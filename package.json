@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --open",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "voices": "node scripts/voices.mjs"
   },
   "dependencies": {
     "@arcade/assets": "workspace:*",

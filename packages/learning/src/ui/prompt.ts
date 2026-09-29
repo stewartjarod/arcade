@@ -48,7 +48,7 @@ export function renderPrompt(p: Prompt, { listen = false, sumSuffix = '' } = {})
   t.className = p.sum ? 'lp-text sum' : 'lp-text'
   t.innerHTML = p.sum ? problemHTML(p.text) + sumSuffix : escapeHTML(p.text)
   box.append(t)
-  if (p.say && canSpeak()) {
+  if (p.say && canSpeak(p.say)) {
     const b = document.createElement('button')
     b.type = 'button'
     b.className = 'lp-say'

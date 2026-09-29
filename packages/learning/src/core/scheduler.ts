@@ -1,4 +1,5 @@
 import { findSkill, SUBJECTS } from '../subjects'
+import { canSpeak } from '../ui/speak'
 import type { Learner } from './learner'
 import type { Format, Item, Skill } from './types'
 
@@ -17,11 +18,9 @@ export interface PickOptions {
   subjects?: string[]
   /** Only questions answerable this way. Default: any. */
   formats?: Format[]
-  /** Can we play sound? Default: yes if the browser can speak. */
+  /** Can we play sound? Default: yes if we have voice clips or the browser can speak. */
   audio?: boolean
 }
-
-const canSpeakDefault = () => typeof speechSynthesis !== 'undefined'
 
 interface Candidate {
   id: string
@@ -30,7 +29,7 @@ interface Candidate {
 }
 
 function candidates(l: Learner, o: PickOptions): Candidate[] {
-  const audio = o.audio ?? canSpeakDefault()
+  const audio = o.audio ?? canSpeak()
   return SUBJECTS.filter((s) => !o.subjects || o.subjects.includes(s.id)).flatMap((s) =>
     s.skills
       .filter((k) => !o.formats || k.formats.some((f) => o.formats!.includes(f)))
