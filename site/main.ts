@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { readSave } from '@arcade/players'
+import { mountPlayers } from './players'
 
 // ------------------------------------------------------------------
 //  The landing page. It finds every games/<slug>/game.json by itself,
@@ -33,44 +35,59 @@ const isNew = (created?: string) => !!created && Date.now() - new Date(created).
 
 const list = document.getElementById('games')!
 
-for (const g of games) {
-  const card = document.createElement('a')
-  card.className = 'card'
-  card.href = `./games/${g.slug}/`
-  card.style.setProperty('--c', g.color ?? '#6c5ce7')
+function renderCards() {
+  list.replaceChildren()
+  for (const g of games) {
+    const card = document.createElement('a')
+    card.className = 'card'
+    card.href = `./games/${g.slug}/`
+    card.style.setProperty('--c', g.color ?? '#6c5ce7')
 
-  const thumb = document.createElement('div')
-  thumb.className = 'thumb'
-  const shot = Object.entries(thumbs).find(([p]) => slugOf(p) === g.slug)?.[1]
-  if (shot) thumb.style.backgroundImage = `url(${shot})`
-  else thumb.innerHTML = `<span></span>`, (thumb.firstElementChild!.textContent = g.emoji ?? '🎮')
+    const thumb = document.createElement('div')
+    thumb.className = 'thumb'
+    const shot = Object.entries(thumbs).find(([p]) => slugOf(p) === g.slug)?.[1]
+    if (shot) thumb.style.backgroundImage = `url(${shot})`
+    else thumb.innerHTML = `<span></span>`, (thumb.firstElementChild!.textContent = g.emoji ?? '🎮')
 
-  const info = document.createElement('div')
-  info.className = 'info'
-  const h2 = document.createElement('h2')
-  h2.textContent = g.title
-  info.append(h2)
-  if (g.description) {
-    const p = document.createElement('p')
-    p.textContent = g.description
-    info.append(p)
+    const info = document.createElement('div')
+    info.className = 'info'
+    const h2 = document.createElement('h2')
+    h2.textContent = g.title
+    info.append(h2)
+    if (g.description) {
+      const p = document.createElement('p')
+      p.textContent = g.description
+      info.append(p)
+    }
+    if (g.authors?.length) {
+      const by = document.createElement('p')
+      by.className = 'by'
+      by.textContent = `by ${g.authors.join(' & ')}`
+      info.append(by)
+    }
+
+    // High score for whoever's playing, if the game saves one with storage().set('best', ...)
+    const best = readSave<number>(g.slug, 'best', 0)
+    if (best > 0) {
+      const b = document.createElement('p')
+      b.className = 'best'
+      b.textContent = `🏆 Best: ${best}`
+      info.append(b)
+    }
+
+    card.append(thumb, info)
+    if (g.slug.startsWith('_')) card.append(badge('draft', 'new draft'))
+    else if (isNew(g.created)) card.append(badge('NEW!', 'new'))
+    list.append(card)
   }
-  if (g.authors?.length) {
-    const by = document.createElement('p')
-    by.className = 'by'
-    by.textContent = `by ${g.authors.join(' & ')}`
-    info.append(by)
-  }
 
-  card.append(thumb, info)
-  if (g.slug.startsWith('_')) card.append(badge('draft', 'new draft'))
-  else if (isNew(g.created)) card.append(badge('NEW!', 'new'))
-  list.append(card)
+  if (!games.length) {
+    list.innerHTML = `<p class="empty">No games yet! Make one with <code>pnpm new my-game</code></p>`
+  }
 }
 
-if (!games.length) {
-  list.innerHTML = `<p class="empty">No games yet! Make one with <code>pnpm new my-game</code></p>`
-}
+renderCards()
+mountPlayers(document.getElementById('who')!, renderCards)
 
 function badge(text: string, className: string) {
   const b = document.createElement('span')

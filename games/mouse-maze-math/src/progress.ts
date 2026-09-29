@@ -1,4 +1,4 @@
-import { unlocked } from './math'
+import { unlocked } from '@arcade/learning'
 import { realmForDepth } from './realms'
 import { save } from './save'
 

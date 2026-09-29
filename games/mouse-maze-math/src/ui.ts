@@ -1,9 +1,10 @@
 import { COLORS, HATS, STICKERS } from './catalog'
-import { KINDS, describe, unlocked } from './math'
+import { KINDS, describe, unlocked } from '@arcade/learning'
 import { REALMS } from './realms'
 import { commit, save } from './save'
 import { activeRealm } from './progress'
 import { sfx, unlockAudio } from './audio'
+import { currentPlayer } from '@arcade/players'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -30,6 +31,12 @@ const screen = (html: string) => {
 }
 export const hideScreen = () => ($('screen').hidden = true)
 
+const playerTag = () => {
+  const p = currentPlayer()
+  const safe = p.name.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)
+  return `${p.avatar} ${safe}`
+}
+
 export const showMenu = () => {
   $('hud').hidden = true
   closeTrap()
@@ -41,7 +48,7 @@ export const showMenu = () => {
     return `<div class="skill ${on ? '' : 'locked'}"><span>${on ? describe(k, Math.round(r)) : '🔒 Unlocks as you grow'}</span>${on ? `<i><b style="width:${pct}%"></b></i>` : ''}</div>`
   }).join('')
   screen(`<h1><span class="mouse">🐭</span> Mouse Maze Math</h1>
-    <div class="sub">🧀 ${save.cheese} &nbsp;·&nbsp; 🖼 ${save.stickers.length}/${STICKERS.length} stickers</div>
+    <div class="sub">${playerTag()} &nbsp;·&nbsp; 🧀 ${save.cheese} &nbsp;·&nbsp; 🖼 ${save.stickers.length}/${STICKERS.length} stickers</div>
     <div class="skills">${bars}</div>
     <div class="row"><button class="btn" data-act="realm">${REALMS[activeRealm()]!.emoji} ${REALMS[activeRealm()]!.name}${save.realmPick < 0 ? ' · auto' : ''} ⟳</button></div>
     <div class="row"><button class="btn primary big" data-act="play">▶ Play Maze ${save.mazes + 1}</button></div>

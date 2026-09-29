@@ -61,3 +61,60 @@ main {
 .empty code { background: #0005; padding: 2px 8px; border-radius: 6px; }
 
 footer { text-align: center; padding: 24px 16px 40px; opacity: 0.6; }
+
+/* --- Who's playing? --- */
+#who { max-width: 1100px; margin: 28px auto 0; padding: 0 16px; text-align: center; }
+.players-title { margin: 0 0 14px; font-size: 1.4rem; }
+.players { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+.player {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font: inherit; color: #fff; background: none; border: 0; cursor: pointer; padding: 4px; width: 92px;
+}
+.player .avatar {
+  display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%;
+  font-size: 2.6rem; background: var(--pc, #ffffff22); box-shadow: 0 6px 0 #0005;
+  transition: transform 0.15s, box-shadow 0.15s; opacity: 0.7;
+}
+.player .name { font-weight: 600; font-size: 1rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
+.player:hover .avatar { transform: translateY(-4px); opacity: 1; }
+.player.on .avatar { opacity: 1; transform: scale(1.1); box-shadow: 0 0 0 4px #fff, 0 8px 0 #0005; }
+.player.on .name { opacity: 1; font-weight: 700; }
+.player.add .avatar { background: #ffffff1a; border: 3px dashed #ffffff66; box-shadow: none; font-size: 2rem; }
+.player .edit {
+  position: absolute; top: -2px; right: 2px; width: 30px; height: 30px; display: grid; place-items: center;
+  background: #fff; border-radius: 50%; font-size: 0.95rem; box-shadow: 0 2px 6px #0006;
+}
+.skills-line { margin: 14px 0 0; opacity: 0.8; font-size: 1rem; min-height: 1.3em; }
+.best { margin-top: 10px !important; font-weight: 700; }
+
+/* --- Make/edit player dialog --- */
+.editor {
+  border: 0; border-radius: 28px; padding: 24px; width: min(440px, calc(100vw - 32px));
+  background: #2b1b5a; color: #fff; font-family: inherit; box-shadow: 0 20px 60px #000a; text-align: center;
+}
+.editor::backdrop { background: #0009; backdrop-filter: blur(3px); }
+.editor h2 { margin: 0 0 12px; }
+.editor h3 { margin: 18px 0 8px; font-size: 1rem; opacity: 0.8; }
+.editor .preview {
+  width: 96px; height: 96px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 3.4rem; box-shadow: 0 6px 0 #0005;
+}
+.editor input {
+  width: 100%; font: inherit; font-size: 1.4rem; font-weight: 600; text-align: center;
+  padding: 10px 14px; border-radius: 16px; border: 3px solid #ffffff33; background: #ffffff14; color: #fff;
+}
+.editor input:focus { outline: none; border-color: #ffd43b; }
+.choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.choice {
+  width: 44px; height: 44px; border-radius: 12px; border: 3px solid transparent; background: #ffffff14;
+  font-size: 1.6rem; cursor: pointer; display: grid; place-items: center; padding: 0;
+}
+.choice.on { border-color: #fff; background: #ffffff33; }
+.colors .choice { border-radius: 50%; width: 40px; height: 40px; }
+.editor-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.editor-buttons button {
+  font: inherit; font-weight: 700; font-size: 1.1rem; border: 0; border-radius: 999px; padding: 10px 20px; cursor: pointer;
+}
+.editor-buttons .go { background: #ffd43b; color: #222; box-shadow: 0 5px 0 #c9a200; }
+.editor-buttons .plain { background: #ffffff22; color: #fff; }
+.editor-buttons .danger { background: none; color: #ff8787; margin-right: auto; padding-left: 4px; }

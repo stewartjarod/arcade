@@ -21,6 +21,25 @@ Push to GitHub. The site rebuilds and every game in `games/` goes live at `/game
 
 To check the real site locally first: `pnpm build && pnpm preview`.
 
+## Players & saves
+
+Pick or make a player on the homepage ("Who's playing?"). Everything is saved in the browser, per player:
+
+- **Game saves** — `storage('my-game')` in the engine automatically saves for whoever is playing.
+  Save a high score as `'best'` (e.g. `save.highScore(score)`) and it shows on the homepage card.
+- **Math skills** — the i+1 learning model lives on the *player*, not in a game, so every math game
+  shares it. Practice in one game and you're levelled up in all of them:
+  ```ts
+  import { mathLearner, chooseProblem, updateSkill } from '@arcade/learning'
+  const math = mathLearner()                         // current player's levels
+  const p = chooseProblem(math.skills)               // a question at their level (sometimes +1)
+  updateSkill(math.skills, math.stats, p, correct ? 1 : 0)
+  math.save()
+  ```
+- `game.player` has the current player's name, avatar and color if a game wants to show them.
+
+Until someone makes a player, you play as Guest; the first player you create keeps Guest's progress.
+
 ## What's where
 
 ```
@@ -28,9 +47,12 @@ index.html, site/      the homepage (finds every game automatically)
 games/
   _template/          starter every new game is copied from
   coin-hunt/          a game! (game.json + index.html + src/main.ts)
+  mouse-maze-math/    3D maze + math practice (its own code, no engine)
 packages/
   engine/             @arcade/engine — the shared game engine
   assets/             @arcade/assets — shared characters, models, sounds
+  players/            @arcade/players — player profiles + per-player saves (localStorage)
+  learning/           @arcade/learning — adaptive i+1 math practice, saved on the player
 scripts/              new / dev
 ```
 

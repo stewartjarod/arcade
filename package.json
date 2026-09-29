@@ -12,6 +12,8 @@
   "dependencies": {
     "@arcade/assets": "workspace:*",
     "@arcade/engine": "workspace:*",
+    "@arcade/learning": "workspace:*",
+    "@arcade/players": "workspace:*",
     "three": "^0.186.1"
   },
   "devDependencies": {

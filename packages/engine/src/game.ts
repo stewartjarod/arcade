@@ -4,6 +4,7 @@ import { Input } from './input'
 import { Sound } from './sound'
 import { Hud } from './hud'
 import { Tweens } from './tween'
+import { currentPlayer, type Player } from '@arcade/players'
 
 export interface GameOptions {
   /** Element to put the game in. Defaults to document.body. */
@@ -40,6 +41,8 @@ export class Game {
   paused = false
   /** Free-form shared state for your game (score, lives, level...). */
   state: Record<string, any> = {}
+  /** Who's playing (picked on the arcade homepage). */
+  readonly player: Player = currentPlayer()
 
   private entities: Entity[] = []
   private toAdd: Entity[] = []
@@ -70,6 +73,10 @@ export class Game {
 
     this.input = new Input(this.renderer.domElement)
     this.hud = new Hud(parent)
+
+    // The page's "🏠 Arcade" link also shows who's playing.
+    const home = document.getElementById('home')
+    if (home) home.textContent = `🏠 Arcade · ${this.player.avatar} ${this.player.name}`
 
     window.addEventListener('resize', () => this.resize())
     this.resize()

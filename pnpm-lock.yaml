@@ -14,6 +14,12 @@ importers:
       '@arcade/engine':
         specifier: workspace:*
         version: link:packages/engine
+      '@arcade/learning':
+        specifier: workspace:*
+        version: link:packages/learning
+      '@arcade/players':
+        specifier: workspace:*
+        version: link:packages/players
       three:
         specifier: ^0.186.1
         version: 0.186.1
@@ -32,9 +38,20 @@ importers:
 
   packages/engine:
     dependencies:
+      '@arcade/players':
+        specifier: workspace:*
+        version: link:../players
       three:
         specifier: '*'
         version: 0.186.1
+
+  packages/learning:
+    dependencies:
+      '@arcade/players':
+        specifier: workspace:*
+        version: link:../players
+
+  packages/players: {}
 
 packages:
 
