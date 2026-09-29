@@ -29,6 +29,10 @@ pnpm new space-cats     # copies games/_template → games/space-cats
 pnpm dev space-cats     # jumps straight into one game; saves reload instantly
 ```
 
+`pnpm dev` serves the game at **https://arcade.localhost** (via [portless](https://github.com/vercel-labs/portless), so no port numbers to remember). Run `pnpm setup:dev` once on a new machine: it starts portless at boot and trusts its certificate.
+It also prints a **Network** link — open that one on a phone or tablet on the same Wi-Fi (`arcade.localhost` only works on this computer).
+`pnpm dev:plain` skips portless and uses a normal `localhost:5173`.
+
 Then open `games/space-cats/src/main.ts` and start changing things.
 Set the title, emoji, color and description in `games/space-cats/game.json` — that's what shows on the homepage.
 Want a picture instead of the emoji? Drop a `thumbnail.png` (a screenshot works great) next to `game.json`.

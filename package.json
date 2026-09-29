@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "portless arcade node scripts/dev.mjs",
+    "setup:dev": "bash scripts/setup-dev.sh",
+    "dev:plain": "node scripts/dev.mjs",
     "new": "node scripts/new-game.mjs",
     "build": "vite build",
     "preview": "vite preview --open",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
+    "portless": "^0.15.6",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
