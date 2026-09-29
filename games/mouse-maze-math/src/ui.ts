@@ -1,5 +1,6 @@
 import { COLORS, HATS, STICKERS } from './catalog'
-import { KINDS, describe, unlocked } from '@arcade/learning'
+import { numberPad, problemHTML, skillSummary } from '@arcade/learning'
+import { confetti as rain, setMuted } from '@arcade/engine'
 import { REALMS } from './realms'
 import { commit, save } from './save'
 import { activeRealm } from './progress'
@@ -40,13 +41,11 @@ const playerTag = () => {
 export const showMenu = () => {
   $('hud').hidden = true
   closeTrap()
-  const open = unlocked(save.skills)
-  const bars = KINDS.map((k) => {
-    const on = open.includes(k)
-    const r = save.skills[k]
-    const pct = Math.round((r - Math.floor(r)) * 100)
-    return `<div class="skill ${on ? '' : 'locked'}"><span>${on ? describe(k, Math.round(r)) : '🔒 Unlocks as you grow'}</span>${on ? `<i><b style="width:${pct}%"></b></i>` : ''}</div>`
-  }).join('')
+  const bars = skillSummary(save.skills)
+    .map((sk) => sk.unlocked
+      ? `<div class="skill"><span>${sk.label}</span><i><b style="width:${Math.round(sk.progress * 100)}%"></b></i></div>`
+      : `<div class="skill locked"><span>🔒 ${sk.label}</span></div>`)
+    .join('')
   screen(`<h1><span class="mouse">🐭</span> Mouse Maze Math</h1>
     <div class="sub">${playerTag()} &nbsp;·&nbsp; 🧀 ${save.cheese} &nbsp;·&nbsp; 🖼 ${save.stickers.length}/${STICKERS.length} stickers</div>
     <div class="skills">${bars}</div>
@@ -96,19 +95,7 @@ export const showFinish = (f: Finish) => {
   confetti()
 }
 
-export const confetti = () => {
-  const bits = ['🧀', '⭐', '🎉', '✨', '🎈']
-  for (let i = 0; i < 50; i++) {
-    const el = document.createElement('div')
-    el.className = 'confetti'
-    el.textContent = bits[i % bits.length]!
-    el.style.left = `${Math.random() * 100}vw`
-    el.style.animationDuration = `${2.5 + Math.random() * 2.5}s`
-    el.style.animationDelay = `${Math.random() * 1.2}s`
-    document.body.append(el)
-    setTimeout(() => el.remove(), 7000)
-  }
-}
+export const confetti = () => rain(['🧀', '⭐', '🎉', '✨', '🎈'])
 
 export const showHud = (levelName: string) => {
   $('hud').hidden = false
@@ -123,7 +110,7 @@ export const setStreak = (n: number) => {
 export const setQuestion = (text: string | null) => {
   $('q').classList.toggle('off', text === null)
   if (text !== null) {
-    $('qtext').innerHTML = `${text.replace(/[+−×÷]/g, (op) => `<span class="op">${op}</span>`)} <span class="op">=</span> <span class="qmark">?</span>`
+    $('qtext').innerHTML = `${problemHTML(text)} <span class="op">=</span> <span class="qmark">?</span>`
     $('qhint').textContent = 'Which door leads to the cheese? 🧀'
   }
 }
@@ -161,50 +148,15 @@ export const toast = (msg: string, kind: 'good' | 'bad' | '' = '') => {
   toastTimer = window.setTimeout(() => (el.className = ''), 1500)
 }
 
-let resolveAnswer: ((n: number) => void) | null = null
-export const closeTrap = () => {
-  resolveAnswer = null
-  $('trap').hidden = true
-}
-export const askNumber = (o: { title: string; text: string; msg?: string }) =>
-  new Promise<number>((res) => {
-    $('trap-title').textContent = o.title
-    $('trap-q').textContent = `${o.text} =`
-    $('trap-msg').textContent = o.msg ?? ''
-    const input = $<HTMLInputElement>('ans')
-    input.value = ''
-    $('trap').hidden = false
-    resolveAnswer = res
-    if (matchMedia('(pointer: fine)').matches) setTimeout(() => input.focus(), 50)
-  })
-export const trapFeedback = (msg: string) => {
-  $('trap-msg').textContent = msg
-  const t = $('trap')
-  t.classList.remove('shake')
-  void t.offsetWidth
-  t.classList.add('shake')
-}
+// Typed answers use the shared number pad from @arcade/learning.
+const pad = numberPad()
+export const closeTrap = () => pad.close()
+export const askNumber = pad.ask
+export const trapFeedback = pad.feedback
 
 export const initUI = (h: Handlers) => {
   handlers = h
   setCheese()
-  $('trap').addEventListener('submit', (ev) => {
-    ev.preventDefault()
-    const input = $<HTMLInputElement>('ans')
-    const v = Number(input.value.trim())
-    if (input.value.trim() === '' || Number.isNaN(v)) return
-    const r = resolveAnswer
-    resolveAnswer = null
-    r?.(v)
-  })
-  $('pad').addEventListener('click', (ev) => {
-    const key = (ev.target as HTMLElement).closest<HTMLElement>('[data-key]')?.dataset.key
-    if (!key) return
-    const input = $<HTMLInputElement>('ans')
-    if (key === 'back') input.value = input.value.slice(0, -1)
-    else if (input.value.length < 6) input.value += key
-    sfx.pop()
-  })
   document.addEventListener('click', (ev) => {
     unlockAudio()
     const t = (ev.target as HTMLElement).closest<HTMLElement>('[data-act]')
@@ -220,6 +172,7 @@ export const initUI = (h: Handlers) => {
     else if (act === 'stickers') showStickers()
     else if (act === 'mute') {
       save.muted = !save.muted
+      setMuted(save.muted)
       commit()
       showMenu()
     } else if (act === 'wear') {

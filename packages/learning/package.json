@@ -6,6 +6,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@arcade/players": "workspace:*"
-  }
+    "@arcade/players": "workspace:*",
+    "@arcade/engine": "workspace:*"
+  },
+  "sideEffects": false
 }

@@ -3,15 +3,25 @@
 A dad-and-daughter monorepo of small three.js games. Keep code simple and readable for a kid learning to code:
 short functions, friendly names, comments that explain *why* in plain words. Favor fun and visible results over architecture.
 
+## What we're making
+Small, colorful, quick-to-play 3D browser games (a round is a few minutes), built in an afternoon, sometimes
+with sneaky-educational bits (math via `@arcade/learning`). Prefer the simplest thing that's fun over reusable
+architecture. If an idea needs weeks of engine work, suggest a smaller idea instead.
+The README's "What this repo is for" and "Using the shared packages" sections are the user-facing version of this.
+
+## Adding libraries
+`docs/libraries.md` lists candidate libraries (Rapier, postprocessing, Howler, yuka, …) and the rules for adding one:
+install at the root, wrap it as an engine behavior/helper, lazy-load heavy ones, and only add it when a game needs it.
+
 ## Layout
 - `index.html` + `site/` — landing page; globs `games/*/game.json` (and optional `thumbnail.{png,jpg,webp}`) to render cards. `_` drafts show only in dev.
 - `games/<slug>/` — one game each: `game.json` (homepage card: title, description, emoji, color, authors, created), `index.html`, `src/main.ts`, optional `public/`.
   Games are NOT workspace packages; they resolve `@arcade/*` from the root `node_modules`.
 - `games/_template/` — copied by `pnpm new <slug>`; `{{slug}}`, `{{title}}`, `{{date}}` get substituted. `_`-prefixed games are skipped by the build.
-- `packages/engine` (`@arcade/engine`) — Game, Entity, behaviors, shapes, input, sound (synth presets), hud, tweens, particles, loaders, util. Re-exports `THREE`.
-- `packages/assets` (`@arcade/assets`) — shared prefabs (`buddy`, `coin`, `starPickup`, `tree`, `cloud`, `spiky`, `platform`) and shared files imported as `@arcade/assets/models/x.glb?url`.
+- `packages/engine` (`@arcade/engine`) — Game, Entity, behaviors, shapes, input, hud, tweens, particles, loaders, util; `audio.ts` (shared synth: `tone`/`noise`, `sfx.*`, `music.play(track)`, `setMuted`; auto-unlocks on first gesture), `labels.ts` (`answerSign`, `emojiSprite`), `confetti()`. Re-exports `THREE`. `sideEffects: false`, so games that use only a few parts (like Mouse Maze Math) don't pull in the rest.
+- `packages/assets` (`@arcade/assets`) — shared prefabs (`buddy`, `coin`, `starPickup`, `tree`, `cloud`, `spiky`, `platform`), `mouseModel({ color, hat })` and shared files imported as `@arcade/assets/models/x.glb?url`.
 - `packages/players` (`@arcade/players`) — profiles in localStorage (`arcade:players`, `arcade:current-player`); all per-player data lives under `arcade:p:<playerId>:<game>:<key>` via `playerKey()`, so deleting a player and Guest→first-player hand-off just move/remove that prefix. Falls back to a `guest` player.
-- `packages/learning` (`@arcade/learning`) — the adaptive i+1 math model (problem generator, Elo-style `updateSkill`, unlock order, distractors). Skill levels are **profile-level**, stored at `playerKey('learning', 'math')` via `mathLearner()`. Any game asking math questions must use `mathLearner()` rather than its own copy, so progress is shared across games. Mouse Maze Math aliases `save.skills`/`save.stats` to the learner's objects.
+- `packages/learning` (`@arcade/learning`) — the i+1 math model (`math.ts`: generator, Elo-style `updateSkill`, unlock order, distractors), each player's cached learner (`mathLearner()`, stored at `playerKey('learning', 'math')`), the `Practice → Moment → Question` API, `numberPad()` and `mathChallenge()`. Tests in `practice.test.ts` (`pnpm test`).
 - Single multi-page Vite app: `vite.config.ts` lists the landing page plus every non-`_` game as build inputs → `dist/index.html`, `dist/games/<slug>/index.html`; three.js lands in one shared chunk.
 
 ## Engine conventions
@@ -22,6 +32,13 @@ short functions, friendly names, comments that explain *why* in plain words. Fav
 - Never write to localStorage with raw keys in a game — go through `storage()`, `playerKey()` or `mathLearner()` so saves stay per-player.
 - Promote anything reused by 2+ games into `packages/`.
 
+## Learning rules (important)
+- Every game should include i+1 practice, and it must go through `@arcade/learning` so skills are shared per player across all games.
+- Use `mathChallenge()` for a quick typed question, or `startPractice()` → `practice.moment()` → `moment.ask()` → `moment.check/record()` for custom UIs. One `Practice` per level/round; one `Moment` per challenge (its questions share the max-drop safety net and only its first question earns the speed bonus).
+- Never call `updateSkill`/`limitDrop`/`chooseProblem` directly from a game, never keep a separate copy of skills, and never score retries — `Moment` enforces first-answer-only, speed bonus, guess discount (`choices` = options still open) and the drop limit.
+- For display only (homepage, profile cards) use `peekMathSkills()` + `skillSummary()`; in-game use the cached `mathLearner()`.
+- New subjects (spelling, reading...) should follow the same shape: model + per-player learner + Practice API in `@arcade/learning`.
+
 ## Commands
-`pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm build` · `pnpm preview`
-Always run `pnpm typecheck && pnpm build` after changes.
+`pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm preview`
+Always run `pnpm typecheck && pnpm test && pnpm build` after changes.

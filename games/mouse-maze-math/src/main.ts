@@ -1,8 +1,10 @@
+import { setMuted } from '@arcade/engine'
 import { save } from './save'
 import { createGame } from './game'
 import { initUI } from './ui'
 import { createWorld } from './world'
 
+setMuted(save.muted)
 const world = createWorld(document.getElementById('c') as HTMLCanvasElement)
 world.setSkin(save.color, save.hat)
 const game = createGame(world)

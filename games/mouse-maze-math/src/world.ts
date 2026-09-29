@@ -1,13 +1,12 @@
 import * as THREE from 'three'
-import { sfx } from './audio'
+import { SIGN_SIZE, answerSign, emojiSprite, sfx } from '@arcade/engine'
+import { mouseModel, type MouseHat } from '@arcade/assets'
 import { COLORS } from './catalog'
 import { DX, DZ, type Dir, type Layout } from './maze'
 import { REALMS, type Realm } from './realms'
 
 export const CELL = 4
 const WALL_H = 4
-const SIGN_W = 2.5
-const SIGN_H = 1.55
 
 const box = new THREE.BoxGeometry(1, 1, 1)
 const ball = new THREE.SphereGeometry(1, 20, 14)
@@ -87,133 +86,6 @@ const stepTasks = (dt: number) => {
 }
 export const sleep = (s: number) => tween(s, () => {})
 
-const emojiSprite = (emoji: string) => {
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = 128
-  const cx = cv.getContext('2d')!
-  cx.font = '96px serif'
-  cx.textAlign = 'center'
-  cx.textBaseline = 'middle'
-  cx.fillText(emoji, 64, 72)
-  const tex = new THREE.CanvasTexture(cv)
-  tex.colorSpace = THREE.SRGBColorSpace
-  return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }))
-}
-
-const makeSign = (color: number) => {
-  const cv = document.createElement('canvas')
-  cv.width = 512
-  cv.height = 320
-  const cx = cv.getContext('2d')!
-  cx.scale(2, 2)
-  const tex = new THREE.CanvasTexture(cv)
-  tex.colorSpace = THREE.SRGBColorSpace
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(SIGN_W, SIGN_H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthTest: false }))
-  sprite.renderOrder = 10
-  const hex = `#${color.toString(16).padStart(6, '0')}`
-  const draw = (label: string, mark: 'good' | 'bad' | null = null) => {
-    cx.clearRect(0, 0, 256, 160)
-    const fill = mark === 'good' ? '#22c55e' : mark === 'bad' ? '#ef4444' : hex
-    cx.fillStyle = 'rgba(0,0,0,.28)'
-    cx.beginPath()
-    cx.roundRect(14, 20, 228, 118, 34)
-    cx.fill()
-    cx.fillStyle = '#ffffff'
-    cx.beginPath()
-    cx.roundRect(8, 8, 240, 124, 36)
-    cx.moveTo(110, 130)
-    cx.lineTo(128, 154)
-    cx.lineTo(146, 130)
-    cx.fill()
-    cx.fillStyle = fill
-    cx.beginPath()
-    cx.roundRect(18, 18, 220, 104, 28)
-    cx.moveTo(116, 120)
-    cx.lineTo(128, 138)
-    cx.lineTo(140, 120)
-    cx.fill()
-    cx.fillStyle = 'rgba(255,255,255,.22)'
-    cx.beginPath()
-    cx.roundRect(28, 24, 200, 36, 18)
-    cx.fill()
-    const text = mark === 'good' ? `✓ ${label}` : mark === 'bad' ? `✗ ${label}` : label
-    let size = 96
-    do cx.font = `700 ${(size -= 4)}px Fredoka, ui-rounded, system-ui, sans-serif`
-    while (cx.measureText(text).width > 190 && size > 30)
-    cx.textAlign = 'center'
-    cx.textBaseline = 'middle'
-    cx.lineJoin = 'round'
-    cx.lineWidth = 12
-    cx.strokeStyle = 'rgba(30,20,60,.55)'
-    cx.strokeText(text, 128, 74)
-    cx.fillStyle = '#ffffff'
-    cx.fillText(text, 128, 74)
-    tex.needsUpdate = true
-  }
-  return { sprite, draw }
-}
-
-const buildRig = (color: number, hat: string) => {
-  const rig = new THREE.Group()
-  const add = (...o: THREE.Object3D[]) => rig.add(...o)
-  add(blob(0.62, 0.55, 0.9, color, 0, 0.65, 0), blob(0.42, 0.4, 0.45, color, 0, 0.85, 0.85))
-  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 12), mat(color))
-  snout.rotation.x = Math.PI / 2
-  snout.position.set(0, 0.78, 1.3)
-  add(snout, blob(0.1, 0.1, 0.1, 0xff7a9c, 0, 0.78, 1.58))
-  for (const s of [-1, 1]) {
-    add(
-      blob(0.07, 0.09, 0.05, 0x111111, s * 0.18, 0.98, 1.15),
-      blob(0.3, 0.3, 0.08, color, s * 0.36, 1.3, 0.7),
-      blob(0.2, 0.2, 0.06, 0xffb3c6, s * 0.36, 1.3, 0.76),
-      blob(0.16, 0.1, 0.24, color, s * 0.32, 0.12, 0.4),
-      blob(0.16, 0.1, 0.24, color, s * 0.32, 0.12, -0.4),
-    )
-  }
-  const tail = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0.5, -0.8),
-    new THREE.Vector3(0, 0.35, -1.3),
-    new THREE.Vector3(0.35, 0.25, -1.8),
-    new THREE.Vector3(0.7, 0.4, -2.2),
-  ])
-  add(new THREE.Mesh(new THREE.TubeGeometry(tail, 16, 0.06, 6), mat(0xffb3c6)))
-
-  const h = new THREE.Group()
-  h.position.set(0, 1.2, 0.85)
-  if (hat === 'party') {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.75, 16), mat(0xd946ef))
-    cone.position.y = 0.3
-    h.add(cone, blob(0.08, 0.08, 0.08, 0xffe066, 0, 0.7, 0))
-  } else if (hat === 'crown') {
-    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.28, 0.25, 16), mat(0xf2c94c))
-    ring.position.y = 0.05
-    h.add(ring)
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.24, 8), mat(0xf2c94c))
-      spike.position.set(Math.cos(a) * 0.26, 0.29, Math.sin(a) * 0.26)
-      h.add(spike)
-    }
-  } else if (hat === 'wizard') {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.34, 1.0, 16), mat(0x5b3fd1))
-    cone.position.y = 0.5
-    cone.rotation.z = 0.15
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.05, 20), mat(0x5b3fd1))
-    h.add(cone, brim, blob(0.07, 0.07, 0.07, 0xffe066, 0.1, 0.55, 0.36))
-  } else if (hat === 'bow') {
-    h.position.set(0.36, 1.5, 0.7)
-    for (const s of [-1, 1]) {
-      const wing = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.32, 10), mat(0xff4d8d))
-      wing.rotation.z = -s * (Math.PI / 2)
-      wing.position.x = s * 0.16
-      h.add(wing)
-    }
-    h.add(blob(0.07, 0.07, 0.07, 0xd6336c, 0, 0, 0))
-  }
-  add(h)
-  return rig
-}
-
 type DoorView = { panel: THREE.Mesh; hinge: THREE.Group; sign: THREE.Mesh; draw: (t: string, mark?: 'good' | 'bad' | null) => void }
 
 export const createWorld = (canvas: HTMLCanvasElement) => {
@@ -245,7 +117,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   const setSkin = (color: string, hat: string) => {
     skin = { color, hat }
     mouse.remove(rig)
-    rig = buildRig(COLORS.find((c) => c.id === color)?.hex ?? COLORS[0]!.hex, hat)
+    rig = mouseModel({ color: COLORS.find((c) => c.id === color)?.hex ?? COLORS[0]!.hex, hat: hat as MouseHat })
     mouse.add(rig)
   }
   setSkin('gray', 'none')
@@ -502,14 +374,14 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
         } else if (r.style === 'stone') {
           g.add(cuboid(0.9, 0.5, 0.6, 0x6d655e, 0, WALL_H + 0.25, 0))
         }
-        const s = makeSign(color)
-        s.sprite.userData.exit = e
-        s.sprite.userData.face = face
-        s.sprite.userData.g = g
-        s.sprite.visible = false
-        g.add(s.sprite)
+        const s = answerSign(color)
+        s.mesh.userData.exit = e
+        s.mesh.userData.face = face
+        s.mesh.userData.g = g
+        s.mesh.visible = false
+        g.add(s.mesh)
         level.add(g)
-        return { panel, hinge, sign: s.sprite, draw: s.draw }
+        return { panel, hinge, sign: s.mesh, draw: s.draw }
       })
       views.push(row)
     })
@@ -726,7 +598,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
       d.sign.quaternion.copy(inv.copy(g.quaternion).invert().multiply(cam.quaternion))
       const w = d.sign.getWorldPosition(swivel)
       const px = Math.max(48, Math.min(innerHeight * 0.13, innerWidth * 0.13, 120))
-      const fit = ((px / innerHeight) * 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * w.distanceTo(cam.position)) / SIGN_H
+      const fit = ((px / innerHeight) * 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * w.distanceTo(cam.position)) / SIGN_SIZE.height
       const hl = e === hover ? 1.14 + Math.sin(time * 8) * 0.03 : 1
       d.sign.scale.setScalar((d.sign.userData.pop ?? 1) * fit * hl)
     })

@@ -2,7 +2,7 @@ import {
   AVATARS, PLAYER_COLORS, createPlayer, currentPlayer, deletePlayer, listPlayers,
   onPlayersChanged, selectPlayer, updatePlayer, type Player,
 } from '@arcade/players'
-import { describe, mathLearner, unlocked } from '@arcade/learning'
+import { peekMathSkills, skillSummary } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  "Who's playing?" — pick, make, edit and delete players.
@@ -18,6 +18,8 @@ export function mountPlayers(root: HTMLElement, onChange: () => void) {
     onChange()
   }
   onPlayersChanged(rerender)
+  // Coming back from a game with the Back button can show a saved copy of this page; refresh it.
+  window.addEventListener('pageshow', (e) => e.persisted && rerender())
   render()
 }
 
@@ -64,9 +66,9 @@ function playerRow(changed: () => void): HTMLElement[] {
 function skillLine() {
   const line = el('p', 'skills-line')
   const player = currentPlayer()
-  const math = mathLearner(player.id)
-  if (math.isNew) return line
-  const levels = unlocked(math.skills).map((k) => describe(k, Math.round(math.skills[k])))
+  const skills = peekMathSkills(player.id)
+  if (!skills) return line
+  const levels = skillSummary(skills).filter((s) => s.unlocked).map((s) => s.label)
   line.textContent = `🧠 ${player.name}'s math: ${levels.join(' · ')}`
   return line
 }

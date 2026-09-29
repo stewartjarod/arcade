@@ -2,11 +2,13 @@ import {
   Game, THREE, ground, moveWithKeys, cameraFollow, collect, chase, onTouch,
   stayInside, burst, rand, storage,
 } from '@arcade/engine'
-import { buddy, coin, tree, cloud, spiky } from '@arcade/assets'
+import { buddy, coin, tree, cloud, spiky, starPickup } from '@arcade/assets'
+import { mathChallenge } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  {{title}}
 //  Arrow keys / WASD to move. Grab every coin. Don't touch the spikies!
+//  Bonus stars ask a math question at your level — get it right to save time.
 // ------------------------------------------------------------------
 
 const game = new Game({ background: '#87ceeb' })
@@ -44,6 +46,22 @@ function level(game: Game) {
       }),
     )
   }
+
+  // Bonus stars: a math question at the player's level (it levels up their profile in every game)
+  const spawnStar = () =>
+    game.add(starPickup()).at(rand(-WORLD, WORLD), 1, rand(-WORLD, WORLD)).with(
+      collect('player', async () => {
+        game.paused = true
+        const { solved } = await mathChallenge({ title: '⭐ Bonus star! Solve it for −10 seconds' })
+        game.paused = false
+        if (solved) {
+          game.time = Math.max(0, game.time - 10)
+          game.hud.message('−10 seconds! ⏱️', { seconds: 1.2 })
+        }
+      }),
+    )
+  spawnStar()
+  game.every(20, spawnStar)
 
   // A new spiky shows up every 5 seconds and chases you
   const spawnSpiky = () => game.add(spiky()).at(rand(-WORLD, WORLD), 0, -WORLD).with(chase('player', 2.5))

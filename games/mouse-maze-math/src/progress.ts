@@ -1,8 +1,8 @@
-import { unlocked } from '@arcade/learning'
+import { mathDepth } from '@arcade/learning'
 import { realmForDepth } from './realms'
 import { save } from './save'
 
-export const depth = () => Math.max(...unlocked(save.skills).map((k) => save.skills[k]))
+export const depth = () => mathDepth(save.skills)
 
 export const activeRealm = () => {
   save.realmMax = Math.max(save.realmMax, realmForDepth(depth()))

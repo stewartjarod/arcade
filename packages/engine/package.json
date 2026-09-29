@@ -10,5 +10,6 @@
   },
   "dependencies": {
     "@arcade/players": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }
