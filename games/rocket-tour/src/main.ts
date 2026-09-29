@@ -246,6 +246,7 @@ function tour(game: Game) {
   let stardust = 0
   let streak = 0
   let introTime = 0
+  let blasting = false // an answer was chosen: zoom through the gate
 
   // --- HUD ---
   const dust = ui('stardust', '✨ 0')
@@ -298,13 +299,15 @@ function tour(game: Game) {
     bubbles = options.map((opt, i) => makeBubble(opt, i))
     banner = ui('question')
     banner.innerHTML = `<span class="q">${esc(q.text)}</span><button class="say" aria-label="Hear it">🔊</button>
-      <div class="hint">Steer into the right answer!</div>`
+      <div class="hint">Tap an answer to blast off! (or steer ⬅ ➡ and press ⬆)</div>`
     banner.querySelector<HTMLButtonElement>('.say')!.onclick = () => speak(questionSpeech())
     laneButtons = ui('lanes')
     laneButtons.innerHTML = options.map((o, i) => `<button data-i="${i}" style="--c:${LANE_COLORS[i]}">${esc(o)}</button>`).join('')
     laneButtons.onclick = (ev) => {
       const b = (ev.target as HTMLElement).closest<HTMLElement>('button')
-      if (b) steerTo(Number(b.dataset.i))
+      if (!b) return
+      steerTo(Number(b.dataset.i))
+      blast()
     }
     updateLaneButtons()
     say(questionSpeech())
@@ -362,7 +365,15 @@ function tour(game: Game) {
     if (phase === 'gate' && open.has(lane)) say(`${options[lane]!}.`)
   }
 
+  /** They've picked their answer: full speed ahead through the bubble. */
+  function blast() {
+    if (phase !== 'gate' || blasting || !open.has(lane)) return
+    blasting = true
+    sfx.whoosh(false)
+  }
+
   function passGate() {
+    blasting = false
     if (!open.has(lane)) return bounceBack() // flew through a popped bubble: come around again
     const picked = options[lane]!
     const right = moment!.check(q!, picked, { choices: open.size })
@@ -393,6 +404,7 @@ function tour(game: Game) {
 
   function bounceBack() {
     phase = 'bounce'
+    blasting = false
     speed = 0
     game.tweens.to(rocket.position, { z: gateZ(k) + 40 }, 1, ease.out).then(() => {
       if (phase === 'bounce') phase = 'gate'
@@ -472,24 +484,29 @@ function tour(game: Game) {
       if (input.pressed('left')) steerTo(lane - 1)
       if (input.pressed('right')) steerTo(lane + 1)
       if (input.clicked) steerTo(lane + (input.pointer.x < 0 ? -1 : 1)) // taps on the game itself (not buttons)
+      if (input.pressed('up') || input.pressed('jump') || input.pressed('action')) blast()
     }
     if (phase === 'card' && (input.pressed('action') || input.pressed('jump'))) leave()
 
-    // Flying forward: cruise fast, slow down near a question so there's time to read it.
+    // Flying forward: cruise, slow down near a question so there's time to read it,
+    // and blast through once an answer is picked.
     if (phase === 'cruise' || phase === 'gate') {
       const nearGate = phase === 'gate' && rocket.position.z - gateZ(k) < 70
-      speed += ((nearGate ? 5 : 14) * WARP - speed) * (1 - Math.exp(-2 * dt))
+      const target = blasting ? 45 : nearGate ? 5 : 14
+      speed += (target * WARP - speed) * (1 - Math.exp(-(blasting ? 4 : 2) * dt))
       rocket.position.z -= speed * dt
       if (phase === 'cruise' && rocket.position.z < gateZ(k) + 95) openGate()
       if (phase === 'gate' && rocket.position.z <= gateZ(k)) passGate()
     }
     if (phase === 'land') {
-      // After the right answer, glide in next to the planet.
+      // After the right answer, zoom to the planet and ease off as we arrive.
       const stopZ = planetZ(k) + 2
-      speed += (10 * WARP - speed) * (1 - Math.exp(-2 * dt))
+      const left = rocket.position.z - stopZ
+      const target = Math.min(45, Math.max(4, left * 2.2)) * WARP
+      speed += (target - speed) * (1 - Math.exp(-4 * dt))
       rocket.position.z = Math.max(stopZ, rocket.position.z - speed * dt)
       lane = 1
-      if (rocket.position.z <= stopZ + 0.01) arrive()
+      if (rocket.position.z <= stopZ + 0.05) arrive()
     }
 
     // Slide between lanes, leaning into the turn.
@@ -540,7 +557,8 @@ function tour(game: Game) {
       camWant.set(rocket.position.x * 0.5, 3.2, rocket.position.z + 9.5)
       camLook.set(rocket.position.x * 0.6, 0.6, rocket.position.z - 14)
     }
-    game.camera.position.lerp(camWant, 1 - Math.exp(-4 * dt))
+    // The camera keeps up better when we're going fast.
+    game.camera.position.lerp(camWant, 1 - Math.exp(-(4 + speed * 0.12) * dt))
     const m = new THREE.Matrix4().lookAt(game.camera.position, camLook, game.camera.up)
     game.camera.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(m), 1 - Math.exp(-6 * dt))
   })
