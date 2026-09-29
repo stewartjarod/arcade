@@ -141,36 +141,87 @@ describe('safety net', () => {
   })
 })
 
-describe('where players start', () => {
-  test('grade sets the starting level', () => {
-    expect(fresh({ grade: 1 }).rating('math.add')).toBe(2) // adding within 20
-    expect(fresh({ grade: 2 }).rating('math.add')).toBe(3.5) // adding within 50–100
-    expect(fresh({ grade: 2 }).rating('reading.words')).toBe(3) // long vowels
-    expect(fresh().rating('math.add')).toBe(1) // no grade: start at the beginning
+describe('starting from zero, then finding their level', () => {
+  test('everyone starts every skill at level 1, whatever their grade', () => {
+    expect(fresh().rating('math.add')).toBe(1)
+    expect(fresh({ grade: 2 }).rating('math.add')).toBe(1)
+    expect(fresh({ grade: 2 }).rating('reading.words')).toBe(1)
+    expect(fresh({ grade: 2 }).isUnlocked('math.mul')).toBe(false) // unlocks by growing, not by grade
   })
 
-  test('skills unlock when their prerequisites are reached', () => {
-    const first = fresh({ grade: 1 })
-    expect(first.isUnlocked('math.mul')).toBe(false)
-    expect(first.isUnlocked('geography.capitals')).toBe(false)
-    const second = fresh({ grade: 2 })
-    expect(second.isUnlocked('math.mul')).toBe(true) // + and − are solid by 2nd grade
-    expect(second.rating('math.mul')).toBe(1) // starting with 2s and 10s
-    expect(second.isUnlocked('math.div')).toBe(false)
-  })
-
-  test('the old math-only save carries over', () => {
+  test('a strong kid climbs a level per right answer while calibrating', () => {
     const l = fresh()
-    l.adoptLegacyMath({ skills: { add: 4.2, sub: 3.1, mul: 0, div: 0 }, stats: { seen: { add: 30 } } })
+    // Millie knows adding to 100: right, right, right at each new level...
+    for (let i = 0; i < 3; i++) l.score(itemAt('math.add', Math.round(l.rating('math.add'))), 1)
+    expect(l.rating('math.add')).toBe(4)
+    expect(l.isCalibrating('math.add')).toBe(true)
+    // ...then misses at level 4 (adding to 100 → 200 is new): she settles just below and calibration ends.
+    l.score(itemAt('math.add', 4), 0)
+    expect(l.rating('math.add')).toBe(3.5)
+    expect(l.isCalibrating('math.add')).toBe(false)
+  })
+
+  test('a lucky pick among choices jumps less than a typed answer', () => {
+    const typed = fresh()
+    const picked = fresh()
+    typed.score(itemAt('space.planets', 1), 1)
+    picked.score(itemAt('space.planets', 1), 1, 1 / 3)
+    expect(typed.rating('space.planets')).toBe(2)
+    expect(picked.rating('space.planets')).toBeCloseTo(1 + 2 / 3)
+  })
+
+  test('easy review questions during calibration do not push them up', () => {
+    const l = fresh()
+    l.score(itemAt('math.add', 1), 1) // → 2
+    l.score(itemAt('math.add', 1), 1) // below their level: tells us nothing new
+    expect(l.rating('math.add')).toBe(2)
+  })
+
+  test('calibration ends after a handful of answers even without a miss', () => {
+    const l = fresh()
+    for (let i = 0; i < 8; i++) l.score(itemAt('space.planets', 4), 1)
+    expect(l.isCalibrating('space.planets')).toBe(false)
+  })
+
+  test('the baseline found in one game carries to every other game', () => {
+    // Two different games = two different practices on the same player's learner.
+    const l = fresh()
+    const rocketTour = startPractice({ learner: l, subjects: ['space'], formats: ['choice'], audio: true })
+    const m = rocketTour.moment()
+    const q = new Question(itemAt('space.planets', 1))
+    m.check(q, q.answer, { choices: 3 })
+    const afterRocket = l.rating('space.planets')
+    const coinHunt = startPractice({ learner: l, audio: true })
+    expect(afterRocket).toBeGreaterThan(1)
+    expect(coinHunt.learner.rating('space.planets')).toBe(afterRocket)
+    // New questions in the other game are asked around the new level.
+    for (let i = 0; i < 50; i++) {
+      const it = pickItem(l, { subjects: ['space'] })
+      if (it.skill === 'space.planets') expect(it.level).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  test('skills unlock by growing into them', () => {
+    const l = fresh()
+    for (const id of ['math.add', 'math.sub']) for (let i = 0; i < 2; i++) l.score(itemAt(id, Math.round(l.rating(id))), 1)
+    expect(l.rating('math.add')).toBe(3)
+    expect(l.isUnlocked('math.mul')).toBe(true) // + and − reached level 3
+    expect(l.rating('math.mul')).toBe(1) // and × starts from the beginning too
+  })
+
+  test('the old math-only save carries over, already calibrated', () => {
+    const l = fresh()
+    l.adoptLegacyMath({ skills: { add: 4.2, sub: 3.1, mul: 0, div: 0 }, stats: { seen: { add: 30, sub: 20 } } })
     expect(l.rating('math.add')).toBe(4.2)
     expect(l.seen('math.add')).toBe(30)
+    expect(l.isCalibrating('math.add')).toBe(false)
     expect(l.isUnlocked('math.mul')).toBe(true)
   })
 })
 
 describe('choosing questions', () => {
   test('only unlocked skills, in the formats a game can show', () => {
-    const l = fresh({ grade: 1 })
+    const l = fresh()
     for (let i = 0; i < 300; i++) {
       const it = pickItem(l, { formats: ['number'], audio: true })
       expect(it.formats).toContain('number')
@@ -261,17 +312,17 @@ describe('summaries', () => {
     expect(p.grew()).toContain('Adding up to 100') // level 4
   })
 
-  test('growth counts from where their grade placed them', () => {
+  test('growth counts from the very start', () => {
     const l = fresh({ grade: 2 })
     expect(subjectGrowth(l, 'math')).toBe(0)
     ;(l as unknown as { state: { ratings: Record<string, number> } }).state.ratings['math.add'] = 5
-    expect(subjectGrowth(l, 'math')).toBe(1.5)
+    expect(subjectGrowth(l, 'math')).toBe(4)
   })
 
   test('skill and subject summaries describe where a player is', () => {
     const l = fresh({ grade: 2 })
     const math = skillSummary(l, 'math')
-    expect(math.find((s) => s.id === 'math.add')!.label).toBe('Adding up to 100')
+    expect(math.find((s) => s.id === 'math.add')!.label).toBe('Adding up to 10')
     expect(math.find((s) => s.id === 'math.div')!.unlocked).toBe(false)
     const subjects = subjectSummary(l)
     expect(subjects.map((s) => s.id)).toEqual(['math', 'reading', 'writing', 'space', 'geography', 'clocks'])

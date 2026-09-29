@@ -120,14 +120,13 @@ const runs = (ns: number[]) => {
   return out.join(', ')
 }
 
-function opSkill(op: Op, o: Pick<Skill, 'label' | 'unlocksAfter' | 'startByGrade'> & { max: number }): Skill {
+function opSkill(op: Op, o: Pick<Skill, 'label' | 'unlocksAfter'> & { max: number }): Skill {
   return {
     id: op,
     label: o.label,
     maxLevel: o.max,
     formats: ['number', 'choice'],
     unlocksAfter: o.unlocksAfter,
-    startByGrade: o.startByGrade,
     generate: (L) => problemItem(build(op, L)),
     fromKey: (key, L) => {
       const p = fromText(key, L)
@@ -228,32 +227,27 @@ export const math: Subject = {
     opSkill('add', {
       label: (L) => `Adding up to ${cap(L)}`,
       max: 12,
-      startByGrade: { 0: 1, 1: 2, 2: 3.5, 3: 4.5, 4: 5 },
     }),
     opSkill('sub', {
       label: (L) => `Subtracting from ${cap(L)}`,
       max: 12,
-      startByGrade: { 0: 1, 1: 1.5, 2: 3, 3: 4, 4: 5 },
     }),
     // Skills unlock in order: × once + and − are solid, ÷ once × is.
     opSkill('mul', {
       label: (L) => (L <= TABLE_LEVELS ? `Times tables: ${runs(tables(L))}` : `Big times tables`),
       max: 16,
       unlocksAfter: [{ skill: 'add', level: 3 }, { skill: 'sub', level: 3 }],
-      startByGrade: { 3: 4, 4: 8 },
     }),
     opSkill('div', {
       label: (L) => (L <= TABLE_LEVELS ? `Dividing by ${runs(tables(L))}` : `Big division`),
       max: 16,
       unlocksAfter: [{ skill: 'mul', level: 3 }],
-      startByGrade: { 4: 4 },
     }),
     {
       id: 'place',
       label: (L) => PLACE_LABELS[L - 1]!,
       maxLevel: PLACE_LABELS.length,
       formats: ['number', 'choice'],
-      startByGrade: { 0: 1, 1: 1, 2: 3, 3: 5 },
       generate: placeValue,
     },
     {
@@ -261,7 +255,6 @@ export const math: Subject = {
       label: (L) => SKIP_LABELS[L - 1]!,
       maxLevel: SKIP_LABELS.length,
       formats: ['number', 'choice'],
-      startByGrade: { 0: 1, 1: 2, 2: 3, 3: 4 },
       generate: skipCount,
     },
   ],

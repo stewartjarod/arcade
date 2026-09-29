@@ -68,54 +68,82 @@ function factItem(f: Fact): ItemSpec {
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
 /** Planets next to this one in the list — the most believable wrong answers. */
 const neighbors = (i: number) => [PLANETS[i - 1], PLANETS[i + 1], PLANETS[i - 2], PLANETS[i + 2]].filter(Boolean) as string[]
+const idx = (name: string) => PLANETS.indexOf(name as (typeof PLANETS)[number])
 
-function orderItem(level: number): ItemSpec {
-  let q: string
+/** Work out the answer from the question's own words, so any order question can be rebuilt from its key. */
+function orderSpec(q: string): ItemSpec | null {
   let a: string
   let near: string[] = []
   let pool: readonly string[] = PLANETS
-  if (level === 1) {
-    ;[q, a] = pick([
-      ['Which planet is closest to the Sun?', 'Mercury'],
-      ['Which planet is farthest from the Sun?', 'Neptune'],
-      ['Which planet is 3rd from the Sun?', 'Earth'],
-      ['Which planet comes right after Earth?', 'Mars'],
-    ])
-  } else if (level === 2 || level === 3) {
-    // Level 2: the inner planets; level 3: any of them.
-    const i = level === 2 ? rand(1, 4) : rand(1, 6)
-    if (Math.random() < 0.5) {
-      q = `Which planet comes right after ${PLANETS[i]}?`
-      a = PLANETS[i + 1]!
-      near = [PLANETS[i - 1]!, ...neighbors(i + 1)]
-    } else {
-      q = `Which planet comes right before ${PLANETS[i]}?`
-      a = PLANETS[i - 1]!
-      near = [PLANETS[i + 1]!, ...neighbors(i - 1)]
-    }
-    if (level === 3 && Math.random() < 0.4) {
-      const k = rand(0, 7)
-      q = `Which planet is ${ORDINAL[k]} from the Sun?`
-      a = PLANETS[k]!
-      near = neighbors(k)
-    }
-  } else {
-    const i = rand(0, 7)
-    if (Math.random() < 0.5) {
-      const k = rand(1, 6)
-      q = `Which planet is between ${PLANETS[k - 1]} and ${PLANETS[k + 1]}?`
-      a = PLANETS[k]!
-      near = neighbors(k).filter((p) => p !== PLANETS[k - 1] && p !== PLANETS[k + 1])
-      pool = PLANETS.filter((p) => p !== PLANETS[k - 1] && p !== PLANETS[k + 1])
-    } else {
-      q = `How many planets are closer to the Sun than ${PLANETS[i]}?`
-      a = String(i)
-      pool = ['0', '1', '2', '3', '4', '5', '6', '7']
-      near = [String(i + 1), String(i - 1)].filter((x) => x !== '-1' && x !== '8')
-    }
-  }
+  let m: RegExpMatchArray | null
+  if (q === 'Which planet is closest to the Sun?') (a = 'Mercury'), (near = ['Venus', 'Earth'])
+  else if (q === 'Which planet is farthest from the Sun?') (a = 'Neptune'), (near = ['Uranus', 'Saturn'])
+  else if ((m = q.match(/^Which planet comes right after (\w+)\?$/)) && idx(m[1]!) >= 0 && idx(m[1]!) < 7) {
+    const i = idx(m[1]!) + 1
+    ;(a = PLANETS[i]!), (near = [PLANETS[i - 2]!, ...neighbors(i)].filter((p) => p !== m![1]))
+  } else if ((m = q.match(/^Which planet comes right before (\w+)\?$/)) && idx(m[1]!) > 0) {
+    const i = idx(m[1]!) - 1
+    ;(a = PLANETS[i]!), (near = [PLANETS[i + 2]!, ...neighbors(i)].filter((p) => p && p !== m![1]))
+  } else if ((m = q.match(/^Which planet is (\d)(?:st|nd|rd|th) from the Sun\?$/))) {
+    const i = Number(m[1]) - 1
+    ;(a = PLANETS[i]!), (near = neighbors(i))
+  } else if ((m = q.match(/^Which planet is between (\w+) and (\w+)\?$/))) {
+    const i = idx(m[1]!) + 1
+    const [before, after] = [m[1]!, m[2]!]
+    ;(a = PLANETS[i]!), (near = neighbors(i).filter((p) => p !== before && p !== after))
+    pool = PLANETS.filter((p) => p !== before && p !== after)
+  } else if ((m = q.match(/^How many planets are closer to the Sun than (\w+)\?$/))) {
+    const i = idx(m[1]!)
+    ;(a = String(i)), (pool = ['0', '1', '2', '3', '4', '5', '6', '7'])
+    near = [String(i + 1), String(i - 1)].filter((x) => x !== '-1' && x !== '8')
+  } else return null
   return { key: q, prompt: { text: q, emoji: '☀️' }, answer: a, wrong: (n) => wrongFrom(a, n, pool, near) }
 }
+
+function orderQuestion(level: number): string {
+  if (level === 1) {
+    return pick(['Which planet is closest to the Sun?', 'Which planet is farthest from the Sun?', 'Which planet is 3rd from the Sun?', 'Which planet comes right after Earth?'])
+  }
+  if (level === 2 || level === 3) {
+    // Level 2: the inner planets; level 3: all of them, and "which is 5th?"
+    if (level === 3 && Math.random() < 0.4) return `Which planet is ${ORDINAL[rand(0, 7)]} from the Sun?`
+    const i = level === 2 ? rand(1, 4) : rand(1, 6)
+    return Math.random() < 0.5 ? `Which planet comes right after ${PLANETS[i]}?` : `Which planet comes right before ${PLANETS[i]}?`
+  }
+  if (Math.random() < 0.5) {
+    const k = rand(1, 6)
+    return `Which planet is between ${PLANETS[k - 1]} and ${PLANETS[k + 1]}?`
+  }
+  return `How many planets are closer to the Sun than ${PLANETS[rand(0, 7)]}?`
+}
+
+// --- Planet cards: what games show when you visit a planet ---
+
+export interface PlanetCard {
+  name: string
+  /** 1 = closest to the Sun (the Sun itself is 0). */
+  order: number
+  nickname: string
+  kind: 'star' | 'rocky planet' | 'gas giant' | 'ice giant'
+  /** Short, true, kid-sized facts — the first is the most important. */
+  facts: string[]
+}
+
+// Checked against NASA's solar system pages. Avoid facts that change (like exact moon counts).
+export const PLANET_CARDS: PlanetCard[] = [
+  { name: 'Sun', order: 0, nickname: 'Our star', kind: 'star', facts: ['The Sun is a star — the closest star to us.', 'About a million Earths could fit inside it.', 'All the planets travel around it.'] },
+  { name: 'Mercury', order: 1, nickname: 'The speedy little one', kind: 'rocky planet', facts: ['Mercury is the closest planet to the Sun.', 'It is the smallest planet.', 'A year on Mercury is only 88 days.', 'It has no moons, and lots of craters.'] },
+  { name: 'Venus', order: 2, nickname: 'The hot, cloudy one', kind: 'rocky planet', facts: ['Venus is the hottest planet — even hotter than Mercury!', 'Thick clouds trap its heat like a blanket.', 'On Venus, the Sun rises in the west.', 'It is the brightest planet in our night sky.'] },
+  { name: 'Earth', order: 3, nickname: 'Our home', kind: 'rocky planet', facts: ['Earth is our home — the only planet we know has living things.', 'Oceans of water cover most of it.', 'It has one Moon.', 'It takes one year to go around the Sun.'] },
+  { name: 'Mars', order: 4, nickname: 'The Red Planet', kind: 'rocky planet', facts: ['Mars is the Red Planet — its dirt is rusty red.', 'It has the tallest volcano of any planet, Olympus Mons.', 'It has two tiny moons, Phobos and Deimos.', 'Robot rovers drive around on Mars.'] },
+  { name: 'Jupiter', order: 5, nickname: 'The giant', kind: 'gas giant', facts: ['Jupiter is the biggest planet — over 1,000 Earths could fit inside!', 'Its Great Red Spot is a storm bigger than Earth.', 'It is made mostly of gas.'] },
+  { name: 'Saturn', order: 6, nickname: 'The one with rings', kind: 'gas giant', facts: ['Saturn has the biggest, brightest rings, made of ice and rock.', 'It is so light it would float in a giant bathtub.', 'Its moon Titan is bigger than the planet Mercury.'] },
+  { name: 'Uranus', order: 7, nickname: 'The sideways one', kind: 'ice giant', facts: ['Uranus spins tipped over on its side.', 'It is an icy, blue-green ice giant.', 'It was the first planet found with a telescope.'] },
+  { name: 'Neptune', order: 8, nickname: 'The windy blue one', kind: 'ice giant', facts: ['Neptune is the farthest planet from the Sun.', 'It has the fastest winds in the solar system.', 'One year on Neptune is about 165 Earth years!'] },
+]
+
+/** The memory trick for the order of the planets. */
+export const PLANET_MNEMONIC = 'My Very Excellent Mother Just Served Us Nachos'
 
 export const space: Subject = {
   id: 'space',
@@ -139,7 +167,8 @@ export const space: Subject = {
       maxLevel: 4,
       formats: ['choice'],
       unlocksAfter: [{ skill: 'planets', level: 1 }],
-      generate: orderItem,
+      generate: (L) => orderSpec(orderQuestion(L))!,
+      fromKey: (key) => orderSpec(key),
     },
   ],
 }

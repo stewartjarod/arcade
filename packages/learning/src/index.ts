@@ -15,6 +15,7 @@ export { skillSummary, subjectSummary, subjectDepth, subjectGrowth, type SkillIn
 
 // Subjects.
 export { SUBJECTS, findSkill, findSubject } from './subjects'
+export { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, type PlanetCard } from './subjects/space'
 
 // Ready-made UI.
 export { challenge, mathChallenge, type ChallengeOptions, type ChallengeResult } from './ui/challenge'

@@ -163,7 +163,6 @@ export const clocksCoins: Subject = {
       label: (L) => ["Telling time: o'clock", 'Telling time: half past', 'Telling time: quarter past and to', 'Telling time: every 5 minutes', 'Telling time: any minute'][L - 1]!,
       maxLevel: 5,
       formats: ['choice'],
-      startByGrade: { 1: 1, 2: 3 },
       generate: (L) => clockItem(...clockTime(L)),
       fromKey: (key) => {
         const m = key.match(/^clock:(\d+):(\d\d)$/)
@@ -175,7 +174,6 @@ export const clocksCoins: Subject = {
       label: (L) => ['What coins are worth', 'Counting the same coins', 'Counting coins up to 50¢', 'Counting coins up to $1', 'Making change'][L - 1]!,
       maxLevel: 5,
       formats: ['number', 'choice'],
-      startByGrade: { 1: 1, 2: 2 },
       generate: coinItem,
     },
   ],

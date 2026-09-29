@@ -71,8 +71,8 @@ export const subjectDepth = (l: Learner, subjectId: string) =>
   Math.max(0, ...l.unlockedSkills(subjectId).map((id) => l.rating(id)))
 
 /**
- * How far they've come in a subject since they started (0 = where their grade placed them).
- * Use this for in-game rewards, so everyone earns them by growing, whatever grade they're in.
+ * How far they've come in a subject from the very start (0 = brand new).
+ * Handy for in-game rewards like new worlds.
  */
 export const subjectGrowth = (l: Learner, subjectId: string) =>
-  Math.max(0, subjectDepth(l, subjectId) - subjectDepth(new Learner(l.playerId, null, { grade: l.grade }), subjectId))
+  Math.max(0, subjectDepth(l, subjectId) - subjectDepth(new Learner(l.playerId, null, {}), subjectId))

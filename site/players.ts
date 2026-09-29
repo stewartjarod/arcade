@@ -142,7 +142,7 @@ function openEditor(player: Player | null, changed: () => void) {
     colors.append(b)
   }
 
-  // School grade sets where each subject starts (they still move up and down as they play).
+  // Grade is just a label — everyone starts every skill at zero and the game finds their level.
   const grades = el('div', 'choices words')
   GRADES.forEach((g, i) => {
     const b = choice(g, i === grade, () => {
@@ -191,7 +191,7 @@ function openEditor(player: Player | null, changed: () => void) {
   form.append(
     el('h2', '', player ? `Change ${player.name}` : 'New player'),
     preview, name, el('h3', '', 'Pick a buddy'), avatars, el('h3', '', 'Pick a color'), colors,
-    el('h3', '', 'What grade are you in?'), grades, el('h3', '', 'Practice more of…'), focuses, buttons,
+    el('h3', '', 'What grade are you in? (just for fun)'), grades, el('h3', '', 'Practice more of…'), focuses, buttons,
   )
   dialog.append(form)
   dialog.addEventListener('close', () => dialog.remove())

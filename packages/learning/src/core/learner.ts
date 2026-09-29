@@ -9,6 +9,11 @@ import type { Item, Skill } from './types'
  * Ratings: "comfortable at level r" for each skill ("math.add": 3.4).
  * Facts:   questions they missed, which come back sooner until they stick.
  *
+ * Everyone starts every skill at level 1 — no guessing from age or grade. A new skill
+ * calibrates fast: each right answer at their level jumps a whole level, and the first
+ * miss settles them just below it. From then on it's gentle i+1. The baseline is saved on
+ * the player, so a skill calibrated in one game is already calibrated in every other game.
+ *
  * Games shouldn't change ratings directly — use startPractice() (practice.ts),
  * which applies the fairness rules.
  */
@@ -31,6 +36,8 @@ interface State {
   facts: Record<string, Fact>
   /** When each subject was last practiced (ms), to rotate subjects fairly. */
   last: Record<string, number>
+  /** Skills whose starting level has been found (see score()). */
+  calibrated: Record<string, boolean>
 }
 
 /** The old math-only save: { skills: { add: 3.2, ... }, stats: { seen, fast } }. */
@@ -40,12 +47,18 @@ export interface LegacyMath {
 }
 
 function adoptMath(state: State, old: LegacyMath) {
-  for (const [k, r] of Object.entries(old.skills ?? {})) if (r > 0) state.ratings[`math.${k}`] = r
+  for (const [k, r] of Object.entries(old.skills ?? {})) {
+    if (r > 0) state.ratings[`math.${k}`] = r
+    if (r > 0 && (old.stats?.seen?.[k] ?? 0) > 0) state.calibrated[`math.${k}`] = true // already knew their level
+  }
   for (const [k, n] of Object.entries(old.stats?.seen ?? {})) state.seen[`math.${k}`] = n
   for (const [k, n] of Object.entries(old.stats?.fast ?? {})) state.fast[`math.${k}`] = n
 }
 
-const fresh = (): State => ({ v: 2, ratings: {}, seen: {}, fast: {}, facts: {}, last: {} })
+const fresh = (): State => ({ v: 2, ratings: {}, seen: {}, fast: {}, facts: {}, last: {}, calibrated: {} })
+
+/** A new skill stops calibrating after its first miss, or after this many answers. */
+export const CALIBRATION_ANSWERS = 8
 
 // How long to wait before re-asking a fact, by box. Box 5 = learned: forgotten about.
 const MINUTE = 60_000
@@ -64,7 +77,7 @@ export class Learner {
   private stored: boolean
   private profile?: { grade?: number; focus?: string }
 
-  /** `profile` overrides the saved player's grade/focus (handy for tests and previews). */
+  /** `profile` overrides the saved player's grade/focus (handy for tests and previews). Grade is just for show. */
   constructor(playerId: string, state: State | null, profile?: { grade?: number; focus?: string }) {
     this.playerId = playerId
     this.stored = !!state
@@ -91,7 +104,12 @@ export class Learner {
     if (r !== undefined && r > 0) return r
     const skill = findSkill(skillId)
     if (!skill || !this.prereqsMet(skillId, skill)) return 0
-    return startLevel(skill, this.grade)
+    return 1 // everyone starts at the beginning, then calibrates quickly
+  }
+
+  /** Still finding their starting level in this skill? */
+  isCalibrating(skillId: string) {
+    return !this.state.calibrated[skillId] && this.seen(skillId) < CALIBRATION_ANSWERS
   }
 
   isUnlocked(skillId: string) {
@@ -129,9 +147,13 @@ export class Learner {
   }
 
   /**
-   * Elo-style update: surprise (result vs. expected) moves the rating; new skills move fast, then settle.
-   * `outcome`: 0 wrong … 1 right (1.1–1.2 = right and quick). `guess`: chance of being right by luck.
-   * Three quick first-try answers in a row at or above their level skip them ahead a little.
+   * Update a skill after an answer. `outcome`: 0 wrong … 1 right (1.1–1.2 = right and quick).
+   * `guess`: chance of being right by luck (1/3 with three choices, 0 when typed).
+   *
+   * Calibrating (a new skill): right at their level → jump up a level (less for a possible lucky
+   * guess); the first miss → settle half a level lower and stop calibrating.
+   * After that, Elo-style: surprise (result vs. expected) moves the rating, fast at first, then
+   * settling. Three quick first-try answers in a row at or above their level skip them ahead a little.
    */
   score(item: Item, outcome: number, guess = 0) {
     if (guess >= 1) return // the only option left: tells us nothing
@@ -140,13 +162,26 @@ export class Learner {
     const subject = id.split('.')[0]!
     const r = this.rating(id) || 1
     const seen = this.seen(id)
-    const expected = guess + (1 - guess) * solves(r, item.level)
-    const warmup = 1 + 1.5 * Math.max(0, 1 - seen / 15)
-    let next = Math.max(1, r + 0.4 * warmup * (outcome - expected))
-    let fast = outcome > 1 && item.level >= Math.round(next) ? (this.state.fast[id] ?? 0) + 1 : 0
-    if (fast >= 3) {
-      next += 0.25
-      fast = 0
+    let next: number
+    let fast = 0
+    if (this.isCalibrating(id)) {
+      if (outcome < 1) {
+        next = Math.max(1, r - 0.5)
+        this.state.calibrated[id] = true
+      } else {
+        // Only a question at (or above) their level tells us they're ready for more.
+        next = item.level >= Math.round(r) ? r + (1 - guess) : r
+      }
+      if (seen + 1 >= CALIBRATION_ANSWERS) this.state.calibrated[id] = true
+    } else {
+      const expected = guess + (1 - guess) * solves(r, item.level)
+      const warmup = 1 + 1.5 * Math.max(0, 1 - seen / 15)
+      next = Math.max(1, r + 0.4 * warmup * (outcome - expected))
+      fast = outcome > 1 && item.level >= Math.round(next) ? (this.state.fast[id] ?? 0) + 1 : 0
+      if (fast >= 3) {
+        next += 0.25
+        fast = 0
+      }
     }
     if (skill) next = Math.min(next, skill.maxLevel + 1)
     this.state.ratings[id] = next
@@ -207,15 +242,6 @@ export class Learner {
   }
 }
 
-/** Where a new player starts a skill: by their grade if the skill says so, else level 1. */
-function startLevel(skill: Skill, grade: number | undefined) {
-  const table = skill.startByGrade
-  if (!table || grade === undefined) return 1
-  let best = 1
-  for (const [g, level] of Object.entries(table)) if (Number(g) <= grade) best = level
-  return best
-}
-
 // Stored under a pseudo-game called "learning", so it's deleted with the player
 // and handed from Guest to the first real player like any other save.
 const key = (playerId: string) => playerKey('learning', 'v2', playerId)
@@ -224,7 +250,13 @@ const OLD_MATH_KEY = (playerId: string) => playerKey('learning', 'math', playerI
 function read(playerId: string): State | null {
   try {
     const raw = localStorage.getItem(key(playerId))
-    if (raw) return { ...fresh(), ...JSON.parse(raw) }
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<State>
+      const state: State = { ...fresh(), ...saved }
+      // Saved before calibration existed: skills with a few answers already have a real level.
+      if (!saved.calibrated) for (const [id, n] of Object.entries(state.seen)) if (n >= 3) state.calibrated[id] = true
+      return state
+    }
     // Before subjects existed, only math was saved, under another key.
     const old: LegacyMath | null = JSON.parse(localStorage.getItem(OLD_MATH_KEY(playerId)) ?? 'null')
     if (!old) return null

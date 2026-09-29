@@ -56,8 +56,6 @@ export interface Skill {
   listen?: boolean
   /** Skills that must reach a level first. */
   unlocksAfter?: { skill: string; level: number }[]
-  /** Starting level for a new player, by school grade (0 = kindergarten). Missing = locked/1. */
-  startByGrade?: Record<number, number>
   /** Make a question at a level. */
   generate(level: number): ItemSpec
   /** Rebuild a question from its key, to re-ask a fact they missed. */

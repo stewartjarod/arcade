@@ -42,9 +42,13 @@ To check the real site locally first: `pnpm build && pnpm preview`.
 
 ## Players & saves
 
-Pick or make a player on the homepage ("Who's playing?"). Set their **grade** (it decides where each
-subject starts) and, optionally, a subject to **practice more of**. Everything is saved in the browser, per player:
+Pick or make a player on the homepage ("Who's playing?"), and optionally a subject to **practice more of**.
+Everything is saved in the browser, per player:
 
+- **Where they start: zero.** Every skill starts at the very beginning — no guessing from age or grade.
+  A new skill calibrates fast: each right answer jumps a whole level, and the first miss settles them just
+  below it. Then it's gentle i+1. That baseline belongs to the player, so a skill found in one game is
+  already known in every other game.
 - **What they know** — every subject's levels, plus facts they missed (which come back until they stick),
   live on the *player*, not in a game. Practice in one game and they're levelled up in all of them.
   The homepage shows it: "What Millie is learning", with every skill.
@@ -100,7 +104,7 @@ Show questions with `renderPrompt(q.prompt)` (pictures, clocks, 🔊 read-aloud)
 `numberPad()`, `letterPad()` and `choicePad()`.
 
 For in-game rewards (new worlds, harder enemies), use `subjectGrowth(learner(), 'math')` — how far they've
-come since they started — so a 1st grader and a 2nd grader both earn them by growing.
+come since they started.
 
 **Adding a subject** — write one file in `packages/learning/src/subjects/` (copy `space.ts`: a list of skills,
 each with levels and a `generate(level)`), add it to `subjects/index.ts`, and run `pnpm test`: the content
@@ -114,6 +118,7 @@ games/
   _template/          starter every new game is copied from
   coin-hunt/          a game! (game.json + index.html + src/main.ts)
   mouse-maze-math/    3D maze + math practice (own world code; shared learning, sound, labels, mouse)
+  rocket-tour/        fly from the Sun to Neptune; space questions at each planet (add ?warp=3 to fly faster)
 packages/
   engine/             @arcade/engine — the shared game engine
   assets/             @arcade/assets — shared characters, models, sounds
