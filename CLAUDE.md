@@ -40,7 +40,7 @@ install at the root, wrap it as an engine behavior/helper, lazy-load heavy ones,
 - In-game rewards/unlocks use `subjectGrowth()`, not absolute levels (grade placement would skip rewards).
 - Display: `peekLearner()` + `skillSummary()`/`subjectSummary()` (fresh from storage); in-game: cached `learner()`.
 - Content must be correct for kids *and* grown-ups (facts checked; avoid answers that change over time). New subjects/skills must pass `pnpm test` — the sweep checks every level: answer present, `wrong(n)` returns n distinct options none of which score as right, `fromKey` round-trips. Use `check()` for exact-match content (capitalization) or partial credit (spelling).
-- Kids: 1st and 2nd graders. Keep prompts short; use `say` for anything a 1st grader can't read; `listen: true` only when sound is required.
+- Kids: Ima (1st grade) and Millie (2nd grade). Keep prompts short; use `say` for anything a 1st grader can't read; `listen: true` only when sound is required.
 ## Commands
 `pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm preview`
 Always run `pnpm typecheck && pnpm test && pnpm build` after changes.

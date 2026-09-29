@@ -47,7 +47,7 @@ subject starts) and, optionally, a subject to **practice more of**. Everything i
 
 - **What they know** — every subject's levels, plus facts they missed (which come back until they stick),
   live on the *player*, not in a game. Practice in one game and they're levelled up in all of them.
-  The homepage shows it: "What Mia is learning", with every skill.
+  The homepage shows it: "What Millie is learning", with every skill.
 - **Game saves** — `storage('my-game')` in the engine automatically saves for whoever is playing.
   Save a high score as `'best'` (e.g. `save.highScore(score)`) and it shows on the homepage card.
 - `game.player` has the current player's name, avatar, color and grade if a game wants them.
