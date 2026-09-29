@@ -15,6 +15,10 @@ export interface Player {
   avatar: string
   color: string
   created: string
+  /** School grade (0 = kindergarten). Sets where each subject starts. */
+  grade?: number
+  /** A subject id a grown-up wants practiced more (e.g. "math"). */
+  focus?: string
 }
 
 export const AVATARS = ['🦊', '🐱', '🐶', '🐼', '🐸', '🦄', '🐙', '🦖', '🐧', '🐯', '🐰', '🐻', '🐵', '🦉', '🐲', '🤖', '👽', '🧙', '🦸', '🧜'] as const
@@ -64,7 +68,7 @@ export function selectPlayer(id: string) {
   write(CURRENT, id)
 }
 
-export function createPlayer(info: Pick<Player, 'name' | 'avatar' | 'color'>): Player {
+export function createPlayer(info: Pick<Player, 'name' | 'avatar' | 'color'> & Partial<Pick<Player, 'grade' | 'focus'>>): Player {
   const players = listPlayers()
   const player: Player = {
     id: Math.random().toString(36).slice(2, 10),
@@ -72,6 +76,8 @@ export function createPlayer(info: Pick<Player, 'name' | 'avatar' | 'color'>): P
     avatar: info.avatar,
     color: info.color,
     created: new Date().toISOString(),
+    grade: info.grade,
+    focus: info.focus,
   }
   if (players.length === 0) moveSaves(GUEST.id, player.id)
   write(PLAYERS, [...players, player])
@@ -79,7 +85,7 @@ export function createPlayer(info: Pick<Player, 'name' | 'avatar' | 'color'>): P
   return player
 }
 
-export function updatePlayer(id: string, changes: Partial<Pick<Player, 'name' | 'avatar' | 'color'>>) {
+export function updatePlayer(id: string, changes: Partial<Pick<Player, 'name' | 'avatar' | 'color' | 'grade' | 'focus'>>) {
   if (changes.name !== undefined) changes.name = changes.name.trim().slice(0, 20) || 'Player'
   write(PLAYERS, listPlayers().map((p) => (p.id === id ? { ...p, ...changes } : p)))
 }
@@ -99,6 +105,13 @@ export function deletePlayer(id: string) {
 }
 
 /** The localStorage key for one piece of one game's save data, for the current player. */
+/** Look up one player (or undefined). */
+export function getPlayer(id: string): Player | undefined {
+  return id === GUEST.id ? GUEST : listPlayers().find((p) => p.id === id)
+}
+
+export const GRADES = ['K', '1st', '2nd', '3rd', '4th', '5th'] as const
+
 export function playerKey(game: string, key: string, playerId = currentPlayer().id) {
   return `${prefix(playerId)}${game}:${key}`
 }

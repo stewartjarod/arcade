@@ -21,7 +21,7 @@ install at the root, wrap it as an engine behavior/helper, lazy-load heavy ones,
 - `packages/engine` (`@arcade/engine`) — Game, Entity, behaviors, shapes, input, hud, tweens, particles, loaders, util; `audio.ts` (shared synth: `tone`/`noise`, `sfx.*`, `music.play(track)`, `setMuted`; auto-unlocks on first gesture), `labels.ts` (`answerSign`, `emojiSprite`), `confetti()`. Re-exports `THREE`. `sideEffects: false`, so games that use only a few parts (like Mouse Maze Math) don't pull in the rest.
 - `packages/assets` (`@arcade/assets`) — shared prefabs (`buddy`, `coin`, `starPickup`, `tree`, `cloud`, `spiky`, `platform`), `mouseModel({ color, hat })` and shared files imported as `@arcade/assets/models/x.glb?url`.
 - `packages/players` (`@arcade/players`) — profiles in localStorage (`arcade:players`, `arcade:current-player`); all per-player data lives under `arcade:p:<playerId>:<game>:<key>` via `playerKey()`, so deleting a player and Guest→first-player hand-off just move/remove that prefix. Falls back to a `guest` player.
-- `packages/learning` (`@arcade/learning`) — the i+1 math model (`math.ts`: generator, Elo-style `updateSkill`, unlock order, distractors), each player's cached learner (`mathLearner()`, stored at `playerKey('learning', 'math')`), the `Practice → Moment → Question` API, `numberPad()` and `mathChallenge()`. Tests in `practice.test.ts` (`pnpm test`).
+- `packages/learning` (`@arcade/learning`) — i+1 learning for every subject. `core/`: types (Subject → Skill → Item; formats `number|choice|letters`), `learner.ts` (one per-player state at `playerKey('learning','v2')`: ratings per `subject.skill`, seen/fast, missed-fact spaced repetition, grade placement via `startByGrade`, unlocks via `unlocksAfter`, migration from the old `learning:math` key), `scheduler.ts` (focus subject 50%, stalest subject, weaker skills, due facts 35%, level mix 70/20/10), `practice.ts` (Practice → Moment → Question), `summary.ts`. `subjects/`: math, reading, writing, space, geography, clocks (+ shared word lists). `ui/`: numberPad, letterPad, choicePad, renderPrompt, speak (TTS), `challenge()`. Tests: `core/core.test.ts`, `subjects/subjects.test.ts` (content sweep).
 - Single multi-page Vite app: `vite.config.ts` lists the landing page plus every non-`_` game as build inputs → `dist/index.html`, `dist/games/<slug>/index.html`; three.js lands in one shared chunk.
 
 ## Engine conventions
@@ -29,16 +29,18 @@ install at the root, wrap it as an engine behavior/helper, lazy-load heavy ones,
 - Tags drive interaction: `'player'`, `'enemy'`, `'coin'`, `'solid'` (landed on by `gravity()`). Collision is sphere-based via `entity.radius` / `touches()`.
 - Levels are scene functions `(game) => void | cleanup`; `game.setScene(fn)` wipes the world, `game.restart()` reruns the current one.
 - `game.state` for per-run values (score), `storage(slug)` for per-player persistence (`'best'` shows on the homepage card), `game.player` for who's playing.
-- Never write to localStorage with raw keys in a game — go through `storage()`, `playerKey()` or `mathLearner()` so saves stay per-player.
+- Never write to localStorage with raw keys in a game — go through `storage()`, `playerKey()` or `@arcade/learning` so saves stay per-player.
 - Promote anything reused by 2+ games into `packages/`.
 
 ## Learning rules (important)
-- Every game should include i+1 practice, and it must go through `@arcade/learning` so skills are shared per player across all games.
-- Use `mathChallenge()` for a quick typed question, or `startPractice()` → `practice.moment()` → `moment.ask()` → `moment.check/record()` for custom UIs. One `Practice` per level/round; one `Moment` per challenge (its questions share the max-drop safety net and only its first question earns the speed bonus).
-- Never call `updateSkill`/`limitDrop`/`chooseProblem` directly from a game, never keep a separate copy of skills, and never score retries — `Moment` enforces first-answer-only, speed bonus, guess discount (`choices` = options still open) and the drop limit.
-- For display only (homepage, profile cards) use `peekMathSkills()` + `skillSummary()`; in-game use the cached `mathLearner()`.
-- New subjects (spelling, reading...) should follow the same shape: model + per-player learner + Practice API in `@arcade/learning`.
-
+- Every game should include i+1 practice, and it must go through `@arcade/learning` so progress is shared per player across all games and subjects.
+- Quick question: `challenge({ title, subjects?, formats? })`. Custom UI: `startPractice({ subjects?, formats })` → `practice.moment()` → `moment.ask()` → `moment.check(q, response, { choices })` / `moment.record(q, correct|0..1, { choices })`. One `Practice` per level/round; one `Moment` per challenge (shared max-drop safety net; only its first question can earn the speed bonus).
+- Declare only the `formats` the game can actually show. Show `q.prompt` fully (emoji/svg/`say` via `renderPrompt`) — questions for young kids depend on pictures and read-aloud.
+- Never call `learner.score`/`limitDrop`/`pickItem` from a game, never keep a copy of ratings, never score retries.
+- In-game rewards/unlocks use `subjectGrowth()`, not absolute levels (grade placement would skip rewards).
+- Display: `peekLearner()` + `skillSummary()`/`subjectSummary()` (fresh from storage); in-game: cached `learner()`.
+- Content must be correct for kids *and* grown-ups (facts checked; avoid answers that change over time). New subjects/skills must pass `pnpm test` — the sweep checks every level: answer present, `wrong(n)` returns n distinct options none of which score as right, `fromKey` round-trips. Use `check()` for exact-match content (capitalization) or partial credit (spelling).
+- Kids: 1st and 2nd graders. Keep prompts short; use `say` for anything a 1st grader can't read; `listen: true` only when sound is required.
 ## Commands
 `pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm preview`
 Always run `pnpm typecheck && pnpm test && pnpm build` after changes.

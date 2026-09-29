@@ -1,8 +1,8 @@
 import {
-  AVATARS, PLAYER_COLORS, createPlayer, currentPlayer, deletePlayer, listPlayers,
+  AVATARS, GRADES, PLAYER_COLORS, createPlayer, currentPlayer, deletePlayer, listPlayers,
   onPlayersChanged, selectPlayer, updatePlayer, type Player,
 } from '@arcade/players'
-import { peekMathSkills, skillSummary } from '@arcade/learning'
+import { SUBJECTS, peekLearner, skillSummary, subjectSummary } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  "Who's playing?" — pick, make, edit and delete players.
@@ -11,7 +11,7 @@ import { peekMathSkills, skillSummary } from '@arcade/learning'
 
 export function mountPlayers(root: HTMLElement, onChange: () => void) {
   const render = () => {
-    root.replaceChildren(...playerRow(rerender), skillLine())
+    root.replaceChildren(...playerRow(rerender), learningCard())
   }
   const rerender = () => {
     render()
@@ -62,15 +62,37 @@ function playerRow(changed: () => void): HTMLElement[] {
   return [title, row]
 }
 
-/** "🦊 Mia's math: Adding up to 20 · Times tables: 2, 10" — shared by every game. */
-function skillLine() {
-  const line = el('p', 'skills-line')
+/** What the current player is learning, in every subject (shared by every game). */
+function learningCard() {
   const player = currentPlayer()
-  const skills = peekMathSkills(player.id)
-  if (!skills) return line
-  const levels = skillSummary(skills).filter((s) => s.unlocked).map((s) => s.label)
-  line.textContent = `🧠 ${player.name}'s math: ${levels.join(' · ')}`
-  return line
+  const l = peekLearner(player.id)
+  const card = el('section', 'learning')
+  const grade = player.grade !== undefined ? ` · ${GRADES[player.grade]} grade` : ''
+  card.append(el('h3', 'learning-title', `🧠 What ${player.name} is learning${grade}`))
+  const grid = el('div', 'subjects')
+  for (const s of subjectSummary(l)) {
+    const tile = el('details', 'subject')
+    if (player.focus === s.id) tile.classList.add('focus')
+    const summary = el('summary')
+    const bar = el('i')
+    bar.append(el('b'))
+    ;(bar.firstChild as HTMLElement).style.width = `${Math.round(Math.max(0.04, s.progress) * 100)}%`
+    summary.append(
+      el('span', 'subject-emoji', s.emoji),
+      el('span', 'subject-name', s.name + (player.focus === s.id ? ' 📌' : '')),
+      el('span', 'subject-now', s.started ? s.current : `Ready: ${s.current}`),
+      bar,
+    )
+    if (s.review) summary.append(el('span', 'subject-review', `🔁 ${s.review} to practice again`))
+    const skills = el('ul', 'subject-skills')
+    for (const k of skillSummary(l, s.id)) {
+      skills.append(el('li', k.unlocked ? (k.mastered ? 'done' : '') : 'locked', `${k.mastered ? '⭐' : k.unlocked ? '▸' : '🔒'} ${k.label}${k.unlocked ? '' : ' — coming soon'}`))
+    }
+    tile.append(summary, skills)
+    grid.append(tile)
+  }
+  card.append(grid)
+  return card
 }
 
 // --- The make/edit dialog ---
@@ -80,6 +102,8 @@ function openEditor(player: Player | null, changed: () => void) {
   dialog.className = 'editor'
   let avatar = player?.avatar ?? pickUnused(AVATARS, listPlayers().map((p) => p.avatar))
   let color = player?.color ?? pickUnused(PLAYER_COLORS, listPlayers().map((p) => p.color))
+  let grade = player?.grade
+  let focus = player?.focus
 
   const form = document.createElement('form')
   form.method = 'dialog'
@@ -118,6 +142,27 @@ function openEditor(player: Player | null, changed: () => void) {
     colors.append(b)
   }
 
+  // School grade sets where each subject starts (they still move up and down as they play).
+  const grades = el('div', 'choices words')
+  GRADES.forEach((g, i) => {
+    const b = choice(g, i === grade, () => {
+      grade = grade === i ? undefined : i
+      grades.querySelectorAll('.on').forEach((n) => n.classList.remove('on'))
+      if (grade !== undefined) b.classList.add('on')
+    })
+    grades.append(b)
+  })
+
+  // A grown-up can ask for more of one subject.
+  const focuses = el('div', 'choices words')
+  for (const [id, label] of [[undefined, 'Everything'], ...SUBJECTS.map((s) => [s.id, `${s.emoji} ${s.name}`])] as [string | undefined, string][]) {
+    const b = choice(label, id === focus, () => {
+      focus = id
+      select(focuses, b)
+    })
+    focuses.append(b)
+  }
+
   const buttons = el('div', 'editor-buttons')
   if (player) {
     const del = el('button', 'danger', 'Delete')
@@ -138,14 +183,15 @@ function openEditor(player: Player | null, changed: () => void) {
   buttons.append(cancel, ok)
 
   form.addEventListener('submit', () => {
-    if (player) updatePlayer(player.id, { name: name.value, avatar, color })
-    else createPlayer({ name: name.value, avatar, color })
+    if (player) updatePlayer(player.id, { name: name.value, avatar, color, grade, focus })
+    else createPlayer({ name: name.value, avatar, color, grade, focus })
     changed()
   })
 
   form.append(
     el('h2', '', player ? `Change ${player.name}` : 'New player'),
-    preview, name, el('h3', '', 'Pick a buddy'), avatars, el('h3', '', 'Pick a color'), colors, buttons,
+    preview, name, el('h3', '', 'Pick a buddy'), avatars, el('h3', '', 'Pick a color'), colors,
+    el('h3', '', 'What grade are you in?'), grades, el('h3', '', 'Practice more of…'), focuses, buttons,
   )
   dialog.append(form)
   dialog.addEventListener('close', () => dialog.remove())

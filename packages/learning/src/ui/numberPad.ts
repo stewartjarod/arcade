@@ -1,4 +1,6 @@
 import { sfx } from '@arcade/engine'
+import type { Prompt } from '../core/types'
+import { renderPrompt } from './prompt'
 
 /**
  * A pop-up number pad for typed answers — works with touch, mouse and keyboard.
@@ -11,7 +13,8 @@ import { sfx } from '@arcade/engine'
  * Restyle it with CSS variables: --pad-accent, --pad-ink, --pad-good, --pad-bad, --pad-border.
  */
 export interface NumberPad {
-  ask(o: { title: string; text: string; msg?: string }): Promise<number>
+  /** Show a sum (`text: "7 + 5"`) or any question (`prompt`), and wait for their answer. */
+  ask(o: { title: string; text?: string; prompt?: Prompt; listen?: boolean; msg?: string }): Promise<number>
   /** Show a message and give the pad a little shake. */
   feedback(msg: string): void
   close(): void
@@ -38,6 +41,10 @@ const CSS = `
 .num-pad-title { font-weight: 700; font-size: 1rem; color: #6b5f99; }
 .num-pad-row { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 6px; }
 .num-pad-q { font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 700; white-space: nowrap; }
+.num-pad-q:empty { display: none; }
+.num-pad-q.long { font-size: clamp(1.2rem, 5vw, 1.5rem); white-space: normal; text-align: right; }
+.num-pad-prompt:empty { display: none; }
+.num-pad-prompt { margin-top: 4px; }
 .num-pad input { width: 3.6em; min-width: 0; font: inherit; font-size: 2rem; font-weight: 700; text-align: center;
   border-radius: 18px; border: 4px solid var(--pad-accent); background: #fff; color: var(--pad-ink); padding: .05em;
   caret-color: #8a5cf6; -webkit-user-select: text; user-select: text; outline: none; }
@@ -67,6 +74,7 @@ function createPad(): NumberPad {
     .join('')
   form.innerHTML = `
     <div class="num-pad-title"></div>
+    <div class="num-pad-prompt"></div>
     <div class="num-pad-row"><div class="num-pad-q"></div><input inputmode="none" autocomplete="off" aria-label="Your answer" /></div>
     <div class="num-pad-keys">${keys}
       <button type="button" data-key="back" aria-label="Delete">⌫</button><button type="button" data-key="0">0</button><button type="submit" class="go" aria-label="Check">✓</button>
@@ -114,7 +122,11 @@ function createPad(): NumberPad {
     ask(o) {
       return new Promise<number>((res) => {
         $('.num-pad-title').textContent = o.title
-        $('.num-pad-q').textContent = `${o.text} =`
+        // Sums sit next to the answer box ("7 + 5 = [  ]"); anything else goes above it.
+        const sum = o.prompt ? (o.prompt.sum && !o.prompt.emoji && !o.prompt.svg ? o.prompt.text : null) : (o.text ?? '')
+        $('.num-pad-q').textContent = sum !== null ? `${sum} =` : ''
+        $('.num-pad-q').classList.toggle('long', (sum ?? '').length > 12)
+        $('.num-pad-prompt').replaceChildren(...(o.prompt && sum === null ? [renderPrompt(o.prompt, { listen: o.listen })] : []))
         $('.num-pad-msg').textContent = o.msg ?? ''
         input.value = ''
         form.hidden = false

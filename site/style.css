@@ -84,7 +84,6 @@ footer { text-align: center; padding: 24px 16px 40px; opacity: 0.6; }
   position: absolute; top: -2px; right: 2px; width: 30px; height: 30px; display: grid; place-items: center;
   background: #fff; border-radius: 50%; font-size: 0.95rem; box-shadow: 0 2px 6px #0006;
 }
-.skills-line { margin: 14px 0 0; opacity: 0.8; font-size: 1rem; min-height: 1.3em; }
 .best { margin-top: 10px !important; font-weight: 700; }
 
 /* --- Make/edit player dialog --- */
@@ -118,3 +117,22 @@ footer { text-align: center; padding: 24px 16px 40px; opacity: 0.6; }
 .editor-buttons .go { background: #ffd43b; color: #222; box-shadow: 0 5px 0 #c9a200; }
 .editor-buttons .plain { background: #ffffff22; color: #fff; }
 .editor-buttons .danger { background: none; color: #ff8787; margin-right: auto; padding-left: 4px; }
+
+/* --- What they're learning --- */
+.learning { max-width: 900px; margin: 18px auto 0; text-align: left; }
+.learning-title { text-align: center; margin: 0 0 10px; font-size: 1.15rem; opacity: .9; }
+.subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-items: start; }
+.subject { background: #ffffff14; border-radius: 18px; padding: 10px 14px; border: 2px solid transparent; }
+.subject.focus { border-color: #ffd43b; }
+.subject summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; }
+.subject summary::-webkit-details-marker { display: none; }
+.subject-emoji { grid-row: span 3; font-size: 2rem; }
+.subject-name { font-weight: 700; }
+.subject-now { font-size: .9rem; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subject i { display: block; height: 8px; border-radius: 6px; background: #0004; overflow: hidden; margin-top: 4px; }
+.subject i b { display: block; height: 100%; background: linear-gradient(90deg, #ffc93c, #ff8a3d); border-radius: 6px; }
+.subject-review { grid-column: 2; font-size: .8rem; opacity: .75; margin-top: 4px; }
+.subject-skills { margin: 10px 0 2px; padding: 0 0 0 4px; list-style: none; font-size: .92rem; display: grid; gap: 4px; }
+.subject-skills .locked { opacity: .45; }
+.subject-skills .done { color: #ffd43b; }
+.choices.words .choice { width: auto; padding: 0 12px; font-size: 1rem; font-family: inherit; font-weight: 600; color: #fff; }

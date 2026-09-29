@@ -42,50 +42,69 @@ To check the real site locally first: `pnpm build && pnpm preview`.
 
 ## Players & saves
 
-Pick or make a player on the homepage ("Who's playing?"). Everything is saved in the browser, per player:
+Pick or make a player on the homepage ("Who's playing?"). Set their **grade** (it decides where each
+subject starts) and, optionally, a subject to **practice more of**. Everything is saved in the browser, per player:
 
+- **What they know** — every subject's levels, plus facts they missed (which come back until they stick),
+  live on the *player*, not in a game. Practice in one game and they're levelled up in all of them.
+  The homepage shows it: "What Mia is learning", with every skill.
 - **Game saves** — `storage('my-game')` in the engine automatically saves for whoever is playing.
   Save a high score as `'best'` (e.g. `save.highScore(score)`) and it shows on the homepage card.
-- **Math skills** — the i+1 learning model lives on the *player*, not in a game, so every game
-  shares it. Practice in one game and you're levelled up in all of them. See "Learning in every game" below.
-- `game.player` has the current player's name, avatar and color if a game wants to show them.
+- `game.player` has the current player's name, avatar, color and grade if a game wants them.
 
 Until someone makes a player, you play as Guest; the first player you create keeps Guest's progress.
 
 ## Learning in every game
 
-Every game can (and should!) sneak in some math. All of it goes through `@arcade/learning`,
-which picks questions at the player's level — mostly just right, sometimes one step harder (that's "i+1") —
-and saves progress to their profile.
+Every game can (and should!) sneak in some learning. It all goes through `@arcade/learning`, which picks
+questions at the player's level — mostly just right, sometimes one step harder (that's "i+1") — in any subject:
 
-**The one-liner** — a pop-up question with a number pad:
+| Subject | Skills (they unlock and level up as you go) |
+| --- | --- |
+| 🔢 Math | + and − (10 → 1000s), times tables, division, place value, skip counting |
+| 📚 Reading | first sounds, picture words (cat → frog → cake → star), sight words (heard aloud), short stories |
+| ✏️ Writing | spelling words you hear, spotting the right spelling, capitals & punctuation |
+| 🪐 Space | planet names, their order from the Sun, what makes each one special |
+| 🌎 Geography | continents & oceans, countries, then US states & capitals |
+| ⏰ Clocks & Coins | telling time on a real clock, counting coins, making change |
+
+**The one-liner** — a pop-up question in whatever subject fits, with the right pad (numbers, letters or choices):
 
 ```ts
-import { mathChallenge } from '@arcade/learning'
+import { challenge } from '@arcade/learning'
 
 game.paused = true
-const { solved } = await mathChallenge({ title: '⭐ Bonus star! Solve it for −10 seconds' })
+const { solved } = await challenge({ title: '⭐ Bonus star!' })   // or { subjects: ['space'] }
 game.paused = false
 ```
 
 The template (and Coin Hunt) already have a bonus star that does this.
 
-**Your own way of asking** — multiple-choice doors, answers on balloons, anything:
+**Your own way of asking** — doors, balloons, anything. Say which answer styles your game can show:
 
 ```ts
 import { startPractice } from '@arcade/learning'
 
-const practice = startPractice()          // once per level
+const practice = startPractice({ formats: ['choice'] })   // once per level; optionally subjects: [...]
 const moment = practice.moment()          // one challenge (a door, a boss, a gate)
-const q = moment.ask()                    // q.text is "7 + 5", q.answer is 12
-const options = q.options(3)              // [11, 12, 14] — believable wrong answers
+const q = moment.ask()                    // q.prompt = { text, emoji?, svg?, say? }, q.answer = "12"
+const options = q.options(3)              // ["11", "12", "14"] — believable wrong answers
 // ...player picks one...
-moment.record(q, picked === q.answer, { choices: 3 })   // or moment.check(q, typedNumber)
-practice.grew()                           // ["Adding up to 20"] — for the level-complete screen
+moment.check(q, picked, { choices: 3 })   // → true/false; their levels move
+practice.grew()                           // ["Adding up to 100"] — for the level-complete screen
 ```
 
 It handles the fairness rules for you: only the first answer counts, fast answers count a bit extra,
-lucky guesses count less, and one bad moment can't undo a level.
+lucky guesses count less, one bad moment can't undo a level, and missed facts come back later.
+Show questions with `renderPrompt(q.prompt)` (pictures, clocks, 🔊 read-aloud) or use the ready-made
+`numberPad()`, `letterPad()` and `choicePad()`.
+
+For in-game rewards (new worlds, harder enemies), use `subjectGrowth(learner(), 'math')` — how far they've
+come since they started — so a 1st grader and a 2nd grader both earn them by growing.
+
+**Adding a subject** — write one file in `packages/learning/src/subjects/` (copy `space.ts`: a list of skills,
+each with levels and a `generate(level)`), add it to `subjects/index.ts`, and run `pnpm test`: the content
+sweep checks every question at every level is answerable and fair.
 
 ## What's where
 
@@ -99,7 +118,7 @@ packages/
   engine/             @arcade/engine — the shared game engine
   assets/             @arcade/assets — shared characters, models, sounds
   players/            @arcade/players — player profiles + per-player saves (localStorage)
-  learning/           @arcade/learning — i+1 math practice, number pad, mathChallenge (saved on the player)
+  learning/           @arcade/learning — i+1 practice in every subject, pads, challenge() (saved on the player)
 scripts/              new / dev
                       pnpm test runs the learning tests
 ```
@@ -147,11 +166,11 @@ so there is nothing to install per game. Start from `games/_template/src/main.ts
 | `@arcade/engine` | The `Game` world, entities, behaviors, shapes, input, sound, HUD, tweens, particles, `storage()`. Also re-exports `THREE`, so `import { THREE } from '@arcade/engine'` and you never need to install three yourself. | `import { Game, box, moveWithKeys, storage } from '@arcade/engine'` |
 | `@arcade/assets` | Ready-made things: `buddy` `coin` `starPickup` `tree` `cloud` `spiky` `platform`, plus shared `.glb` models. | `import { buddy, coin } from '@arcade/assets'` |
 | `@arcade/players` | Who is playing, plus per-player save keys. Mostly used through the engine (`game.player`, `storage()`). | `import { currentPlayer } from '@arcade/engine'` |
-| `@arcade/learning` | Adaptive math: `mathChallenge()` pops up a question at the player's level. Lower-level pieces are `mathLearner()`, `chooseProblem`, `updateSkill`. | `import { mathChallenge } from '@arcade/learning'` |
+| `@arcade/learning` | i+1 learning in every subject: `challenge()` pops up a question at the player's level; `startPractice()` for your own way of asking; `numberPad` / `letterPad` / `choicePad`. | `import { challenge } from '@arcade/learning'` |
 
 Rules of thumb:
 - **Saving anything?** Use `storage('my-game')`, never raw `localStorage`, so saves stay per-player.
-- **Asking math questions?** Use `mathChallenge()` or `mathLearner()`, never your own copy, so skill levels are shared by every game.
+- **Asking questions (any subject)?** Use `challenge()` or `startPractice()`, never your own copy, so levels are shared by every game.
 - **Need a shared model or sound?** Import it with a `?url` suffix, for example `import hat from '@arcade/assets/models/hat.glb?url'`, then `loadModel(hat)`.
 - **Made something two games could use?** Move it into a package (see below).
 

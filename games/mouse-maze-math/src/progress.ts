@@ -1,8 +1,10 @@
-import { mathDepth } from '@arcade/learning'
+import { learner, subjectGrowth } from '@arcade/learning'
 import { realmForDepth } from './realms'
 import { save } from './save'
 
-export const depth = () => mathDepth(save.skills)
+// Realms are earned by growing in math from wherever you started (1 = where your grade placed you),
+// so a 1st grader and a 2nd grader both begin in the Cheese Cupboards.
+export const depth = () => 1 + subjectGrowth(learner(), 'math')
 
 export const activeRealm = () => {
   save.realmMax = Math.max(save.realmMax, realmForDepth(depth()))

@@ -1,11 +1,10 @@
-import { mathLearner, type Skills, type Stats } from '@arcade/learning'
+import { learner, type LegacyMath } from '@arcade/learning'
 import { playerKey } from '@arcade/players'
 
+// Math levels aren't saved here: they live on the player's profile (@arcade/learning),
+// shared with every game. This save is just Mouse Maze Math's own stuff.
 export type Save = {
   cheese: number
-  /** The player's math levels — shared with every game (see @arcade/learning). */
-  skills: Skills
-  stats: Stats
   mazes: number
   realmMax: number
   realmPick: number
@@ -18,14 +17,12 @@ export type Save = {
   muted: boolean
 }
 
-type GameSave = Omit<Save, 'skills' | 'stats'>
-
 // Game-only things (cheese, stickers, closet) live in this game's slot for the current player.
 const KEY = playerKey('mouse-maze-math', 'v1')
 // Before players existed, everything (skills included) lived under this one key.
 const LEGACY_KEY = 'mouse-maze-math:v1'
 
-const fresh = (): GameSave => ({
+const fresh = (): Save => ({
   cheese: 0,
   mazes: 0,
   realmMax: 0,
@@ -39,15 +36,13 @@ const fresh = (): GameSave => ({
   muted: false,
 })
 
-const read = (key: string): (Partial<Save> & Record<string, unknown>) | null => {
+const read = (key: string): (Partial<Save> & LegacyMath) | null => {
   try {
     return JSON.parse(localStorage.getItem(key) ?? 'null')
   } catch {
     return null
   }
 }
-
-const math = mathLearner()
 
 const load = (): Save => {
   let stored = read(KEY)
@@ -62,26 +57,24 @@ const load = (): Save => {
       }
     }
   }
+  // Old saves kept math levels here; hand them to the profile if it has none yet.
   const { skills, stats, ...game } = stored ?? {}
-  if (math.isNew && skills) {
-    Object.assign(math.skills, skills)
-    if (stats?.seen) Object.assign(math.stats.seen, stats.seen)
-    if (stats?.fast) Object.assign(math.stats.fast, stats.fast)
+  const profile = learner()
+  if (skills && profile.isNew) {
+    profile.adoptLegacyMath({ skills, stats })
+    profile.save()
   }
-  // skills/stats are the learner's own objects, so updates made through save.skills are shared.
-  return { ...fresh(), ...game, skills: math.skills, stats: math.stats }
+  return { ...fresh(), ...game }
 }
 
 export const save = load()
 
 export const commit = () => {
-  const { skills: _skills, stats: _stats, ...game } = save
   try {
-    localStorage.setItem(KEY, JSON.stringify(game))
+    localStorage.setItem(KEY, JSON.stringify(save))
   } catch {
     /* storage unavailable: progress just won't be remembered */
   }
-  math.save()
 }
 
 // Write straight away so progress adopted from the legacy key is never only in memory.

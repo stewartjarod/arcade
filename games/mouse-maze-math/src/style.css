@@ -39,6 +39,7 @@ button.chip { color: var(--ink); border: 0; font-family: inherit; cursor: pointe
 #q { margin: 10px auto 0; max-width: 520px; text-align: center; background: #fffaf0; color: var(--dark); border-radius: 26px; padding: 8px 16px 10px; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25); border: 4px solid var(--accent); transition: opacity 0.25s, transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
 #q.off { opacity: 0; transform: translateY(-20px) scale(0.9); pointer-events: none; }
 #qtext { font-size: clamp(2.4rem, 11vw, 3.8rem); font-weight: 700; line-height: 1.1; letter-spacing: 0.02em; }
+#qtext.long { font-size: clamp(1.4rem, 6vw, 2rem); line-height: 1.2; }
 #qtext .op { color: #8a5cf6; }
 #qtext .qmark { display: inline-block; color: #ff5d8f; animation: wiggle 1.4s ease-in-out infinite; }
 @keyframes wiggle { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }

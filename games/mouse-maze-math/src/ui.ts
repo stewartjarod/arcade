@@ -1,5 +1,5 @@
 import { COLORS, HATS, STICKERS } from './catalog'
-import { numberPad, problemHTML, skillSummary } from '@arcade/learning'
+import { learner, numberPad, problemHTML, skillSummary, type Prompt } from '@arcade/learning'
 import { confetti as rain, setMuted } from '@arcade/engine'
 import { REALMS } from './realms'
 import { commit, save } from './save'
@@ -41,7 +41,7 @@ const playerTag = () => {
 export const showMenu = () => {
   $('hud').hidden = true
   closeTrap()
-  const bars = skillSummary(save.skills)
+  const bars = skillSummary(learner(), 'math')
     .map((sk) => sk.unlocked
       ? `<div class="skill"><span>${sk.label}</span><i><b style="width:${Math.round(sk.progress * 100)}%"></b></i></div>`
       : `<div class="skill locked"><span>🔒 ${sk.label}</span></div>`)
@@ -107,10 +107,14 @@ export const setStreak = (n: number) => {
   $('streak').textContent = n >= 2 ? `🔥 ${n} in a row` : ''
   $('streak').hidden = n < 2
 }
-export const setQuestion = (text: string | null) => {
-  $('q').classList.toggle('off', text === null)
-  if (text !== null) {
-    $('qtext').innerHTML = `${problemHTML(text)} <span class="op">=</span> <span class="qmark">?</span>`
+export const setQuestion = (prompt: Prompt | null) => {
+  $('q').classList.toggle('off', prompt === null)
+  if (prompt !== null) {
+    // Sums get "= ?"; other questions ("What digit is in the tens place of 47?") show as they are.
+    $('qtext').innerHTML = prompt.sum
+      ? `${problemHTML(prompt.text)} <span class="op">=</span> <span class="qmark">?</span>`
+      : problemHTML(prompt.text).replace('__', '<span class="qmark">?</span>')
+    $('qtext').classList.toggle('long', prompt.text.length > 14)
     $('qhint').textContent = 'Which door leads to the cheese? 🧀'
   }
 }

@@ -45,7 +45,7 @@ export const createGame = (world: World) => {
       for (let tries = 0; ; ) {
         const v = await ui.askNumber({
           title: `🪤 Caught! Solve ${CAGE_QUESTIONS - solved} more to escape`,
-          text: q.text,
+          prompt: q.prompt,
           msg,
         })
         // Only the first typed answer is scored; the moment ignores retries.
@@ -83,7 +83,8 @@ export const createGame = (world: World) => {
   const play = async () => {
     const n = save.mazes + 1
     const level = { name: `Maze ${n}`, emoji: '🧀', junctions: Math.min(4 + Math.floor(n / 2), 10) }
-    const practice = startPractice()
+    // Math questions that can be answered by picking a door.
+    const practice = startPractice({ subjects: ['math'], formats: ['choice'] })
     const realm = REALMS[activeRealm()]!
     const layout = generateMaze(level.junctions, Math.min(0.3 + n * 0.02, 0.5), { runs: realm.runs, len: realm.len })
     world.load(layout, realm)
@@ -115,7 +116,7 @@ export const createGame = (world: World) => {
         const choices = j.exits.length - tried.size
         const firstTry = tried.size === 0
         const labels = q.options(j.exits.length, correctIdx).map(String)
-        ui.setQuestion(q.text)
+        ui.setQuestion(q.prompt)
         world.showSigns(k, labels)
         ui.showAnswers(labels, realm.doors, (i) => pending?.(i), world.setHover)
         q.restartTimer()
