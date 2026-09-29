@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Mouse Maze Math</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🐭</text></svg>" />
+    <meta name="theme-color" content="#2a2540" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="hud" hidden>
+      <div class="hud-row">
+        <button class="chip btn" data-act="menu">☰ Menu</button>
+        <span id="lvl" class="chip"></span>
+        <span class="spacer"></span>
+        <span id="streak" class="chip"></span>
+        <span id="cheese" class="chip"></span>
+      </div>
+      <div id="progress"><div id="bar"></div></div>
+      <div id="q"><div id="qtext"></div><div id="qhint"></div></div>
+    </div>
+    <div id="answers" class="off"></div>
+    <div id="toast"></div>
+    <form id="trap" hidden autocomplete="off">
+      <div id="trap-title"></div>
+      <div class="trap-row">
+        <div id="trap-q"></div>
+        <input id="ans" inputmode="none" autocomplete="off" aria-label="Your answer" />
+      </div>
+      <div id="pad">
+        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+        <button type="button" data-key="back" aria-label="Delete">⌫</button><button type="button" data-key="0">0</button><button type="submit" class="go" aria-label="Check">✓</button>
+      </div>
+      <div id="trap-msg"></div>
+    </form>
+    <div id="screen" hidden></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
