@@ -6,6 +6,7 @@ Anything here can be used by every game.
 - `models/` — `.glb` files. Great free ones: https://kenney.nl/assets and https://poly.pizza
 - `sounds/` — `.mp3`/`.ogg` files. Free: https://kenney.nl/assets?q=audio
 - `textures/` — images.
+- `LICENSES.md` — where every third-party file came from. Add a row for each file you bring in, and stick to CC0. More sources in `docs/libraries.md`.
 
 Import a file's URL, then load it:
 

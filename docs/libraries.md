@@ -24,9 +24,30 @@ something they *don't* do. **Nothing here is installed yet.** Add a library only
 | **yuka** | Game AI: steering, wandering, pathfinding, state machines | Engine-agnostic. Good for smarter enemies and NPCs than `chase` and `patrol`. |
 | **three-mesh-bvh** | Fast raycasts and collisions against big or complex meshes | For maze and level games with lots of geometry. |
 
+## Free assets (models, sounds, textures)
+
+Only bring in **CC0** files (public domain: no credit needed, no strings). That keeps the site simple.
+If a file is *not* CC0, ask first, because it needs a credit line.
+
+| Source | Good for | License |
+| --- | --- | --- |
+| [Kenney](https://kenney.nl/assets) | 3D models (GLB), sprites, UI, sounds. All in matching styles, so the best first stop. | CC0 |
+| [Quaternius](https://quaternius.com) | Cute low-poly animals, characters, environments, with animations built in. | Older packs CC0. Newer ones use their own licence (free to use, no reselling or redistributing as a pack). Check the pack. |
+| [Poly Haven](https://polyhaven.com) | Sky images (HDRIs), textures, some models. | CC0 |
+| [Poly Pizza](https://poly.pizza) | Searchable low-poly GLB models. | Varies per model. Check each one. |
+| [Freesound](https://freesound.org), [OpenGameArt](https://opengameart.org) | Sound effects and music. Use the CC0 filter. | Varies per file. |
+
+Adding a file:
+1. Make sure the license is CC0 (or ask first).
+2. Shrink models with `gltf-transform` (see Dev tools below) before committing.
+3. Put it in `packages/assets/{models,sounds,textures}/`.
+4. Add a row to `packages/assets/LICENSES.md`: file, source link, author, license.
+
 ## Maybe later
 
 - **GSAP**: fancy timelines (camera flythroughs, UI animation). Our `tweens` covers most needs. Try it only if tweens gets in the way.
+- **three-pathfinding**: navmesh pathfinding. Pairs with yuka for maze and chase games.
+- **jsfxr**: a browser tool for designing retro sound effects. Fun for the kids to make their own.
 - **Tone.js**: generative or reactive music.
 - **Zustand** or a tiny store: only if HUD and UI state gets tangled. `game.state` is fine until then.
 
