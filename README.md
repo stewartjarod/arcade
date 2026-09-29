@@ -82,7 +82,7 @@ const { solved } = await challenge({ title: '⭐ Bonus star!' })   // or { subje
 game.paused = false
 ```
 
-The template (and Coin Hunt) already have a bonus star that does this.
+The template already has a bonus star that does this.
 
 **Your own way of asking** — doors, balloons, anything. Say which answer styles your game can show:
 
@@ -116,7 +116,6 @@ sweep checks every question at every level is answerable and fair.
 index.html, site/      the homepage (finds every game automatically)
 games/
   _template/          starter every new game is copied from
-  coin-hunt/          a game! (game.json + index.html + src/main.ts)
   mouse-maze-math/    3D maze + math practice (own world code; shared learning, sound, labels, mouse)
   rocket-tour/        fly from the Sun to Neptune; space questions at each planet (add ?warp=3 to fly faster)
 packages/

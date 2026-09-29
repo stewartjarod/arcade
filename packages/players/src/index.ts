@@ -3,7 +3,7 @@
  * Every game on the site shares the same list and the same "who's playing".
  *
  *   currentPlayer()              → { name: 'Millie', avatar: '🦊', grade: 2, ... }
- *   playerKey('coin-hunt', 'best') → a localStorage key just for this player
+ *   playerKey('rocket-tour', 'best') → a localStorage key just for this player
  *
  * Until someone makes a player, everyone plays as "Guest". The first player
  * created inherits the guest's progress, so nothing is lost.
