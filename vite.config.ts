@@ -1,21 +1,25 @@
 import { defineConfig } from 'vite'
+import { readdirSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// One shared config for every game. Pick the game with GAME=<slug>
-// (scripts/dev.mjs and scripts/build.mjs do this for you).
-const game = process.env.GAME
-if (!game) throw new Error('Set GAME=<slug>, or use `pnpm dev <slug>`.')
-
-const root = resolve(import.meta.dirname, 'games', game)
+// The whole site is one multi-page app: the landing page (index.html)
+// plus one page per game (games/<slug>/index.html). Folders starting
+// with "_" are drafts: playable in dev, but left out of the build.
+const root = import.meta.dirname
+const games = readdirSync(resolve(root, 'games')).filter(
+  (g) => !g.startsWith('_') && !g.startsWith('.') && existsSync(resolve(root, 'games', g, 'index.html')),
+)
 
 export default defineConfig({
-  root,
-  base: './', // relative paths, so a game works at any URL (/games/<slug>/)
+  base: './', // relative paths, so the site works at any URL (domain root or /repo-name/)
   assetsInclude: ['**/*.glb', '**/*.gltf', '**/*.hdr'],
-  server: { fs: { allow: [resolve(import.meta.dirname)] } },
   build: {
-    outDir: resolve(import.meta.dirname, 'dist/games', game),
-    emptyOutDir: true,
     chunkSizeWarningLimit: 1500,
+    rolldownOptions: {
+      input: {
+        home: resolve(root, 'index.html'),
+        ...Object.fromEntries(games.map((g) => [g, resolve(root, 'games', g, 'index.html')])),
+      },
+    },
   },
 })

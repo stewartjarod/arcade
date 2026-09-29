@@ -4,12 +4,13 @@ A dad-and-daughter monorepo of small three.js games. Keep code simple and readab
 short functions, friendly names, comments that explain *why* in plain words. Favor fun and visible results over architecture.
 
 ## Layout
-- `games/<slug>/` — one game each: `game.json` (homepage card: title, description, emoji, color, created), `index.html`, `src/main.ts`, optional `public/`.
+- `index.html` + `site/` — landing page; globs `games/*/game.json` (and optional `thumbnail.{png,jpg,webp}`) to render cards. `_` drafts show only in dev.
+- `games/<slug>/` — one game each: `game.json` (homepage card: title, description, emoji, color, authors, created), `index.html`, `src/main.ts`, optional `public/`.
   Games are NOT workspace packages; they resolve `@arcade/*` from the root `node_modules`.
 - `games/_template/` — copied by `pnpm new <slug>`; `{{slug}}`, `{{title}}`, `{{date}}` get substituted. `_`-prefixed games are skipped by the build.
 - `packages/engine` (`@arcade/engine`) — Game, Entity, behaviors, shapes, input, sound (synth presets), hud, tweens, particles, loaders, util. Re-exports `THREE`.
 - `packages/assets` (`@arcade/assets`) — shared prefabs (`buddy`, `coin`, `starPickup`, `tree`, `cloud`, `spiky`, `platform`) and shared files imported as `@arcade/assets/models/x.glb?url`.
-- `scripts/build.mjs` builds each game with the shared `vite.config.ts` (`GAME=<slug>`) into `dist/games/<slug>/` and generates `dist/index.html`.
+- Single multi-page Vite app: `vite.config.ts` lists the landing page plus every non-`_` game as build inputs → `dist/index.html`, `dist/games/<slug>/index.html`; three.js lands in one shared chunk.
 
 ## Engine conventions
 - An Entity wraps a three.js Object3D; logic goes in behaviors attached via `.with()`. A behavior is `(entity, dt) => void` or `{ start, update, destroy }`.
@@ -19,5 +20,5 @@ short functions, friendly names, comments that explain *why* in plain words. Fav
 - Promote anything reused by 2+ games into `packages/`.
 
 ## Commands
-`pnpm new <slug>` · `pnpm dev <slug>` · `pnpm typecheck` · `pnpm build` · `pnpm preview`
+`pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm build` · `pnpm preview`
 Always run `pnpm typecheck && pnpm build` after changes.

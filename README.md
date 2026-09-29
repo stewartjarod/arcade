@@ -5,30 +5,33 @@ Our three.js games, all in one place. Every game gets its own page, and the home
 ## Make a new game
 
 ```sh
+pnpm dev                # opens the Arcade homepage — pick a game to play
 pnpm new space-cats     # copies games/_template → games/space-cats
-pnpm dev space-cats     # opens it in the browser; saves reload instantly
+pnpm dev space-cats     # jumps straight into one game; saves reload instantly
 ```
 
 Then open `games/space-cats/src/main.ts` and start changing things.
 Set the title, emoji, color and description in `games/space-cats/game.json` — that's what shows on the homepage.
+Want a picture instead of the emoji? Drop a `thumbnail.png` (a screenshot works great) next to `game.json`.
 
 ## Release it
 
 Push to GitHub. The site rebuilds and every game in `games/` goes live at `/games/<name>/`.
-(Folders starting with `_` are skipped, so `_my-secret-game` stays private until you rename it.)
+(Folders starting with `_` are drafts: they show up on the homepage while you run `pnpm dev`, but not on the real site until you rename them.)
 
 To check the real site locally first: `pnpm build && pnpm preview`.
 
 ## What's where
 
 ```
+index.html, site/      the homepage (finds every game automatically)
 games/
   _template/          starter every new game is copied from
   coin-hunt/          a game! (game.json + index.html + src/main.ts)
 packages/
   engine/             @arcade/engine — the shared game engine
   assets/             @arcade/assets — shared characters, models, sounds
-scripts/              new / dev / build / preview
+scripts/              new / dev
 ```
 
 ## The engine in 30 seconds

@@ -1,13 +1,12 @@
 import { createServer } from 'vite'
-import { readdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 
-const games = readdirSync('games').filter((g) => !g.startsWith('.'))
+// `pnpm dev` opens the landing page; `pnpm dev coin-hunt` jumps straight into a game.
 const slug = process.argv[2]
-if (!slug || !games.includes(slug)) {
-  console.log(`Usage: pnpm dev <game>\n\nGames:\n${games.map((g) => '  ' + g).join('\n')}`)
-  process.exit(slug ? 1 : 0)
+if (slug && !existsSync(`games/${slug}/index.html`)) {
+  console.error(`No game called "${slug}" in games/`)
+  process.exit(1)
 }
-process.env.GAME = slug
-const server = await createServer({ configFile: 'vite.config.ts', server: { open: true } })
+const server = await createServer({ server: { open: slug ? `/games/${slug}/` : '/' } })
 await server.listen()
 server.printUrls()

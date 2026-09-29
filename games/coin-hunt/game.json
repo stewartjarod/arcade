@@ -1,8 +1,8 @@
 {
   "title": "Coin Hunt",
   "description": "Collect all the coins, dodge the spikies!",
-  "emoji": "🎮",
-  "color": "#6c5ce7",
-  "authors": [],
+  "emoji": "🪙",
+  "color": "#f59f00",
+  "authors": ["Dad", "Me"],
   "created": "2026-09-29"
 }
