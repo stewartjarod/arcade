@@ -1,3 +1,4 @@
+import { keepAwake } from '@arcade/engine'
 import { setMood, setRealmSound, sfx } from './audio'
 import { STICKERS } from './catalog'
 import { DX, DZ, generateMaze } from './maze'
@@ -73,6 +74,7 @@ export const createGame = (world: World) => {
     pending = null
     ui.closeTrap()
     ui.hideAnswers()
+    keepAwake(false) // nobody is playing, let the screen sleep
     setMood('menu')
     world.showSigns(0, null)
     world.load(generateMaze(1), REALMS[activeRealm()])
@@ -92,6 +94,7 @@ export const createGame = (world: World) => {
     world.setSkin(save.color, save.hat)
     world.setOrbit(false)
     world.onPick((i) => pending?.(i))
+    keepAwake(true) // don't let the phone dim between questions
     setMood('maze')
     ui.hideScreen()
     ui.toast(`${realm.emoji} ${realm.name}`, 'good')
@@ -202,6 +205,7 @@ export const createGame = (world: World) => {
     const grew = practice.grew()
     if (isNew) setTimeout(sfx.sticker, 1400)
     if (grew.length) setTimeout(sfx.levelUp, 2200)
+    keepAwake(false) // the round is over; sleeping on the results screen is fine
     ui.showFinish({ n, stars, mistakes, bonus, sticker, isNew, grew, newRealm: newRealm ? `${newRealm.emoji} ${newRealm.name}` : undefined })
   }
 
