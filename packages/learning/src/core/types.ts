@@ -46,7 +46,7 @@ export type ItemSpec = Omit<Item, 'skill' | 'level' | 'formats'> & { formats?: F
 export interface Skill {
   /** Short id inside its subject, e.g. "add". */
   id: string
-  /** Friendly name for a level: "Adding up to 20". */
+  /** Friendly name for a level: "Addition up to 20". */
   label(level: number): string
   /** The hardest level that has its own questions. */
   maxLevel: number

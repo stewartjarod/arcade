@@ -152,7 +152,7 @@ export const space: Subject = {
   skills: [
     {
       id: 'planets',
-      label: (L) => ['Planet names', 'What makes each planet special', 'Amazing planet facts', 'Planet groups and big ideas'][L - 1]!,
+      label: (L) => ['Identify the planets in the solar system', 'What makes each planet special', 'Amazing planet facts', 'Planet groups and big ideas'][L - 1]!,
       maxLevel: 4,
       formats: ['choice'],
       generate: (L) => factItem(upToLevel(FACTS, L)),

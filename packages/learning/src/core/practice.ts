@@ -76,12 +76,16 @@ export class Question {
   }
 }
 
+/** How many of the latest questions a practice avoids repeating. */
+const RECENT = 6
+
 export class Practice {
   readonly learner: Learner
   readonly options: PickOptions
   /** Ratings when this practice started, to see what grew. */
   private readonly start: Record<string, number>
-  private lastKey?: string
+  /** The last few questions asked, so a short list of questions doesn't repeat right away. */
+  private recent: string[] = []
 
   constructor(learner: Learner, options: PickOptions = {}) {
     this.learner = learner
@@ -104,16 +108,20 @@ export class Practice {
 
   /** @internal */
   next(): Item {
-    const it = pickItem(this.learner, this.options, this.lastKey)
-    this.lastKey = it.key
+    const it = pickItem(this.learner, this.options, this.recent)
+    this.remember(it.key)
     return it
   }
 
   /** @internal */
   nextLike(to: Item): Item {
-    const it = pickSimilar(to, this.lastKey)
-    this.lastKey = it.key
+    const it = pickSimilar(to, [to.key, ...this.recent])
+    this.remember(it.key)
     return it
+  }
+
+  private remember(key: string) {
+    this.recent = [...this.recent, key].slice(-RECENT)
   }
 }
 

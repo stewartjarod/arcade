@@ -50,7 +50,15 @@ export function canPick(l: Learner, o: PickOptions = {}) {
   return candidates(l, o).length > 0
 }
 
-export function pickItem(l: Learner, o: PickOptions = {}, avoidKey?: string): Item {
+export function pickItem(l: Learner, o: PickOptions = {}, avoid?: string | readonly string[]): Item {
+  const avoidKeys = typeof avoid === 'string' ? [avoid] : avoid ?? []
+  let it = pickOnce(l, o, avoidKeys)
+  // A skill with a short list of questions can run out of fresh ones; then try another skill before settling for a repeat.
+  for (let i = 0; i < 8 && avoidKeys.includes(it.key); i++) it = pickOnce(l, o, avoidKeys)
+  return it
+}
+
+function pickOnce(l: Learner, o: PickOptions, avoidKeys: readonly string[]): Item {
   const all = candidates(l, o)
   if (!all.length) throw new Error('Nothing to practice with these options')
 
@@ -70,7 +78,7 @@ export function pickItem(l: Learner, o: PickOptions = {}, avoidKey?: string): It
 
   // 3. A missed fact that's due, some of the time
   const formats = o.formats
-  const usable = (it: Item) => (!formats || it.formats.some((f) => formats.includes(f))) && it.key !== avoidKey
+  const usable = (it: Item) => (!formats || it.formats.some((f) => formats.includes(f))) && !avoidKeys.includes(it.key)
   const due = l.dueFacts(c.id)
   if (due.length && c.skill.fromKey && Math.random() < 0.35) {
     const f = due[0]!
@@ -89,8 +97,9 @@ export function pickItem(l: Learner, o: PickOptions = {}, avoidKey?: string): It
 }
 
 /** Another question from the same skill and level (e.g. "try one like it"). */
-export function pickSimilar(to: Item, avoidKey = to.key): Item {
-  return generate(to.skill, to.level, (it) => it.key !== avoidKey)
+export function pickSimilar(to: Item, avoid: string | readonly string[] = to.key): Item {
+  const avoidKeys = typeof avoid === 'string' ? [avoid] : avoid
+  return generate(to.skill, to.level, (it) => !avoidKeys.includes(it.key))
 }
 
 function generate(skillId: string, level: number, ok: (it: Item) => boolean): Item {

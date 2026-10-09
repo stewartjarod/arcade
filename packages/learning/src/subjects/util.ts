@@ -42,3 +42,12 @@ export function editDistance(a: string, b: string) {
     }
   return d[a.length]![b.length]!
 }
+
+/** Wrong number answers: the `near` slips first (never negative, never the answer), then answers a little way off. */
+export function numberWrongs(answer: number, count: number, near: number[]) {
+  const pool = new Set(near.filter((v) => v >= 0 && v !== answer))
+  for (const d of [1, 2, 10, 3]) for (const v of [answer + d, answer - d]) if (v >= 0 && v !== answer) pool.add(v)
+  const first = shuffle(near.filter((v) => pool.has(v)))
+  const rest = shuffle([...pool].filter((v) => !first.includes(v)))
+  return [...new Set([...first, ...rest])].slice(0, count).map(String)
+}

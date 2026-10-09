@@ -3,7 +3,7 @@ import { findSkill } from '../subjects'
 import { Learner, MAX_MOMENT_DROP } from './learner'
 import { Question, startPractice } from './practice'
 import { pickItem } from './scheduler'
-import { skillSummary, subjectGrowth, subjectSummary } from './summary'
+import { skillSummary, smartScore, subjectGrowth, subjectSummary } from './summary'
 import type { Item } from './types'
 
 // A learner not tied to storage or saved players.
@@ -250,7 +250,7 @@ describe('choosing questions', () => {
   test('mostly at their level, sometimes one harder, sometimes one easier', () => {
     const l = learnerAt(4)
     const levels: Record<number, number> = {}
-    for (let i = 0; i < 2000; i++) {
+    for (let i = 0; i < 10000; i++) {
       const it = pickItem(l, { subjects: ['math'], formats: ['number'] })
       if (it.skill === 'math.add') levels[it.level] = (levels[it.level] ?? 0) + 1
     }
@@ -298,8 +298,8 @@ describe('missed facts come back', () => {
     l.score(it, 0)
     vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 120_000)
     let again = 0
-    for (let i = 0; i < 200; i++) if (pickItem(l, { subjects: ['space'] }).key === it.key) again++
-    expect(again).toBeGreaterThan(30) // ~35% of the time, plus chance
+    for (let i = 0; i < 1000; i++) if (pickItem(l, { subjects: ['space'] }).key === it.key) again++
+    expect(again).toBeGreaterThan(100) // ~35% of the time when its skill comes up (about half the picks), plus chance
   })
 })
 
@@ -309,7 +309,7 @@ describe('summaries', () => {
     const p = startPractice({ learner: l })
     expect(p.grew()).toEqual([])
     ;(l as unknown as { state: { ratings: Record<string, number> } }).state.ratings['math.add'] = 3.6
-    expect(p.grew()).toContain('Adding up to 100') // level 4
+    expect(p.grew()).toContain('Addition up to 100') // level 4
   })
 
   test('growth counts from the very start', () => {
@@ -322,10 +322,42 @@ describe('summaries', () => {
   test('skill and subject summaries describe where a player is', () => {
     const l = fresh({ grade: 2 })
     const math = skillSummary(l, 'math')
-    expect(math.find((s) => s.id === 'math.add')!.label).toBe('Adding up to 10')
+    expect(math.find((s) => s.id === 'math.add')!.label).toBe('Addition up to 10')
     expect(math.find((s) => s.id === 'math.div')!.unlocked).toBe(false)
     const subjects = subjectSummary(l)
-    expect(subjects.map((s) => s.id)).toEqual(['math', 'reading', 'writing', 'space', 'geography', 'clocks'])
+    expect(subjects.map((s) => s.id)).toEqual(['math', 'reading', 'writing', 'science', 'social', 'space', 'geography', 'clocks'])
     expect(subjects.every((s) => !s.started)).toBe(true)
+  })
+})
+
+describe('SmartScore (IXL-style bands)', () => {
+  test('bands follow IXL: 80 proficient, 90 challenge zone', () => {
+    // A rating of 3.0 is the middle of level 3, so it reads 50.
+    expect(smartScore(3.0, false)).toEqual({ band: 'practicing', score: 50 })
+    expect(smartScore(3.3, false)).toEqual({ band: 'proficient', score: 80 })
+    expect(smartScore(3.4, false)).toEqual({ band: 'challenge', score: 90 })
+  })
+  test('the score rolls over exactly when the level does', () => {
+    expect(smartScore(3.49, false).score).toBe(99)
+    expect(smartScore(3.5, false).score).toBe(0) // rounds to level 4 now
+  })
+  test('a skill still being placed has no score', () => {
+    expect(smartScore(4, true)).toEqual({ band: 'placing' })
+  })
+})
+
+describe('a practice does not repeat questions right away', () => {
+  test('no question comes back within the last few', () => {
+    const l = fresh()
+    vi.spyOn(l, 'save').mockImplementation(() => {})
+    for (const subjects of [['math'], ['reading'], ['science']]) {
+      const practice = startPractice({ learner: l, subjects, formats: ['choice'], audio: true })
+      const keys: string[] = []
+      for (let i = 0; i < 120; i++) keys.push(practice.moment().ask().item.key)
+      keys.forEach((k, i) => {
+        const window = keys.slice(Math.max(0, i - 3), i)
+        expect(window, `${subjects[0]} #${i}: "${k}" repeated within the last 3`).not.toContain(k)
+      })
+    }
   })
 })

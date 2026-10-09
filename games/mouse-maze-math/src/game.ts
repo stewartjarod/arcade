@@ -1,10 +1,11 @@
 import { keepAwake } from '@arcade/engine'
 import { setMood, setRealmSound, sfx } from './audio'
 import { STICKERS } from './catalog'
+import { junctionsFor, QUICK_BONUS, quickSecondsFor, trapChanceFor } from './difficulty'
 import { DX, DZ, generateMaze } from './maze'
-import { activeRealm, depth } from './progress'
+import { activeRealm, currentSubject, depth } from './progress'
 import { REALMS, realmForDepth } from './realms'
-import { startPractice, type Moment, type Question } from '@arcade/learning'
+import { learner, practiceGrade, speak, spokenText, startPractice, gradeName, findSubject, type Moment, type Question } from '@arcade/learning'
 import { commit, save } from './save'
 import * as ui from './ui'
 import { sleep, type World } from './world'
@@ -42,28 +43,24 @@ export const createGame = (world: World) => {
     let solved = 0
     while (solved < CAGE_QUESTIONS) {
       const q = moment.similar(failed)
-      let msg = ''
-      for (let tries = 0; ; ) {
-        const v = await ui.askNumber({
-          title: `🪤 Caught! Solve ${CAGE_QUESTIONS - solved} more to escape`,
-          prompt: q.prompt,
-          msg,
-        })
-        // Only the first typed answer is scored; the moment ignores retries.
-        if (moment.check(q, v)) {
+      const options = q.options(3)
+      let left = options.length // how many answers are still open (a guess among fewer is likelier to be lucky)
+      let picked = await ui.askChoice({ title: `🪤 Caught! Solve ${CAGE_QUESTIONS - solved} more to escape`, prompt: q.prompt, options })
+      for (;;) {
+        // Only the first pick is scored; the moment ignores later ones, so tapping around never hurts.
+        if (moment.check(q, picked, { choices: left })) {
+          ui.markChoice(picked, true)
           sfx.good(solved + 1)
           solved++
           gain(2)
           ui.toast(solved < CAGE_QUESTIONS ? 'Nice! One more!' : 'Free!', 'good')
+          await sleep(0.5)
           break
         }
         sfx.bad()
-        if (++tries >= 3) {
-          ui.toast(`It was ${q.answer}. Try a new one!`, 'bad')
-          break
-        }
-        msg = 'Not quite, try again!'
-        ui.trapFeedback(msg)
+        ui.markChoice(picked, false)
+        left--
+        picked = await ui.askAgain()
       }
     }
     ui.closeTrap()
@@ -84,11 +81,14 @@ export const createGame = (world: World) => {
 
   const play = async () => {
     const n = save.mazes + 1
-    const level = { name: `Maze ${n}`, emoji: '🧀', junctions: Math.min(4 + Math.floor(n / 2), 10) }
-    // Math questions that can be answered by picking a door.
-    const practice = startPractice({ subjects: ['math'], formats: ['choice'] })
+    const subjectId = currentSubject()
+    // The maze gets longer as the player's IXL grade in this subject goes up (and a little with every maze won).
+    const { grade, known } = practiceGrade(learner(), subjectId)
+    const level = { name: `Maze ${n}`, emoji: '🧀', junctions: junctionsFor(grade, n) }
+    // Questions in this subject that can be answered by picking a door.
+    const practice = startPractice({ subjects: [subjectId], formats: ['choice'] })
     const realm = REALMS[activeRealm()]!
-    const layout = generateMaze(level.junctions, Math.min(0.3 + n * 0.02, 0.5), { runs: realm.runs, len: realm.len })
+    const layout = generateMaze(level.junctions, trapChanceFor(grade, n), { runs: realm.runs, len: realm.len })
     world.load(layout, realm)
     setRealmSound(realm.music)
     world.setSkin(save.color, save.hat)
@@ -120,9 +120,11 @@ export const createGame = (world: World) => {
         const firstTry = tried.size === 0
         const labels = q.options(j.exits.length, correctIdx).map(String)
         ui.setQuestion(q.prompt)
-        world.showSigns(k, labels)
+        // Words and sentences don't fit on a door sign, so the sign shows an arrow and the big buttons carry the words.
+        world.showSigns(k, labels.some((l) => l.length > 12) ? ['⬅', '⬆', '➡'] : labels)
+        if (grade <= 1) speak(spokenText(q.prompt)) // young readers: say the question out loud
         ui.showAnswers(labels, realm.doors, (i) => pending?.(i), world.setHover)
-        q.restartTimer()
+        q.restartTimer() // the speed bonus counts from when the doors appear
         const idx = await askExit()
         const ex = j.exits[idx]!
         world.setHover(-1)
@@ -137,11 +139,13 @@ export const createGame = (world: World) => {
 
         if (ex.kind === 'path') {
           sfx.good(streak)
-          const earned = firstTry ? 10 + 2 * Math.min(streak, 5) : 5
+          const quickLimit = quickSecondsFor(grade)
+          const quick = firstTry && quickLimit > 0 && (performance.now() - q.askedAt) / 1000 <= quickLimit
+          const earned = (firstTry ? 10 + 2 * Math.min(streak, 5) : 5) + (quick ? QUICK_BONUS : 0)
           if (firstTry) streak++
           gain(earned)
           ui.setStreak(streak)
-          ui.toast(`Yes! +${earned} 🧀`, 'good')
+          ui.toast(quick ? `⚡ Quick! +${earned} 🧀` : `Yes! +${earned} 🧀`, 'good')
           ui.setQuestion(null)
           world.showSigns(k, null)
           if (k === layout.junctions.length - 1) {
@@ -206,7 +210,7 @@ export const createGame = (world: World) => {
     if (isNew) setTimeout(sfx.sticker, 1400)
     if (grew.length) setTimeout(sfx.levelUp, 2200)
     keepAwake(false) // the round is over; sleeping on the results screen is fine
-    ui.showFinish({ n, stars, mistakes, bonus, sticker, isNew, grew, newRealm: newRealm ? `${newRealm.emoji} ${newRealm.name}` : undefined })
+    ui.showFinish({ n, stars, mistakes, bonus, sticker, isNew, grew, gradeLine: known ? `IXL ${gradeName(practiceGrade(learner(), subjectId).grade)} ${findSubject(subjectId)!.name.toLowerCase()}` : undefined, newRealm: newRealm ? `${newRealm.emoji} ${newRealm.name}` : undefined })
   }
 
   return { play, menu }

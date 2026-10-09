@@ -1,5 +1,9 @@
 import type { ItemSpec, Skill, Subject } from '../core/types'
-import { pick, rand, shuffle } from './util'
+import { GRADE5_MATH } from './mathGrade5'
+import { MORE_MATH } from './mathMore'
+import { UPPER_MATH } from './mathUpper'
+import { shapes, sides } from './shapes'
+import { numberWrongs, pick, rand, shuffle, wrongFrom } from './util'
 
 /**
  * Math: + − × ÷ facts (from Mouse Maze Math), place value, and skip counting.
@@ -184,6 +188,58 @@ function placeValue(L: number): ItemSpec {
   }
 }
 
+// --- Counting objects (Kindergarten): "How many?" with dots in rows of five, so they can count by fives later ---
+
+const COUNT_COLORS = ['#ff6b6b', '#ffa94d', '#51cf66', '#4dabf7', '#9775fa', '#f783ac']
+const COUNT_LABELS = ['Counting to 5', 'Counting to 10', 'Counting to 20', 'Numbers and counting to 30']
+const COUNT_RANGES: [number, number][] = [[1, 5], [1, 10], [6, 20], [11, 30]]
+
+function dotsSVG(n: number, color: string) {
+  const rows = Math.ceil(n / 5)
+  const dots = Array.from({ length: n }, (_, i) => `<circle cx="${22 + (i % 5) * 36}" cy="${22 + Math.floor(i / 5) * 36}" r="14" fill="${color}"/>`)
+  return `<svg viewBox="0 0 196 ${rows * 36 + 8}" xmlns="http://www.w3.org/2000/svg">${dots.join('')}</svg>`
+}
+
+function countItems(L: number): ItemSpec {
+  const [lo, hi] = COUNT_RANGES[L - 1]!
+  return countItem(rand(lo, hi))
+}
+
+function countItem(n: number): ItemSpec {
+  return {
+    key: `count:${n}`,
+    prompt: { text: 'How many?', say: 'How many?', svg: dotsSVG(n, pick(COUNT_COLORS)) },
+    answer: String(n),
+    wrong: (k) => numberWrongs(n, k, [n + 1, n - 1, n + 2, n - 2]),
+    seconds: 4 + Math.ceil(n / 3),
+  }
+}
+
+// --- Comparing numbers: which of three is the greatest (or the least)? Kindergarten → grade 2 ---
+
+const COMPARE_MAX = [5, 10, 20, 100, 1000]
+const COMPARE_LABELS = ['Comparing up to 5', 'Comparing up to 10', 'Comparing up to 20', 'Comparing up to 100', 'Comparing numbers up to 1,000']
+
+function compareItem(L: number): ItemSpec {
+  const hi = COMPARE_MAX[L - 1]!
+  const nums = new Set<number>()
+  while (nums.size < 3) nums.add(rand(L <= 3 ? 0 : Math.floor(hi / 10), hi))
+  return compareFrom([...nums], Math.random() < 0.5, L)
+}
+
+function compareFrom(nums: number[], greatest: boolean, L: number): ItemSpec {
+  const answer = greatest ? Math.max(...nums) : Math.min(...nums)
+  const text = `Which is ${greatest ? 'greatest' : 'least'}? ${nums.join(', ')}`
+  const hi = COMPARE_MAX[L - 1]!
+  return {
+    key: `cmp:${greatest ? 'max' : 'min'}:${nums.join(',')}`,
+    prompt: { text, say: text.replace(/, /g, ' or ') },
+    answer: String(answer),
+    wrong: (n) => wrongFrom(String(answer), n, Array.from({ length: Math.min(hi, 12) + 1 }, (_, i) => String(i)), nums.map(String)),
+    seconds: 4 + L,
+  }
+}
+
 // --- Skip counting: 10s, 5s, 2s, from any start, 100s and 3s, backwards ---
 
 function skipCount(L: number): ItemSpec {
@@ -208,15 +264,8 @@ function skipCount(L: number): ItemSpec {
   }
 }
 
-function numberWrongs(answer: number, count: number, near: number[]) {
-  const pool = new Set(near.filter((v) => v >= 0 && v !== answer))
-  for (const d of [1, 2, 10, 3]) for (const v of [answer + d, answer - d]) if (v >= 0 && v !== answer) pool.add(v)
-  const first = shuffle(near.filter((v) => pool.has(v)))
-  const rest = shuffle([...pool].filter((v) => !first.includes(v)))
-  return [...new Set([...first, ...rest])].slice(0, count).map(String)
-}
 
-const SKIP_LABELS = ['Counting by 10s', 'Counting by 5s', 'Counting by 2s', 'Counting on from any number', 'Counting by 100s, 3s and 4s', 'Counting backwards']
+const SKIP_LABELS = ['Skip-count by tens', 'Skip-count by fives', 'Skip-count by twos', 'Count on from any number', 'Skip-count by hundreds, threes and fours', 'Count backwards']
 const PLACE_LABELS = ['Tens and ones', 'Tens place and ones place', 'Hundreds, tens and ones', 'Adding up place values', '10 more, 100 less', 'Thousands']
 
 export const math: Subject = {
@@ -225,24 +274,48 @@ export const math: Subject = {
   emoji: '🔢',
   skills: [
     opSkill('add', {
-      label: (L) => `Adding up to ${cap(L)}`,
+      label: (L) => `Addition up to ${cap(L)}`,
       max: 12,
     }),
     opSkill('sub', {
-      label: (L) => `Subtracting from ${cap(L)}`,
+      label: (L) => `Subtraction up to ${cap(L)}`,
       max: 12,
     }),
     // Skills unlock in order: × once + and − are solid, ÷ once × is.
     opSkill('mul', {
-      label: (L) => (L <= TABLE_LEVELS ? `Times tables: ${runs(tables(L))}` : `Big times tables`),
+      label: (L) => (L <= TABLE_LEVELS ? `Multiplication facts: ${runs(tables(L))}` : `Multiplication facts up to 12`),
       max: 16,
       unlocksAfter: [{ skill: 'add', level: 3 }, { skill: 'sub', level: 3 }],
     }),
     opSkill('div', {
-      label: (L) => (L <= TABLE_LEVELS ? `Dividing by ${runs(tables(L))}` : `Big division`),
+      label: (L) => (L <= TABLE_LEVELS ? `Division facts: ${runs(tables(L))}` : `Division facts up to 12`),
       max: 16,
       unlocksAfter: [{ skill: 'mul', level: 3 }],
     }),
+    {
+      id: 'count',
+      label: (L) => COUNT_LABELS[L - 1]!,
+      maxLevel: COUNT_LABELS.length,
+      formats: ['number', 'choice'],
+      generate: countItems,
+      fromKey: (key) => {
+        const m = key.match(/^count:(\d+)$/)
+        return m ? countItem(Number(m[1])) : null
+      },
+    },
+    {
+      id: 'compare',
+      label: (L) => COMPARE_LABELS[L - 1]!,
+      maxLevel: COMPARE_LABELS.length,
+      formats: ['number', 'choice'],
+      generate: compareItem,
+      fromKey: (key, level) => {
+        const m = key.match(/^cmp:(max|min):([\d,]+)$/)
+        return m ? compareFrom(m[2]!.split(',').map(Number), m[1] === 'max', level) : null
+      },
+    },
+    shapes,
+    sides,
     {
       id: 'place',
       label: (L) => PLACE_LABELS[L - 1]!,
@@ -257,5 +330,8 @@ export const math: Subject = {
       formats: ['number', 'choice'],
       generate: skipCount,
     },
+    ...UPPER_MATH,
+    ...GRADE5_MATH,
+    ...MORE_MATH,
   ],
 }

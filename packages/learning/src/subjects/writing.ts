@@ -1,4 +1,7 @@
 import type { ItemSpec, Subject } from '../core/types'
+import { grammar, sentences } from './language'
+import { WRITING_MORE } from './languageMore'
+import { WRITING_UPPER } from './languageUpper'
 import { editDistance, pick, upToLevel, wrongFrom } from './util'
 import { PICTURE_WORDS, SIGHT_WORDS } from './words'
 
@@ -140,7 +143,9 @@ function capsItem(level: number): ItemSpec {
   }
 }
 
-const SPELL_LABELS = ['Spelling short words', 'Spelling blends', 'Spelling long vowels', 'Spelling first-grade words', 'Spelling second-grade words']
+const SPELL_TOPICS = ['the short vowel word', 'the word with a consonant blend', 'the long vowel word', 'the sight word: grade 1', 'the sight word: grade 2']
+const SPELL_LABELS = SPELL_TOPICS.map((t) => `Spell ${t}`)
+const PICK_LABELS = SPELL_TOPICS.map((t) => `Choose the correct spelling of ${t}`)
 
 export const writing: Subject = {
   id: 'writing',
@@ -158,19 +163,23 @@ export const writing: Subject = {
     },
     {
       id: 'pick',
-      label: (L) => SPELL_LABELS[L - 1]!.replace('Spelling', 'Spotting'),
+      label: (L) => PICK_LABELS[L - 1]!,
       maxLevel: 5,
       formats: ['choice'],
       listen: true,
       generate: (L) => pickSpellingItem(spellWord(L).word),
       fromKey: (key) => pickSpellingItem(key),
     },
+    sentences,
+    grammar,
     {
       id: 'caps',
-      label: (L) => ['Capitals and periods', 'Capital names and "I"', 'Question marks', 'Days, months and places'][L - 1]!,
+      label: (L) => ['Capitalize the first letter of a sentence', 'Capitalize names and the pronoun "I"', 'Punctuation: question marks', 'Capitalize days, months, and places'][L - 1]!,
       maxLevel: 4,
       formats: ['choice'],
       generate: capsItem,
     },
+    ...WRITING_UPPER,
+    ...WRITING_MORE,
   ],
 }

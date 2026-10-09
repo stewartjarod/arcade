@@ -41,6 +41,9 @@ button.chip { color: var(--ink); border: 0; font-family: inherit; cursor: pointe
 #qtext { font-size: clamp(2.4rem, 11vw, 3.8rem); font-weight: 700; line-height: 1.1; letter-spacing: 0.02em; }
 #qtext.long { font-size: clamp(1.4rem, 6vw, 2rem); line-height: 1.2; }
 #qtext .op { color: #8a5cf6; }
+#qtext .qpic { display: block; text-align: center; margin: 0 0 4px; }
+#qtext .qpic svg { width: min(34vw, 130px); height: auto; display: inline-block; }
+#qtext .qpic.emoji { font-size: 3rem; line-height: 1.1; }
 #qtext .qmark { display: inline-block; color: #ff5d8f; animation: wiggle 1.4s ease-in-out infinite; }
 @keyframes wiggle { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
 #qhint { font-size: 0.95rem; color: #6b5f99; font-weight: 600; }
@@ -54,6 +57,7 @@ button.chip { color: var(--ink); border: 0; font-family: inherit; cursor: pointe
 @keyframes popin { from { transform: scale(0.3); opacity: 0; } }
 .ans .arrow { font-size: 1.1rem; opacity: 0.9; line-height: 1.2; }
 .ans .num { font-size: clamp(2rem, 9vw, 2.8rem); font-weight: 700; line-height: 1; -webkit-text-stroke: 7px rgba(30, 20, 60, 0.5); paint-order: stroke fill; }
+.ans .num.long { font-size: clamp(1.15rem, 5vw, 1.6rem); -webkit-text-stroke: 4px rgba(30, 20, 60, 0.5); }
 .ans:hover, .ans.hot { transform: translateY(-6px) scale(1.04); filter: brightness(1.1); }
 .ans:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
 #answers.picked .ans:not(.good):not(.bad) { opacity: 0.35; transform: scale(0.92); }
@@ -116,3 +120,22 @@ body:has(.num-pad:not([hidden])) #toast { bottom: auto; top: 14%; }
   .ans .num { font-size: 1.8rem; }
   .ans .arrow { display: none; }
 }
+
+/* subject chooser and read-aloud button */
+.subjects-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 8px; }
+.chip-subject { font: inherit; font-weight: 700; font-size: 0.95rem; padding: 5px 12px; border-radius: 999px; border: 3px solid #fff3; background: #ffffff14; color: #fff; cursor: pointer; }
+.chip-subject.on { background: #ffd447; color: #3a2a00; border-color: #fff; }
+.qsay { font: inherit; font-size: 1.2rem; margin-left: 10px; border: 0; border-radius: 999px; background: #ece6ff; box-shadow: 0 3px 0 #c5b8f0; padding: 0.1em 0.6em; cursor: pointer; vertical-align: middle; pointer-events: auto; }
+.ans .num.wordy { font-size: clamp(0.95rem, 3.6vw, 1.25rem); line-height: 1.15; -webkit-text-stroke: 3px rgba(30, 20, 60, 0.5); }
+
+.practicing { margin: 8px 0; }
+.practicing summary { cursor: pointer; font-weight: 700; color: #d9d2ff; list-style: none; text-align: center; padding: 6px; }
+.practicing summary::-webkit-details-marker { display: none; }
+
+/* long answers: one full-width button per row */
+#answers.stacked { flex-direction: column; gap: 8px; }
+#answers.stacked .ans { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; padding: 8px 14px; text-align: left; }
+#answers.stacked .ans .num { font-size: clamp(0.95rem, 4vw, 1.2rem); line-height: 1.2; -webkit-text-stroke: 3px rgba(30, 20, 60, 0.5); }
+
+#qtext .qpic.wide svg { width: min(86vw, 360px); }
+#qtext .qpic.emoji { line-height: 1.15; letter-spacing: 0.05em; font-weight: 400; }

@@ -78,7 +78,7 @@ export const geography: Subject = {
   skills: [
     {
       id: 'world',
-      label: (L) => ['Continents and oceans', 'Where things are in the world', 'Countries and continents'][L - 1]!,
+      label: (L) => ['Identify oceans and continents', 'Read a map of the world', 'Countries and continents'][L - 1]!,
       maxLevel: 3,
       formats: ['choice'],
       generate: (L) => worldItem(upToLevel(WORLD, L)),
@@ -89,7 +89,7 @@ export const geography: Subject = {
     },
     {
       id: 'capitals',
-      label: (L) => `State capitals: ${REGION_NAMES[L - 1]}`,
+      label: (L) => `Name state capitals of ${REGION_NAMES[L - 1]}`,
       maxLevel: REGIONS.length,
       formats: ['choice'],
       unlocksAfter: [{ skill: 'world', level: 2 }],

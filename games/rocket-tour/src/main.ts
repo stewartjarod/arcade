@@ -3,7 +3,7 @@ import {
   type AnswerSign, type Entity,
 } from '@arcade/engine'
 import { planetModel, rocketModel, starPickup, sunModel, PLANET_COLOR, PLANET_SIZE, type PlanetName } from '@arcade/assets'
-import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, speak, startPractice, type Moment, type Question } from '@arcade/learning'
+import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, gradeName, peekLearner, practiceGrade, speak, startPractice, type Moment, type Question } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  🚀 Rocket Tour
@@ -134,13 +134,18 @@ function title(game: Game) {
     game.camera.lookAt(middle, 0, 0)
   })
 
+  // The tour's questions follow the player's level in space, which lines up with IXL science (Astronomy).
+  const ixlLine = () => {
+    const { grade, known } = practiceGrade(peekLearner(), 'space')
+    return known ? ` · 🎓 IXL ${gradeName(grade)} science` : ''
+  }
   const player = currentPlayer()
   const visited: string[] = save.get('visited', [])
   const color = save.get('rocketColor', ROCKET_COLORS[0]!)
   const screen = ui('screen')
   screen.innerHTML = `<div class="card">
     <h1>🚀 Rocket Tour</h1>
-    <div class="sub">${esc(player.avatar)} ${esc(player.name)} · Planets visited: ${visited.length} / 8 · Tours: ${save.get('tours', 0)}</div>
+    <div class="sub">${esc(player.avatar)} ${esc(player.name)} · Planets visited: ${visited.length} / 8 · Tours: ${save.get('tours', 0)}${ixlLine()}</div>
     <div>Pick your rocket's color</div>
     <div class="swatches">${ROCKET_COLORS.map((c) => `<button class="swatch${c === color ? ' on' : ''}" style="background:${c}" data-color="${c}" aria-label="Rocket color"></button>`).join('')}</div>
     <div class="row"><button class="btn go" data-act="tour">🚀 Start the tour</button></div>

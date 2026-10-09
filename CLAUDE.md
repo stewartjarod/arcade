@@ -41,6 +41,7 @@ install at the root, wrap it as an engine behavior/helper, lazy-load heavy ones,
 - In-game rewards/unlocks use `subjectGrowth()`.
 - Display: `peekLearner()` + `skillSummary()`/`subjectSummary()` (fresh from storage); in-game: cached `learner()`.
 - Content must be correct for kids *and* grown-ups (facts checked; avoid answers that change over time). New subjects/skills must pass `pnpm test` — the sweep checks every level: answer present, `wrong(n)` returns n distinct options none of which score as right, `fromKey` round-trips. Use `check()` for exact-match content (capitalization) or partial credit (spelling).
+- **Use IXL's words.** The kids' school grades with IXL, so skill/level labels, prompts and in-game text use IXL's terms ("Addition up to 20", "Multiplication facts", "Skip-count by fives", "Time", "Money"), not our own ("Times tables", "Adding"). Look names up in `docs/ixl-curriculum.md` / `packages/learning/src/ixl/skills.json`; scoring notes (80 = proficient, 100 = mastered) are there too.
 - Kids: Ima (1st grade) and Millie (2nd grade). Keep prompts short; use `say` for anything a 1st grader can't read; `listen: true` only when sound is required.
 ## Commands
 `pnpm new <slug>` · `pnpm dev [slug]` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm preview`

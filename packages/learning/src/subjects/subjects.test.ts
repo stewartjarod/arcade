@@ -1,57 +1,15 @@
 import { describe, expect, test } from 'vitest'
 import { Question } from '../core/practice'
-import type { Item, Skill } from '../core/types'
 import { SUBJECTS } from '.'
+import { expectSkillFair } from './testing'
 import { misspell } from './writing'
 
 // Every question every subject can make should be answerable and fair.
-// This sweeps all skills × levels with many random samples.
-const SAMPLES = 60
-
-const itemAt = (subject: string, skill: Skill, level: number): Item => {
-  const spec = skill.generate(level)
-  return { ...spec, formats: spec.formats ?? skill.formats, listen: spec.listen ?? skill.listen, skill: `${subject}.${skill.id}`, level }
-}
-
+// This sweeps all skills × levels with many random samples (see testing.ts for the rules).
 for (const subject of SUBJECTS) {
   describe(`${subject.emoji} ${subject.name}`, () => {
     for (const skill of subject.skills) {
-      test(`${skill.id}: every level makes fair questions`, () => {
-        for (let level = 1; level <= skill.maxLevel; level++) {
-          expect(skill.label(level), `label for level ${level}`).toBeTruthy()
-          for (let i = 0; i < SAMPLES; i++) {
-            const item = itemAt(subject.id, skill, level)
-            const where = `${subject.id}.${skill.id} L${level}: "${item.prompt.text}" → ${item.answer}`
-            expect(item.key, where).toBeTruthy()
-            expect(item.prompt.text, where).toBeTruthy()
-            expect(item.answer, where).toBeTruthy()
-            expect(item.formats.length, where).toBeGreaterThan(0)
-            expect(new Question(item).score(item.answer), where).toBe(1)
-
-            if (item.formats.includes('number')) expect(item.answer, where).toMatch(/^\d+$/)
-            if (item.formats.includes('choice')) {
-              for (const n of [2, 3]) {
-                const wrong = item.wrong(n)
-                expect(wrong, `${where} (${n} wrong)`).toHaveLength(n)
-                expect(new Set(wrong).size, `${where} distinct`).toBe(n)
-                for (const w of wrong) {
-                  expect(w, where).toBeTruthy()
-                  // The real rule: no wrong option may be scored as right.
-                  expect(new Question(item).score(w), `${where}: "${w}" must not count as right`).toBeLessThan(1)
-                }
-                // And options must look different to a kid (not just differ in hidden spaces).
-                expect(new Set([item.answer, ...wrong].map((x) => x.trim())).size, where).toBe(n + 1)
-              }
-            }
-            if (skill.fromKey) {
-              const again = skill.fromKey(item.key, level)
-              expect(again, `${where} can be rebuilt from its key`).not.toBeNull()
-              expect(again!.answer, where).toBe(item.answer)
-              expect(again!.prompt.text, where).toBe(item.prompt.text)
-            }
-          }
-        }
-      })
+      test(`${skill.id}: every level makes fair questions`, () => expectSkillFair(subject.id, skill))
     }
   })
 }

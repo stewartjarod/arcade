@@ -1,9 +1,10 @@
 import { COLORS, HATS, STICKERS } from './catalog'
-import { learner, numberPad, problemHTML, skillSummary, type Prompt } from '@arcade/learning'
+import { questionHTML } from './questionHtml'
+import { choicePad, findSubject, gradeName, learner, practiceGrade, skillSummary, speak, spokenText, type Prompt, type SkillInfo } from '@arcade/learning'
 import { confetti as rain, setMuted } from '@arcade/engine'
 import { REALMS } from './realms'
 import { commit, save } from './save'
-import { activeRealm } from './progress'
+import { activeRealm, currentSubject, playableSubjects } from './progress'
 import { sfx, unlockAudio } from './audio'
 import { currentPlayer } from '@arcade/players'
 
@@ -12,6 +13,8 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 export type Finish = {
   n: number
   grew: string[]
+  /** "IXL Grade 2 math", when the subject is mapped to IXL. */
+  gradeLine?: string
   newRealm?: string
   stars: number
   mistakes: number
@@ -38,19 +41,40 @@ const playerTag = () => {
   return `${p.avatar} ${safe}`
 }
 
+// "· ⭐ proficient" next to a skill, IXL-style: 80+ is proficient, 90+ is the challenge zone.
+const smartNote = (sk: SkillInfo) => {
+  const b = sk.smart?.band
+  return b === 'proficient' ? ' · ⭐ proficient' : b === 'challenge' ? ' · 🔥 challenge zone' : ''
+}
+const MAX_SKILLS_SHOWN = 8
+
 export const showMenu = () => {
   $('hud').hidden = true
   closeTrap()
-  const bars = skillSummary(learner(), 'math')
-    .map((sk) => sk.unlocked
-      ? `<div class="skill"><span>${sk.label}</span><i><b style="width:${Math.round(sk.progress * 100)}%"></b></i></div>`
-      : `<div class="skill locked"><span>🔒 ${sk.label}</span></div>`)
+  const subjectId = currentSubject()
+  const subject = findSubject(subjectId)!
+  const { grade, known } = practiceGrade(learner(), subjectId)
+  const all = skillSummary(learner(), subjectId)
+  const open = all.filter((sk) => sk.unlocked)
+  // Only what's unlocked, so the menu stays short; the rest are a surprise to discover.
+  const bars = open
+    .slice(0, MAX_SKILLS_SHOWN)
+    .map((sk) => `<div class="skill"><span>${sk.label}${smartNote(sk)}</span><i><b style="width:${Math.round(sk.progress * 100)}%"></b></i></div>`)
     .join('')
-  screen(`<h1><span class="mouse">🐭</span> Mouse Maze Math</h1>
-    <div class="sub">${playerTag()} &nbsp;·&nbsp; 🧀 ${save.cheese} &nbsp;·&nbsp; 🖼 ${save.stickers.length}/${STICKERS.length} stickers</div>
-    <div class="skills">${bars}</div>
-    <div class="row"><button class="btn" data-act="realm">${REALMS[activeRealm()]!.emoji} ${REALMS[activeRealm()]!.name}${save.realmPick < 0 ? ' · auto' : ''} ⟳</button></div>
+  const more = open.length - MAX_SKILLS_SHOWN
+  const hidden = all.length - open.length
+  const chips = playableSubjects()
+    .map((s) => `<button class="chip-subject ${s.id === subjectId ? 'on' : ''}" data-act="subject" data-id="${s.id}">${s.emoji} ${s.name}</button>`)
+    .join('')
+  screen(`<h1><span class="mouse">🐭</span> Mouse Maze ${subject.id === 'math' ? 'Math' : subject.name}</h1>
+    <div class="sub">${playerTag()} &nbsp;·&nbsp; 🧀 ${save.cheese} &nbsp;·&nbsp; 🖼 ${save.stickers.length}/${STICKERS.length} stickers${known ? ` &nbsp;·&nbsp; 🎓 IXL ${gradeName(grade)}` : ''}</div>
+    <div class="subjects-row">${chips}</div>
     <div class="row"><button class="btn primary big" data-act="play">▶ Play Maze ${save.mazes + 1}</button></div>
+    <div class="row"><button class="btn" data-act="realm">${REALMS[activeRealm()]!.emoji} ${REALMS[activeRealm()]!.name}${save.realmPick < 0 ? ' · auto' : ''} ⟳</button></div>
+    <details class="practicing"><summary>📊 What I'm practicing</summary>
+      <div class="skills">${bars}</div>
+      <div class="sub">${[more > 0 ? `+${more} more you're practicing` : '', hidden > 0 ? `🔒 ${hidden} more to discover` : ''].filter(Boolean).join(' · ')}</div>
+    </details>
     <div class="row">
       <button class="btn" data-act="closet">🎩 Mouse closet</button>
       <button class="btn" data-act="stickers">🖼 Sticker book</button>
@@ -86,6 +110,7 @@ export const showFinish = (f: Finish) => {
     <div class="sub">${f.mistakes === 0 ? 'Perfect run!' : `${f.mistakes} wrong turn${f.mistakes === 1 ? '' : 's'}`} &nbsp;·&nbsp; +${f.bonus} 🧀 bonus</div>
     <div class="prize">${f.sticker}</div>
     ${f.grew.length ? `<div class="sub">📈 Now practicing: ${f.grew.join(' · ')}</div>` : ''}
+    ${f.gradeLine ? `<div class="sub">🎓 ${f.gradeLine}</div>` : ''}
     ${f.newRealm ? `<div class="tag">🗺 New realm unlocked: ${f.newRealm}</div>` : ''}
     <div>${f.isNew ? '<span class="tag">New sticker!</span>' : 'Already have it: +20 🧀 instead'}</div>
     <div class="row">
@@ -110,10 +135,8 @@ export const setStreak = (n: number) => {
 export const setQuestion = (prompt: Prompt | null) => {
   $('q').classList.toggle('off', prompt === null)
   if (prompt !== null) {
-    // Sums get "= ?"; other questions ("What digit is in the tens place of 47?") show as they are.
-    $('qtext').innerHTML = prompt.sum
-      ? `${problemHTML(prompt.text)} <span class="op">=</span> <span class="qmark">?</span>`
-      : problemHTML(prompt.text).replace('__', '<span class="qmark">?</span>')
+    $('qtext').innerHTML = `${questionHTML(prompt)}<button class="qsay" aria-label="Hear it">🔊</button>`
+    $('qtext').querySelector<HTMLButtonElement>('.qsay')!.onclick = () => speak(spokenText(prompt))
     $('qtext').classList.toggle('long', prompt.text.length > 14)
     $('qhint').textContent = 'Which door leads to the cheese? 🧀'
   }
@@ -124,7 +147,7 @@ const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`
 export const showAnswers = (labels: string[], colors: number[], pick: (i: number) => void, hover: (i: number) => void) => {
   const el = $('answers')
   el.innerHTML = labels
-    .map((l, i) => `<button class="ans" style="--c:${hex(colors[i]!)}" data-i="${i}" aria-label="${['Left', 'Middle', 'Right'][i]} door: ${l}"><span class="arrow">${ARROWS[i]}</span><span class="num">${l}</span></button>`)
+    .map((l, i) => `<button class="ans" style="--c:${hex(colors[i]!)}" data-i="${i}" aria-label="${['Left', 'Middle', 'Right'][i]} door: ${l}"><span class="arrow">${ARROWS[i]}</span><span class="num${l.length > 12 ? ' long wordy' : l.length > 5 ? ' long' : ''}">${l}</span></button>`)
     .join('')
   el.querySelectorAll<HTMLButtonElement>('.ans').forEach((b) => {
     const i = Number(b.dataset.i)
@@ -132,7 +155,8 @@ export const showAnswers = (labels: string[], colors: number[], pick: (i: number
     b.onpointerenter = (ev) => ev.pointerType === 'mouse' && hover(i)
     b.onpointerleave = () => hover(-1)
   })
-  el.className = ''
+  // Long answers (a whole sentence) read better stacked full-width than squeezed into three columns.
+  el.className = labels.some((l) => l.length > 28) ? 'stacked' : ''
 }
 export const hoverAnswer = (i: number) =>
   $('answers').querySelectorAll('.ans').forEach((b, k) => b.classList.toggle('hot', k === i))
@@ -152,11 +176,12 @@ export const toast = (msg: string, kind: 'good' | 'bad' | '' = '') => {
   toastTimer = window.setTimeout(() => (el.className = ''), 1500)
 }
 
-// Typed answers use the shared number pad from @arcade/learning.
-const pad = numberPad()
+// The trap cage asks with big tap buttons (the shared choice pad), so there's no typing to slow anyone down.
+const pad = choicePad()
 export const closeTrap = () => pad.close()
-export const askNumber = pad.ask
-export const trapFeedback = pad.feedback
+export const askChoice = pad.ask
+export const askAgain = pad.again
+export const markChoice = pad.mark
 
 export const initUI = (h: Handlers) => {
   handlers = h
@@ -170,6 +195,10 @@ export const initUI = (h: Handlers) => {
     else if (act === 'menu' || act === 'home') handlers.menu()
     else if (act === 'realm') {
       save.realmPick = save.realmPick + 1 > save.realmMax ? -1 : save.realmPick + 1
+      commit()
+      handlers.realm()
+    } else if (act === 'subject') {
+      save.subject = id!
       commit()
       handlers.realm()
     } else if (act === 'closet') showCloset()

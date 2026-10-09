@@ -160,7 +160,7 @@ export const clocksCoins: Subject = {
   skills: [
     {
       id: 'time',
-      label: (L) => ["Telling time: o'clock", 'Telling time: half past', 'Telling time: quarter past and to', 'Telling time: every 5 minutes', 'Telling time: any minute'][L - 1]!,
+      label: (L) => ["Time: o'clock", 'Time: half past', 'Time: quarter past and to', 'Time: every 5 minutes', 'Time: any minute'][L - 1]!,
       maxLevel: 5,
       formats: ['choice'],
       generate: (L) => clockItem(...clockTime(L)),
@@ -171,7 +171,7 @@ export const clocksCoins: Subject = {
     },
     {
       id: 'coins',
-      label: (L) => ['What coins are worth', 'Counting the same coins', 'Counting coins up to 50¢', 'Counting coins up to $1', 'Making change'][L - 1]!,
+      label: (L) => ['Identify coins and their values', 'Count the same coins', 'Count coins up to 50¢', 'Count coins up to $1', 'Make change'][L - 1]!,
       maxLevel: 5,
       formats: ['number', 'choice'],
       generate: coinItem,

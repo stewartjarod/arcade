@@ -38,9 +38,9 @@ export function renderPrompt(p: Prompt, { listen = false, sumSuffix = '' } = {})
     const v = document.createElement('div')
     v.className = 'lp-visual'
     if (p.svg) {
-      v.innerHTML = `<div class="lp-svg${p.svg.includes('Coins') ? ' wide' : ''}">${p.svg}</div>`
+      v.innerHTML = `<div class="lp-svg${p.svg.includes('Coins') || isWideSvg(p.svg) ? ' wide' : ''}">${p.svg}</div>`
     } else {
-      v.innerHTML = `<span class="lp-emoji">${escapeHTML(p.emoji!)}</span>`
+      v.innerHTML = `<span class="lp-emoji" style="font-size:${emojiRem(p.emoji!)}rem">${escapeHTML(p.emoji!)}</span>`
     }
     box.append(v)
   }
@@ -58,4 +58,28 @@ export function renderPrompt(p: Prompt, { listen = false, sumSuffix = '' } = {})
     if (listen) setTimeout(() => speak(p.say!), 250)
   }
   return box
+}
+
+/** What to say out loud for a question: its `say` text, or the words with math symbols spelled out ("7 plus 5"). */
+export const spokenText = (p: Prompt) =>
+  p.say ??
+  p.text
+    .replace('+', ' plus ')
+    .replace('−', ' minus ')
+    .replace('×', ' times ')
+    .replace('÷', ' divided by ')
+    .replace('__', 'what')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+/** A drawing that's much wider than tall (a picture graph, a ruler) needs more room than a small shape. */
+export const isWideSvg = (svg: string) => {
+  const m = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
+  return !!m && Number(m[1]) / Number(m[2]) > 1.4
+}
+
+/** Font size (rem) for a row of emoji: a few get big, a long row shrinks so it still fits and wraps nicely. */
+export const emojiRem = (emoji: string) => {
+  const n = emoji.includes(' ') ? emoji.trim().split(/\s+/).length : Array.from(emoji).length
+  return n <= 3 ? 4 : n <= 6 ? 2.6 : n <= 10 ? 1.9 : 1.4
 }

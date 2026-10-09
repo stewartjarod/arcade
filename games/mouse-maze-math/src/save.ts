@@ -15,6 +15,8 @@ export type Save = {
   color: string
   hat: string
   muted: boolean
+  /** What the maze asks about: 'math', 'reading', 'science'... */
+  subject: string
 }
 
 // Game-only things (cheese, stickers, closet) live in this game's slot for the current player.
@@ -34,6 +36,7 @@ const fresh = (): Save => ({
   color: 'gray',
   hat: 'none',
   muted: false,
+  subject: 'math',
 })
 
 const read = (key: string): (Partial<Save> & LegacyMath) | null => {

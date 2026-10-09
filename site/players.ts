@@ -2,7 +2,7 @@ import {
   AVATARS, GRADES, PLAYER_COLORS, createPlayer, currentPlayer, deletePlayer, listPlayers,
   onPlayersChanged, selectPlayer, updatePlayer, type Player,
 } from '@arcade/players'
-import { SUBJECTS, peekLearner, skillSummary, subjectSummary } from '@arcade/learning'
+import { SUBJECTS, gradeName, peekLearner, skillSummary, subjectSummary, type SkillInfo } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  "Who's playing?" — pick, make, edit and delete players.
@@ -62,6 +62,15 @@ function playerRow(changed: () => void): HTMLElement[] {
   return [title, row]
 }
 
+/** "· 85 proficient" next to a skill: where they are in the level, IXL-style. */
+function smartNote(k: SkillInfo) {
+  const sm = k.smart
+  if (!sm) return ''
+  if (sm.band === 'placing') return ' · placing…'
+  const word = sm.band === 'challenge' ? 'challenge zone' : sm.band === 'proficient' ? 'proficient' : ''
+  return ` · ${sm.score}${word ? ` ${word}` : ''}`
+}
+
 /** What the current player is learning, in every subject (shared by every game). */
 function learningCard() {
   const player = currentPlayer()
@@ -80,13 +89,13 @@ function learningCard() {
     summary.append(
       el('span', 'subject-emoji', s.emoji),
       el('span', 'subject-name', s.name + (player.focus === s.id ? ' 📌' : '')),
-      el('span', 'subject-now', s.started ? s.current : `Ready: ${s.current}`),
+      el('span', 'subject-now', (s.started ? s.current : `Ready: ${s.current}`) + (s.ixlGrade !== undefined ? ` · IXL ${gradeName(Math.round(s.ixlGrade))}` : '')),
       bar,
     )
     if (s.review) summary.append(el('span', 'subject-review', `🔁 ${s.review} to practice again`))
     const skills = el('ul', 'subject-skills')
     for (const k of skillSummary(l, s.id)) {
-      skills.append(el('li', k.unlocked ? (k.mastered ? 'done' : '') : 'locked', `${k.mastered ? '⭐' : k.unlocked ? '▸' : '🔒'} ${k.label}${k.unlocked ? '' : ' — coming soon'}`))
+      skills.append(el('li', k.unlocked ? (k.mastered ? 'done' : '') : 'locked', `${k.mastered ? '⭐' : k.unlocked ? '▸' : '🔒'} ${k.label}${k.unlocked ? smartNote(k) : ' — coming soon'}`))
     }
     tile.append(summary, skills)
     grid.append(tile)

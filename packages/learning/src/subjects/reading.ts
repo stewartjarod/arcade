@@ -1,4 +1,7 @@
 import type { ItemSpec, Subject } from '../core/types'
+import { rhyme, syllables, wordMeaning } from './language'
+import { READING_MORE } from './languageMore'
+import { READING_UPPER } from './languageUpper'
 import { pick, rand, upToLevel, wrongFrom } from './util'
 import { PICTURE_WORDS, SIGHT_WORDS } from './words'
 
@@ -150,14 +153,14 @@ export const reading: Subject = {
   skills: [
     {
       id: 'sounds',
-      label: (L) => ['First sounds', 'Tricky first sounds (b, d, p)', 'sh, ch, th, wh'][L - 1]!,
+      label: (L) => ['Identify the first sound', 'Identify the first sound: b, d, p', 'Choose the correct digraph: sh, ch, th, wh'][L - 1]!,
       maxLevel: 3,
       formats: ['choice'],
       generate: firstSoundItem,
     },
     {
       id: 'words',
-      label: (L) => ['Short words (cat, dog)', 'Blends (frog, ship)', 'Long vowels (cake, boat)', 'Words like star, horse, cloud'][L - 1]!,
+      label: (L) => ['Read short vowel words', 'Read words with blends', 'Read long vowel words', 'Read words with other vowel patterns'][L - 1]!,
       maxLevel: 4,
       formats: ['choice'],
       generate: pictureWordItem,
@@ -165,20 +168,25 @@ export const reading: Subject = {
     },
     {
       id: 'sight',
-      label: (L) => ['Sight words: first list', 'Sight words: second list', 'Sight words: first grade', 'Sight words: second grade'][L - 1]!,
+      label: (L) => ['Read sight words: set 1', 'Read sight words: set 2', 'Read sight words: grade 1', 'Read sight words: grade 2'][L - 1]!,
       maxLevel: 4,
       formats: ['choice'],
       listen: true,
       generate: (L) => sightItem(L),
       fromKey: (key, L) => (SIGHT_WORDS[L - 1]?.includes(key) ? sightItem(L, key) : null),
     },
+    rhyme,
+    syllables,
+    wordMeaning,
     {
       id: 'stories',
-      label: (L) => ['Reading a sentence', 'Reading two sentences', 'Why did it happen?', 'First, next, last'][L - 1]!,
+      label: (L) => ['Read a sentence', 'Read two sentences', 'Cause and effect', 'Sequence'][L - 1]!,
       maxLevel: 4,
       formats: ['choice'],
       unlocksAfter: [{ skill: 'words', level: 2 }],
       generate: storyItem,
     },
+    ...READING_UPPER,
+    ...READING_MORE,
   ],
 }
