@@ -155,3 +155,11 @@ export const MONSTER_LINES = {
   hungry: 'You had no candy, so the Candy Monster went home hungry!',
   burp: 'Burp! Now it is full. Keep running!',
 }
+
+/** The first-time lesson on how to play (said out loud, since little kids won't guess the controls). */
+export const COACH_LINES = {
+  drag: 'Put your finger down and slide it to move Buddy!',
+  tap: 'Now tap to jump!',
+  ready: 'Great! Bounce on gumdrops. Jump over sticky taffy. Here we go!',
+  jumpHint: 'Tap to jump!',
+}

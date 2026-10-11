@@ -1,14 +1,15 @@
-import { Game, THREE, burst, confetti, ease, music, pick, rand, sfx, storage, tone, type Entity, type SceneFn } from '@arcade/engine'
+import { Game, THREE, burst, clamp, confetti, ease, music, pick, rand, sfx, storage, tone, type Entity, type SceneFn } from '@arcade/engine'
 import { canPick, learner, letterPad, peekLearner, practiceGrade, speak, startPractice, type PickOptions, type Practice } from '@arcade/learning'
-import { LANDS } from './lands'
+import { COACH_LINES, LANDS } from './lands'
 import { startChase } from './monster'
 import { afterGate, landFor, mapDone, monsterWakes, newMap } from './quest'
-import { landsButton, mapCard, titleCard, toast, touchButtons, type Look } from './ui'
+import { coach, landsButton, mapCard, titleCard, toast, type Look } from './ui'
 import { candyGate, chest, gumdrop, hero, landmark, pathPiece, scenery, taffy, wrappedCandy, xMark } from './world'
 
 // ------------------------------------------------------------------
 //  Candy Quest
-//  Buddy runs along a candy path all by themselves. ⬅ ➡ switch lanes, ⬆ / Space jumps.
+//  Buddy runs along a candy path all by themselves. Drag a finger to move them, tap to jump
+//  (or ⬅ ➡ and Space). The first time, Buddy waits and shows you how.
 //  Gumdrops bounce you high (grab the candies up there!). Sticky taffy slows you down.
 //  A candy gate blocks the path every so often: spell the word to open it and win
 //  a piece of the treasure map. Finish the map, open the chest, and the next land opens.
@@ -16,6 +17,7 @@ import { candyGate, chest, gumdrop, hero, landmark, pathPiece, scenery, taffy, w
 // ------------------------------------------------------------------
 
 const game = new Game({ background: LANDS[0]!.sky, lights: true })
+game.renderer.domElement.style.touchAction = 'none' // sliding a finger steers Buddy; it must not scroll or zoom the page
 const save = storage('candy-quest')
 music.play({ chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], note: 0.35, wave: 'triangle', sparkle: true })
 
@@ -37,8 +39,7 @@ const bounceHeight = (ahead: number, speed: number) => {
 let look: Look = { color: save.get('color', '#f783ac'), hat: save.get('hat', 'none') }
 const finishedLands = () => save.get('finished', 0)
 
-// Button presses from the touch buttons wait here until the next frame.
-let pressed: 'left' | 'jump' | 'right' | null = null
+const EDGE = 2.6 // how far left or right Buddy can go on the path
 
 // Test scripts can add ?warp=5 to run faster (dev only; slow headless browsers need it).
 const WARP = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('warp') ?? 1) : 1
@@ -90,7 +91,6 @@ function runLand(index: number): SceneFn {
     const practice = startPractice({ subjects: ['writing'], formats: ['letters'] }) // one practice per land
     const map = newMap(rules.pieces)
     const card = mapCard(land, rules.pieces)
-    const buttons = touchButtons((a) => (pressed = a))
     const back = landsButton(() => game.setScene(titleScreen))
 
     game.scene.background = new THREE.Color(land.sky)
@@ -104,11 +104,12 @@ function runLand(index: number): SceneFn {
     const me = game.add(hero(look.color, look.hat)).at(0, 0, 0)
     me.object.rotation.y = Math.PI // face down the path
     game.camera.position.set(0, 4.6, 8.5) // start right behind Buddy (not where the last land ended)
-    let lane = 1
+    let targetX = 0 // where Buddy is heading, left to right
     let vy = 0
     let slow = 0 // seconds of sticky-taffy slowness left
     let candies = 0
-    let state: 'ready' | 'run' | 'gate' | 'done' = 'ready'
+    let state: 'ready' | 'teach' | 'run' | 'gate' | 'done' = 'ready'
+    let alive = true // false once we leave this land
     let misses = 0 // gate words missed in this land
     let chase: ReturnType<typeof startChase> | null = null
     let chasePractice: Practice | undefined // made the first time the monster wakes
@@ -144,7 +145,7 @@ function runLand(index: number): SceneFn {
     buildScenery(-90)
 
     // --- Things on the path: gumdrops, taffy, candies. Checked by hand each frame. ---
-    type Thing = { e: Entity; kind: 'gumdrop' | 'taffy' | 'candy'; used: boolean }
+    type Thing = { e: Entity; kind: 'gumdrop' | 'taffy' | 'candy'; used: boolean; hinted?: boolean }
     let things: Thing[] = []
     const addThing = (kind: Thing['kind'], obj: THREE.Object3D, x: number, y: number, z: number) => {
       const e = game.add(obj).at(x, y, z).with(behind(4))
@@ -265,7 +266,7 @@ function runLand(index: number): SceneFn {
     /** Too many missed words: here comes the Candy Monster! No gate until the chase is over. */
     function wakeMonster() {
       chasePractice ??= startPractice(CHASE_QUESTIONS)
-      buttons.style.display = 'none' // the answer buttons go there (arrow keys still steer)
+      back.style.display = 'none' // the answer buttons go down there
       chase = startChase({
         game,
         me,
@@ -278,7 +279,7 @@ function runLand(index: number): SceneFn {
         },
         done: () => {
           chase = null
-          buttons.style.display = 'flex'
+          back.style.display = ''
           // The next gate goes on the first stretch boundary at least 20 steps ahead
           placeEnd(-Math.ceil((20 - me.position.z) / STRETCH) * STRETCH)
         },
@@ -321,9 +322,67 @@ function runLand(index: number): SceneFn {
     game.hud.message(`${land.emoji} ${land.name}`, { subtitle: land.intro, seconds: 3.5 })
     speak(land.intro)
     game.after(3, () => {
+      if (!save.get('taught', false)) return void teach()
       state = 'run'
       sfx.whoosh(false)
     })
+
+    // --- Fingers: hold and slide anywhere to move Buddy (like a trackpad); a quick tap jumps ---
+    let finger: { id: number; startX: number; buddyX: number; at: number; moved: boolean } | null = null
+    let tapped = false
+    let jumps = 0
+    const onScreen = (e: PointerEvent) => !(e.target as Element).closest?.('button, .lp-card, [data-answers]')
+    const onDown = (e: PointerEvent) => {
+      if (!onScreen(e) || finger) return
+      finger = { id: e.pointerId, startX: e.clientX, buddyX: targetX, at: performance.now(), moved: false }
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!finger || e.pointerId !== finger.id) return
+      const dx = e.clientX - finger.startX
+      if (Math.abs(dx) > 12) finger.moved = true
+      // Sliding across the whole screen moves Buddy across the path about twice
+      targetX = clamp(finger.buddyX + (dx / innerWidth) * EDGE * 4, -EDGE, EDGE)
+    }
+    const onUp = (e: PointerEvent) => {
+      if (!finger || e.pointerId !== finger.id) return
+      if (!finger.moved && performance.now() - finger.at < 300) tapped = true
+      finger = null
+    }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+
+    /** Wait (checking 10 times a second) until something is true, or we leave the land. */
+    const until = (test: () => boolean) =>
+      new Promise<void>((done) => {
+        const id = setInterval(() => (test() || !alive) && (clearInterval(id), done()), 100)
+      })
+
+    /** The first time: Buddy stands still and shows how to move and jump, waiting until the kid does it. */
+    async function teach() {
+      state = 'teach'
+      let hint = coach('Slide to move!', 'drag')
+      speak(COACH_LINES.drag)
+      await until(() => Math.abs(me.position.x) > 1.4)
+      hint.remove()
+      sfx.good(1)
+      hint = coach('Tap to jump!', 'tap')
+      speak(COACH_LINES.tap)
+      const before = jumps
+      await until(() => jumps > before)
+      hint.remove()
+      if (!alive) return
+      sfx.good(3)
+      toast('Great! ⭐')
+      speak(COACH_LINES.ready)
+      save.set('taught', true)
+      game.after(1.2, () => {
+        state = 'run'
+        sfx.whoosh(false)
+      })
+    }
+    let jumpHints = 0 // "Tap to jump!" pops up for the first few taffy puddles in Buddy's way
 
     // --- Every frame: run, steer, jump, bounce ---
     let time = 0
@@ -331,26 +390,20 @@ function runLand(index: number): SceneFn {
       time += dt
       const grounded = me.position.y <= 0.001
 
-      // Steering (keys or touch buttons)
-      const left = game.input.pressed('left') || pressed === 'left'
-      const right = game.input.pressed('right') || pressed === 'right'
-      const jump = game.input.pressed('jump') || game.input.pressed('up') || pressed === 'jump'
-      pressed = null
-      if (state === 'run' || state === 'ready') {
-        if (left && lane > 0) {
-          lane--
-          sfx.whoosh()
-        }
-        if (right && lane < 2) {
-          lane++
-          sfx.whoosh()
-        }
+      // Steering: fingers (above), or ⬅ ➡ hop one lane at a time
+      const jump = game.input.pressed('jump') || game.input.pressed('up') || tapped
+      tapped = false
+      if (state === 'run' || state === 'ready' || state === 'teach') {
+        const lane = Math.round(targetX / LANE_X[2]!) // -1, 0 or 1: the nearest lane
+        if (game.input.pressed('left')) targetX = Math.max(-1, lane - 1) * LANE_X[2]!
+        if (game.input.pressed('right')) targetX = Math.min(1, lane + 1) * LANE_X[2]!
         if (jump && grounded) {
           vy = JUMP
+          jumps++
           tone(400, 0, 0.15, { type: 'triangle', vol: 0.08, to: 800 })
         }
       }
-      me.position.x += (LANE_X[lane]! - me.position.x) * Math.min(1, dt * 12)
+      me.position.x += (targetX - me.position.x) * Math.min(1, dt * 12)
 
       // Jumping and falling
       vy -= GRAVITY * dt
@@ -365,6 +418,7 @@ function runLand(index: number): SceneFn {
       me.object.children[0]!.position.y = hop // a little bounce in every step
 
       if (state === 'run') bumpInto()
+      if (state === 'run' && jumpHints < 3) hintJump()
       if (state === 'run' && gate && me.position.z <= gate.z + 2.2) void atGate()
       if (state === 'run' && treasure && me.position.z <= treasure.z + 1) void openChest()
 
@@ -378,6 +432,16 @@ function runLand(index: number): SceneFn {
       game.camera.position.lerp(new THREE.Vector3(me.position.x * 0.5, cam.y, me.position.z + cam.z), Math.min(1, dt * 3))
       game.camera.lookAt(me.position.x * 0.4, 1.2, me.position.z - 6)
     })
+
+    /** For the first few puddles: if taffy is right ahead of Buddy, say "Tap to jump!". */
+    function hintJump() {
+      const ahead = things.find((t) => t.kind === 'taffy' && !t.hinted && t.e.position.z < me.position.z - 3 && t.e.position.z > me.position.z - 7 && Math.abs(t.e.position.x - me.position.x) < 1.2)
+      if (!ahead) return
+      ahead.hinted = true // only once per puddle
+      jumpHints++
+      toast('👆 Tap to jump!')
+      speak(COACH_LINES.jumpHint)
+    }
 
     /** Did Buddy run into a gumdrop, a taffy puddle or a candy? */
     function bumpInto() {
@@ -411,9 +475,13 @@ function runLand(index: number): SceneFn {
     }
 
     return () => {
+      alive = false
       chase?.stop()
       card.remove()
-      buttons.remove()
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       back.remove()
       letterPad().close()
       game.paused = false

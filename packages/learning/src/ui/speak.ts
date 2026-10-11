@@ -1,3 +1,4 @@
+import { audioContext } from '@arcade/engine'
 import { clipsFor, hasAnyClips, mathWords } from './clips'
 
 /**
@@ -34,28 +35,58 @@ export function canSpeak(text?: string): boolean {
   return hasBrowserVoice() && voiceCount > 0
 }
 
-let playing: HTMLAudioElement | undefined
+let playing: { stop(): void } | undefined
 let playId = 0 // lets a newer speak() cancel an older one that is still mid-list
 
 function stopAll() {
   playId++
-  playing?.pause()
+  playing?.stop()
   playing = undefined
   if (hasBrowserVoice()) speechSynthesis.cancel()
 }
 
-/** Play clips one after another; if one fails to load, say the whole thing with the browser voice. */
+// Clips are played through the game's Web Audio (switched on by the first tap), not with new Audio().
+// iPad Safari blocks new Audio().play() unless it happens right inside a tap, and then we fell back to
+// the robot voice: so a word read when a question pops up sounded bad even though we had a clip.
+const decoded = new Map<string, Promise<AudioBuffer>>()
+function loadClip(ctx: AudioContext, url: string) {
+  let p = decoded.get(url)
+  if (!p) {
+    p = fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('no clip')))).then((b) => ctx.decodeAudioData(b))
+    p.catch(() => decoded.delete(url)) // try again next time
+    decoded.set(url, p)
+  }
+  return p
+}
+
+/** Play one clip; resolves when it ends. Web Audio if it's running, else an <audio> element. */
+async function playOne(url: string): Promise<void> {
+  const ctx = audioContext()
+  if (ctx && ctx.state === 'running') {
+    const buffer = await loadClip(ctx, url)
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
+    src.connect(ctx.destination)
+    const ended = new Promise<void>((done) => (src.onended = () => done()))
+    playing = { stop: () => src.stop() }
+    src.start()
+    return ended
+  }
+  const audio = new Audio(url)
+  playing = { stop: () => audio.pause() }
+  await audio.play()
+  await new Promise<void>((done, fail) => {
+    audio.onended = () => done()
+    audio.onerror = () => fail(new Error('clip failed'))
+  })
+}
+
+/** Play clips one after another; if one fails, say the whole thing with the browser voice. */
 async function playClips(urls: string[], id: number, fallback: () => void) {
   for (const url of urls) {
     if (id !== playId) return
-    const audio = new Audio(url)
-    playing = audio
     try {
-      await audio.play()
-      await new Promise<void>((done, fail) => {
-        audio.onended = () => done()
-        audio.onerror = () => fail(new Error('clip failed'))
-      })
+      await playOne(url)
     } catch {
       if (id === playId) fallback()
       return

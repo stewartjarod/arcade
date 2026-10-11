@@ -1,4 +1,5 @@
-// Makes the voice clips: `pnpm voices` (add --force to redo them all, e.g. after changing the voice).
+// Makes the voice clips: `pnpm voices` (add --force to redo them all, e.g. after changing the voice;
+// add --games to record only what the games themselves say, from each games/*/src/lines.ts).
 // Finds every line the games say out loud, and records the ones we don't have yet with Kokoro
 // (a free voice that runs on this computer), saving small mp3 files in packages/learning/audio/.
 import { execFileSync } from 'node:child_process'
@@ -13,6 +14,7 @@ const cacheDir = join(root, '.voices') // Python + voice model (~350 MB) live he
 const VOICE = process.env.VOICE ?? 'af_bella'
 const SPEED = process.env.SPEED ?? '0.9' // a little slow is kind to new readers
 const force = process.argv.includes('--force')
+const gamesOnly = process.argv.includes('--games')
 
 // Kokoro lives in a python venv so it doesn't touch the rest of the machine.
 const py = join(cacheDir, 'venv/bin/python')
@@ -34,18 +36,19 @@ for (const file of ['kokoro-v1.0.onnx', 'voices-v1.0.bin']) {
 const vite = await createServer({ root, logLevel: 'error', server: { middlewareMode: true }, appType: 'custom' })
 const learning = await vite.ssrLoadModule('/packages/learning/src/index.ts')
 const lines = new Set(learning.learningLines())
+const gameLines = new Set()
 for (const game of readdirSync(join(root, 'games'))) {
   const file = join(root, 'games', game, 'src/lines.ts')
   if (existsSync(file)) {
     const mod = await vite.ssrLoadModule(file)
-    for (const line of mod.LINES) learning.sentences(learning.mathWords(line)).forEach((s) => lines.add(s))
+    for (const line of mod.LINES) learning.sentences(learning.mathWords(line)).forEach((s) => (lines.add(s), gameLines.add(s)))
   }
 }
 await vite.close()
 
 mkdirSync(outDir, { recursive: true })
 const wanted = new Map([...lines].map((text) => [learning.clipName(text), text]))
-const todo = [...wanted].filter(([name]) => force || !existsSync(join(outDir, name)))
+const todo = [...wanted].filter(([name, text]) => (force || !existsSync(join(outDir, name))) && (!gamesOnly || gameLines.has(text)))
 
 if (todo.length) {
   console.log(`Recording ${todo.length} lines…`)
@@ -66,5 +69,6 @@ if (todo.length) {
 // Clips for lines that no longer exist just waste space.
 const stale = readdirSync(outDir).filter((f) => f.endsWith('.mp3') && !wanted.has(f))
 for (const f of stale) unlinkSync(join(outDir, f))
-writeFileSync(join(outDir, 'lines.txt'), [...wanted.values()].sort().join('\n') + '\n') // handy to read, not used by the games
-console.log(`${wanted.size} lines: ${todo.length} recorded, ${wanted.size - todo.length} already there, ${stale.length} old ones removed.`)
+const recorded = [...wanted].filter(([name]) => existsSync(join(outDir, name))).map(([, text]) => text)
+writeFileSync(join(outDir, 'lines.txt'), recorded.sort().join('\n') + '\n') // what has a clip: handy to read, not used by the games
+console.log(`${wanted.size} lines wanted, ${recorded.length} have clips (${todo.length} just recorded), ${stale.length} old ones removed.`)

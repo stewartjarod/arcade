@@ -1,9 +1,33 @@
+A new color for Buddy!
+A party hat for Buddy!
+A top hat for Buddy!
 A year on Mercury is only 88 days.
 About a million Earths could fit inside it.
 All the planets travel around it.
+Almost there!
+Answer fast to run away!
+Be brave!
+Bounce on gumdrops.
+Brrr!
+Bubble party!
+Buddy can be lemon yellow!
+Buddy gets a crown too!
+Burp!
+But a map is!
+Chomp!
+Climb on!
+Cross it!
 Earth is our home — the only planet we know has living things.
 Earth!
 Earth.
+Find it!
+Follow it!
+Go in!
+Great!
+Here it is!
+Here we go!
+Hoo hoo!
+Hop along!
 How long does it take Earth to go around the Sun?
 How long is one year on Mercury?
 How many planets are closer to the Sun than Earth?
@@ -42,9 +66,13 @@ It takes one year to go around the Sun.
 It was the first planet found with a telescope.
 Its Great Red Spot is a storm bigger than Earth.
 Its moon Titan is bigger than the planet Mercury.
+Jump over sticky taffy.
 Jupiter is the biggest planet — over 1,000 Earths could fit inside!
 Jupiter!
 Jupiter.
+Keep going!
+Keep running!
+Look up!
 Mars is the Red Planet — its dirt is rusty red.
 Mars!
 Mars.
@@ -62,10 +90,15 @@ Next stop: Neptune, planet number 8 from the Sun.
 Next stop: Saturn, planet number 6 from the Sun.
 Next stop: Uranus, planet number 7 from the Sun.
 Next stop: Venus, planet number 2 from the Sun.
+Nice try!
 Not that one.
+Now it is full.
+Now tap to jump!
 Oceans of water cover most of it.
+Oh no!
 On Venus, the Sun rises in the west.
 On which planet does the Sun rise in the west?
+One more gate to find this map piece.
 One year on Neptune is about 165 Earth years!
 Or Earth?
 Or Jupiter?
@@ -76,13 +109,22 @@ Or Saturn?
 Or Uranus?
 Or Venus?
 Pluto used to be called a planet.
+Pop them all!
+Put your finger down and slide it to move Buddy!
+Queen Sprinkle says thank you!
+Queen Sprinkle's crown is lost!
 Remember: My Very Excellent Mother Just Served Us Nachos.
 Robot rovers drive around on Mars.
+Run past it!
 Saturn has the biggest, brightest rings, made of ice and rock.
 Saturn!
 Saturn.
+Say hi!
+Shh!
 Sit by me.
+Spell words to find map pieces.
 Sun.
+Tap to jump!
 That's Earth.
 That's Jupiter.
 That's Mars.
@@ -91,19 +133,64 @@ That's Neptune.
 That's Saturn.
 That's Uranus.
 That's Venus.
+The Candy Castle!
+The Candy Monster ate some of your candy!
+The Candy Monster!
+The Gumdrop Mountains are big and bouncy!
+The Lollipop Forest.
 The Sun is a star — the closest star to us.
+The castle is just past the trees!
+The crown is close!
+The crown is not here.
 The dog wags its tail.
+The last map leads to the crown.
+The map shows a bell.
+The map shows a big balloon.
+The map shows a big door.
+The map shows a bridge.
+The map shows a bunny cloud.
+The map shows a butterfly.
+The map shows a candle.
+The map shows a chocolate frog.
+The map shows a donut.
+The map shows a duck on the river.
+The map shows a friendly dragon.
+The map shows a giant cookie.
+The map shows a key.
+The map shows a little boat.
+The map shows a little house.
+The map shows a mountain goat.
+The map shows a mushroom.
+The map shows a rainbow.
+The map shows a shield.
+The map shows a shiny star.
+The map shows a sleepy moon.
+The map shows a snowy top.
+The map shows a squirrel.
+The map shows a sunflower.
+The map shows a tent.
+The map shows a trumpet.
+The map shows a unicorn.
+The map shows an eagle.
+The map shows an owl.
+The map shows the queen.
+The treasure is close!
+They lead to the treasure!
 They love their dog.
 Thick clouds trap its heat like a blanket.
 Three, two, one, blast off!
+Toot toot!
 Try again!
 Turn right.
+Up we go!
 Uranus spins tipped over on its side.
 Uranus!
 Uranus.
 Venus is the hottest planet — even hotter than Mercury!
 Venus!
 Venus.
+Wave to it!
+Wave!
 We buy apples.
 Welcome back to Earth!
 Welcome back to Jupiter!
@@ -113,6 +200,7 @@ Welcome back to Neptune!
 Welcome back to Saturn!
 Welcome back to Uranus!
 Welcome back to Venus!
+Welcome to the Chocolate River!
 What goes around the Earth?
 What is between Mars and Jupiter?
 What is it now?
@@ -155,7 +243,6 @@ Which planet is between Saturn and Neptune?
 Which planet is between Venus and Mars?
 Which planet is called the Red Planet?
 Which planet is closest to the Sun?
-Which planet is covered with oceans of water?
 Which planet is farthest from the Sun?
 Which planet is so light it would float in a giant bathtub?
 Which planet is the hottest?
@@ -167,6 +254,7 @@ Which planets are giant balls of gas?
 Which planets are small and rocky?
 Which two planets have no moons at all?
 Yes!
+You can do it!
 You found Earth!
 You found Jupiter!
 You found Mars!
@@ -175,6 +263,11 @@ You found Neptune!
 You found Saturn!
 You found Uranus!
 You found Venus!
+You found the crown!
+You found the treasure!
+You got away!
+You had no candy, so the Candy Monster went home hungry!
+You popped them all!
 You toured the whole solar system!
 a
 after
@@ -236,7 +329,6 @@ could
 cow
 crab
 crown
-cup
 did
 do
 does
@@ -248,7 +340,6 @@ eat
 egg
 every
 fast
-feet
 find
 first
 fish
@@ -278,7 +369,6 @@ hat
 have
 he
 help
-hen
 her
 here
 him
@@ -320,7 +410,6 @@ no
 nose
 not
 now
-nut
 of
 off
 old
@@ -397,7 +486,6 @@ think
 this
 those
 three
-thumb
 to
 too
 train

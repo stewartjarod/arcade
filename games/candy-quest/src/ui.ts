@@ -40,23 +40,6 @@ export function mapCard(land: Land, pieces: number) {
   }
 }
 
-/** Big ⬅ ⬆ ➡ buttons for tablets and phones (the keyboard works too). */
-export function touchButtons(onPress: (action: 'left' | 'jump' | 'right') => void) {
-  const el = div('position:fixed;bottom:14px;right:12px;display:flex;gap:10px;')
-  for (const [action, label] of [['left', '⬅'], ['jump', '⬆'], ['right', '➡']] as const) {
-    const b = document.createElement('button')
-    b.textContent = label
-    b.style.cssText = 'width:70px;height:70px;border-radius:50%;border:4px solid #fff;background:#f783acdd;color:#fff;font-size:32px;box-shadow:0 5px 0 #0003;touch-action:manipulation;cursor:pointer;'
-    // pointerdown (not click) so it reacts the moment a finger touches
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault()
-      onPress(action)
-    })
-    el.append(b)
-  }
-  return el
-}
-
 /** A small "back to the lands" button. */
 export function landsButton(onClick: () => void) {
   const b = document.createElement('button')
@@ -154,4 +137,20 @@ export function chasePanel() {
     },
     remove: () => el.remove(),
   }
+}
+
+/**
+ * A big friendly hint with a moving hand: 'drag' slides side to side, 'tap' pokes up and down.
+ * Used to teach the controls the first time, since little kids won't guess them.
+ */
+export function coach(text: string, move: 'drag' | 'tap') {
+  const el = div('position:fixed;left:50%;bottom:9vh;transform:translateX(-50%);text-align:center;pointer-events:none;')
+  el.innerHTML = `<div data-hand style="font-size:72px;line-height:1">👆</div>
+    <div style="margin-top:6px;font:700 30px Fredoka,system-ui;color:#fff;background:#e64980dd;padding:8px 22px;border-radius:999px;box-shadow:0 5px 0 #0003;white-space:nowrap">${text}</div>`
+  const hand = el.querySelector<HTMLElement>('[data-hand]')!
+  const frames = move === 'drag'
+    ? [{ transform: 'translateX(-90px)' }, { transform: 'translateX(90px)' }, { transform: 'translateX(-90px)' }]
+    : [{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(16px) scale(.85)' }, { transform: 'translateY(0) scale(1)' }]
+  hand.animate(frames, { duration: move === 'drag' ? 1600 : 700, iterations: Infinity, easing: 'ease-in-out' })
+  return { remove: () => el.remove() }
 }

@@ -24,6 +24,9 @@ export function setMuted(on: boolean) {
 export function unlockAudio() {
   try {
     if (!ctx) {
+      // iPad: play like a music app, so the silent switch doesn't mute the game and its voice (Safari 16.4+)
+      const session = (navigator as { audioSession?: { type: string } }).audioSession
+      if (session) session.type = 'playback'
       ctx = new AudioContext()
       const comp = ctx.createDynamicsCompressor()
       master = ctx.createGain()
