@@ -1,0 +1,8 @@
+realm 0 {"items":240,"instances":240,"triangles":18838}
+realm 1 {"items":290,"instances":290,"triangles":19438}
+realm 2 {"items":275,"instances":1431,"triangles":662034}
+realm 3 {"items":263,"instances":617,"triangles":22652}
+realm 4 {"items":298,"instances":633,"triangles":35746}
+realm 5 {"items":248,"instances":557,"triangles":22022}
+realm 6 {"items":290,"instances":984,"triangles":330146}
+realm 7 {"items":243,"instances":509,"triangles":22054}

@@ -1,0 +1,5 @@
+realm 2 medium lvl 12 {"ms":375,"calls":184,"tris":368439,"census":364262}
+realm 6 medium lvl 12 {"ms":277,"calls":68,"tris":154649,"census":184538}
+realm 4 medium lvl 12 {"ms":213,"calls":77,"tris":52105,"census":125818}
+realm 0 medium lvl 12 {"ms":193,"calls":68,"tris":30777,"census":60914}
+  (medium) canvas inline style: null   console: clean

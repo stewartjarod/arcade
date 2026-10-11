@@ -1,0 +1,16 @@
+all on 235 ms/frame
+top level ["HemisphereLight:0","DirectionalLight:0","Object3D:0","Group:5","Group:20","Group:0","Group:2"]
+hide HemisphereLight #0 kids=0 => 750 ms/frame
+hide DirectionalLight #1 kids=0 => 1000 ms/frame
+hide Object3D #2 kids=0 => 1000 ms/frame
+hide Group #3 kids=5 => 1000 ms/frame
+hide Group #4 kids=20 => 1000 ms/frame
+hide Group #5 kids=0 => 1000 ms/frame
+hide Group #6 kids=2 => 1000 ms/frame
+level group index 4 children 20
+  0 Mesh           inst=37   tri/inst=12    map=true transparent=false hidden=> 1250
+  1 Mesh           inst=76   tri/inst=12    map=true transparent=false hidden=> 833
+  2 Mesh           inst=76   tri/inst=12    map=false transparent=false hidden=> 1250
+  3 Mesh           inst=152  tri/inst=2     map=true transparent=true hidden=> 833
+  4 Points         inst=1    tri/inst=13    map=true transparent=true hidden=> 1250
+ 16 Mesh           inst=1    tri/inst=40    map=false transparent=true hidden=> 833

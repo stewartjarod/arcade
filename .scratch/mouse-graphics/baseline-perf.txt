@@ -1,0 +1,9 @@
+realm 0 base   {"ms":86,"frames":58,"calls":115,"triangles":12206,"geometries":10,"textures":4}
+realm 1 base   {"ms":1000,"frames":5,"calls":133,"triangles":11406,"geometries":13,"textures":4}
+realm 2 base   {"ms":1250,"frames":4,"calls":105,"triangles":566614,"geometries":16,"textures":4}
+realm 3 base   {"ms":1000,"frames":5,"calls":247,"triangles":22540,"geometries":21,"textures":4}
+realm 4 base   {"ms":1000,"frames":5,"calls":132,"triangles":20054,"geometries":24,"textures":4}
+realm 5 base   {"ms":1250,"frames":4,"calls":110,"triangles":14218,"geometries":27,"textures":4}
+realm 6 base   {"ms":1000,"frames":5,"calls":211,"triangles":375278,"geometries":31,"textures":4}
+realm 7 base   {"ms":1250,"frames":4,"calls":236,"triangles":22162,"geometries":36,"textures":4}
+console problems: warning: THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.

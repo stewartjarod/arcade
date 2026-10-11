@@ -1,0 +1,10 @@
+file:///home/jarod/Projects/Games/.scratch/mouse-graphics/cdp.mjs:35
+    const r = await Promise.race([new Promise((_, rej) => setTimeout(() => rej(new Error('eval timeout: ' + expr.slice(0, 70))), ms)), send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })])
+                                                                               ^
+
+Error: eval timeout: new Promise((done) => { const i = __mm.world.debug.renderer.info; cons
+    at Timeout._onTimeout (file:///home/jarod/Projects/Games/.scratch/mouse-graphics/cdp.mjs:35:80)
+    at listOnTimeout (node:internal/timers:685:17)
+    at process.processTimers (node:internal/timers:618:7)
+
+Node.js v26.10.0

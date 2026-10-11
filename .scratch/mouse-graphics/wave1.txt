@@ -1,0 +1,27 @@
+realm 0 census {"items":120,"instances":513,"triangles":22882}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 0  {"calls":116,"triangles":23693,"geometries":13,"textures":27}  medianFrameMs=NaN
+realm 1 census {"items":123,"instances":512,"triangles":23634}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 1  {"calls":81,"triangles":17825,"geometries":13,"textures":27}  medianFrameMs=NaN
+realm 2 census {"items":205,"instances":1087,"triangles":84420}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 2  {"calls":133,"triangles":25929,"geometries":16,"textures":27}  medianFrameMs=NaN
+realm 3 census {"items":175,"instances":742,"triangles":25316}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 3  {"calls":109,"triangles":50311,"geometries":17,"textures":30}  medianFrameMs=NaN
+realm 4 census {"items":184,"instances":918,"triangles":40758}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 4  {"calls":131,"triangles":23059,"geometries":17,"textures":33}  medianFrameMs=NaN
+realm 5 census {"items":175,"instances":872,"triangles":25910}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 5  {"calls":185,"triangles":39869,"geometries":19,"textures":36}  medianFrameMs=NaN
+realm 6 census {"items":171,"instances":1319,"triangles":56802}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 6  {"calls":165,"triangles":27647,"geometries":19,"textures":36}  medianFrameMs=NaN
+realm 7 census {"items":176,"instances":694,"triangles":25078}
+  frames: eval timeout: new Promise((done) => { const t = []; let last
+realm 7  {"calls":154,"triangles":54819,"geometries":19,"textures":39}  medianFrameMs=NaN
+console problems:
+warning: THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+warning: THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported.

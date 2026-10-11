@@ -1,0 +1,27 @@
+realm 0 low    lvl 3 {"ms":44,"calls":14,"tris":3994,"census":22474}
+realm 1 low    lvl 3 {"ms":94,"calls":40,"tris":14520,"census":25390}
+realm 2 low    lvl 3 {"ms":123,"calls":43,"tris":88276,"census":98094}
+realm 3 low    lvl 3 {"ms":64,"calls":37,"tris":14992,"census":25866}
+realm 4 low    lvl 3 {"ms":99,"calls":59,"tris":26380,"census":44426}
+realm 5 low    lvl 3 {"ms":60,"calls":37,"tris":13962,"census":24836}
+realm 6 low    lvl 3 {"ms":80,"calls":39,"tris":46216,"census":57090}
+realm 7 low    lvl 3 {"ms":81,"calls":80,"tris":24646,"census":24642}
+  (low) canvas inline style: null   console: clean
+realm 0 medium lvl 3 {"ms":169,"calls":43,"tris":10955,"census":23334}
+realm 1 medium lvl 3 {"ms":206,"calls":109,"tris":29371,"census":23454}
+realm 2 medium lvl 3 {"ms":219,"calls":71,"tris":92031,"census":97760}
+realm 3 medium lvl 3 {"ms":217,"calls":121,"tris":36615,"census":27298}
+realm 4 medium lvl 3 {"ms":252,"calls":79,"tris":27133,"census":39474}
+realm 5 medium lvl 3 {"ms":206,"calls":105,"tris":30689,"census":25472}
+realm 6 medium lvl 3 {"ms":234,"calls":108,"tris":60779,"census":54914}
+realm 7 medium lvl 3 {"ms":239,"calls":108,"tris":31791,"census":26550}
+  (medium) canvas inline style: null   console: clean
+realm 0 high   lvl 3 {"ms":155,"calls":58,"tris":13575,"census":22334}
+realm 1 high   lvl 3 {"ms":240,"calls":113,"tris":31083,"census":24270}
+realm 2 high   lvl 3 {"ms":260,"calls":127,"tris":104813,"census":95708}
+realm 3 high   lvl 3 {"ms":195,"calls":74,"tris":22851,"census":26616}
+realm 4 high   lvl 3 {"ms":210,"calls":93,"tris":27253,"census":35794}
+realm 5 high   lvl 3 {"ms":208,"calls":65,"tris":19643,"census":25328}
+realm 6 high   lvl 3 {"ms":233,"calls":124,"tris":58851,"census":49222}
+realm 7 high   lvl 3 {"ms":224,"calls":115,"tris":31087,"census":24770}
+  (high) canvas inline style: null   console: clean
