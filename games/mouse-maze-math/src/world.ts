@@ -1,15 +1,26 @@
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { SIGN_SIZE, answerSign, emojiSprite, sfx } from '@arcade/engine'
-import { mouseModel, type MouseHat } from '@arcade/assets'
+import { mouseModel, type MouseHat, type MouseRig } from '@arcade/assets'
 import { COLORS } from './catalog'
 import { DX, DZ, type Dir, type Layout } from './maze'
 import { REALMS, type Realm } from './realms'
+import { createPostFx, type PostFx } from '@arcade/engine/src/postfx'
+import { TIERS, createGovernor, pickTier, type Tier } from './quality'
+import { surfaceTexture } from './textures'
+import { createSky } from './sky'
+import { buildProps } from './props'
+import { createChest, createCheeseWedge } from './chest'
 
 export const CELL = 4
 const WALL_H = 4
 
 const box = new THREE.BoxGeometry(1, 1, 1)
 const ball = new THREE.SphereGeometry(1, 20, 14)
+// Hundreds of tiny decorations (hedge leaves, rivets) use this chunky low-detail ball: they are far too small to see
+// the difference, and the smooth one would cost ten times as many triangles.
+const ballLo = new THREE.SphereGeometry(1, 8, 6)
+const ballTiny = new THREE.SphereGeometry(1, 6, 4) // rivets: smaller than a fingernail on screen
 const mats = new Map<number, THREE.MeshLambertMaterial>()
 const mat = (c: number) => {
   let m = mats.get(c)
@@ -29,12 +40,58 @@ const blob = (sx: number, sy: number, sz: number, c: number, x: number, y: numbe
   return m
 }
 
-const glowMats = new Map<number, THREE.MeshBasicMaterial>()
-const glowMat = (c: number) => {
-  let m = glowMats.get(c)
-  if (!m) glowMats.set(c, (m = new THREE.MeshBasicMaterial({ color: c })))
+// Pieces that never move can be glued together (see mergeStatic in createWorld): one draw call instead of dozens.
+// 'world' = glue with every other still piece in the maze; 'local' = glue only with its siblings (they move together, like a door hinge).
+const still = <T extends THREE.Mesh>(m: T, how: 'world' | 'local' = 'world') => {
+  m.userData.merge = how
   return m
 }
+// A fluffy bush blob for the hedge archways: dozens per maze, so it uses the low-detail sphere (the smooth one is ~500 triangles).
+const bush = (r: number, c: number, x: number, y: number, z: number) => {
+  const m = new THREE.Mesh(ballLo, mat(c))
+  m.scale.setScalar(r)
+  m.position.set(x, y, z)
+  return m
+}
+const glowMats = new Map<number, THREE.MeshBasicMaterial>()
+// Glowing things are drawn brighter than "white" (colour above 1) and skip tone mapping, so the bloom pass makes them glow
+// while normal surfaces (never above 1) stay crisp.
+const GLOW = 2.2
+const glowMat = (c: number) => {
+  let m = glowMats.get(c)
+  if (!m) {
+    m = new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(GLOW), toneMapped: false })
+    glowMats.set(c, m)
+  }
+  return m
+}
+// A surface with a pattern painted on it (see textures.ts), tinted by a realm colour.
+const texMats = new Map<string, THREE.MeshLambertMaterial>()
+const texMat = (c: number, tex: THREE.Texture, key: string) => {
+  const id = `${key}:${c}`
+  let m = texMats.get(id)
+  if (!m) texMats.set(id, (m = new THREE.MeshLambertMaterial({ color: c, map: tex })))
+  return m
+}
+// A soft dark edge along the bottom of every wall: a cheap fake of the "tucked in" shade where walls meet the floor.
+let edgeShade: THREE.CanvasTexture | null = null
+const edgeShadeTexture = () => {
+  if (edgeShade) return edgeShade
+  const cv = document.createElement('canvas')
+  cv.width = 4
+  cv.height = 64
+  const cx = cv.getContext('2d')!
+  const g = cx.createLinearGradient(0, 0, 0, 64)
+  g.addColorStop(0, 'rgba(20,10,40,0.42)')
+  g.addColorStop(0.45, 'rgba(20,10,40,0.12)')
+  g.addColorStop(1, 'rgba(20,10,40,0)')
+  cx.fillStyle = g
+  cx.fillRect(0, 0, 4, 64)
+  edgeShade = new THREE.CanvasTexture(cv)
+  edgeShade.colorSpace = THREE.SRGBColorSpace
+  return edgeShade
+}
+
 const gearGeo = (() => {
   const sh = new THREE.Shape()
   const teeth = 12
@@ -50,6 +107,14 @@ const gearGeo = (() => {
   return new THREE.ExtrudeGeometry(sh, { depth: 0.1, bevelEnabled: false })
 })()
 const cone = new THREE.ConeGeometry(0.5, 1, 5)
+// Walls, their caps and the floor tiles are all the same size, so each kind is drawn as ONE instanced mesh.
+const WALL_LEN = CELL + 0.3
+const wallGeo = new THREE.BoxGeometry(WALL_LEN, WALL_H, 0.3)
+const capGeo = new THREE.BoxGeometry(WALL_LEN, 0.15, 0.3)
+const floorGeo = new THREE.BoxGeometry(CELL, 0.2, CELL)
+const shadeGeo = new THREE.PlaneGeometry(WALL_LEN, 1.1).rotateX(-Math.PI / 2) // lying flat on the floor, dark end toward -z
+const cageBarGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6)
+const cageRingGeo = new THREE.TorusGeometry(1.35, 0.08, 6, 20)
 const dotTex = (() => {
   const cv = document.createElement('canvas')
   cv.width = cv.height = 64
@@ -89,8 +154,14 @@ export const sleep = (s: number) => tween(s, () => {})
 type DoorView = { panel: THREE.Mesh; hinge: THREE.Group; sign: THREE.Mesh; draw: (t: string, mark?: 'good' | 'bad' | null) => void }
 
 export const createWorld = (canvas: HTMLCanvasElement) => {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+  // How fancy to draw: picked from the device at the start, and lowered on the fly if the game gets slow (see quality.ts).
+  // iPads pretend to be Macs, so a touch screen on a "Macintosh" counts as a tablet.
+  const ua = navigator.userAgent + (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent) ? ' Mobile' : '')
+  let tier: Tier = pickTier(location.search, ua, devicePixelRatio, navigator.hardwareConcurrency || 8)
+  // The glow pass smooths the edges by itself, so the canvas only does it when there is no glow pass.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !TIERS[tier].composer, powerPreference: 'high-performance' })
+  renderer.setPixelRatio(Math.min(devicePixelRatio, TIERS[tier].pixelRatio))
+  renderer.shadowMap.type = THREE.PCFShadowMap
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x2a2540)
   scene.fog = new THREE.Fog(0x2a2540, 12, 30)
@@ -98,16 +169,29 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   scene.add(hemi)
   const sun = new THREE.DirectionalLight(0xfff1d6, 1.4)
   sun.position.set(6, 14, 4)
-  scene.add(sun)
+  // One shadow map follows the mouse: only the stretch of maze around it needs real shadows.
+  const SUN_OFFSET = new THREE.Vector3(6, 14, 4)
+  const SHADOW_HALF = 20
+  sun.shadow.camera.left = sun.shadow.camera.bottom = -SHADOW_HALF
+  sun.shadow.camera.right = sun.shadow.camera.top = SHADOW_HALF
+  sun.shadow.camera.near = 1
+  sun.shadow.camera.far = 60
+  sun.shadow.bias = -0.0004
+  sun.shadow.normalBias = 0.04
+  sun.shadow.radius = 3
+  scene.add(sun, sun.target)
+  const sky = createSky()
+  scene.add(sky.group)
   const cam = new THREE.PerspectiveCamera(68, 1, 0.1, 400)
+  let postfx: PostFx | null = TIERS[tier].composer ? createPostFx(renderer, scene, cam, { multisampling: TIERS[tier].msaa, bloom: TIERS[tier].bloom }) : null
 
   const level = new THREE.Group()
   const fx = new THREE.Group()
   scene.add(level, fx)
 
   const mouse = new THREE.Group()
-  let rig = new THREE.Group()
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.95, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }))
+  let rig: THREE.Group & { animate?: MouseRig['animate'] } = new THREE.Group()
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.95, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false }))
   shadow.rotation.x = -Math.PI / 2
   shadow.position.y = 0.03
   mouse.add(shadow, rig)
@@ -124,11 +208,15 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
 
   let realm: Realm = REALMS[0]!
   const flames: THREE.Mesh[] = []
-  const spinners: { m: THREE.Object3D; s: number }[] = []
+  // Every spinning brass gear is one instance of ONE mesh (see buildGears): `base` is where it sits, `angle` how far it has turned.
+  const gears: { base: THREE.Matrix4; s: number; angle: number; c: number; parent?: THREE.Object3D }[] = []
+  let gearMesh: THREE.InstancedMesh | null = null
   let dust: { pts: THREE.Points; vel: Float32Array } | null = null
   let views: DoorView[][] = []
   let current = -1
-  let chest: { g: THREE.Group; lid: THREE.Group } | null = null
+  let chest: { g: THREE.Group; lid: THREE.Group; parts: ReturnType<typeof createChest> } | null = null
+  let chestGlow = 0 // 0 closed .. 1 wide open: the chest's halo and sparkles follow it
+  let props: ReturnType<typeof buildProps> | null = null
   let cage: THREE.Group | null = null
   let moving = false
   let orbit = false
@@ -154,10 +242,11 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   const overviewFrom = new THREE.Vector3()
   const overviewLook = new THREE.Vector3()
   let beacon: THREE.Mesh | null = null
-  let glow: THREE.PointLight | null = null
 
   const onResize = () => {
-    renderer.setSize(innerWidth, innerHeight, false)
+    renderer.setPixelRatio(Math.min(devicePixelRatio, TIERS[tier].pixelRatio))
+    if (postfx) postfx.setSize(innerWidth, innerHeight)
+    else renderer.setSize(innerWidth, innerHeight, false)
     cam.aspect = innerWidth / innerHeight
     cam.updateProjectionMatrix()
     zoom = cam.aspect < 0.8 ? 1.5 : cam.aspect < 1.2 ? 1.2 : 1
@@ -165,17 +254,50 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   addEventListener('resize', onResize)
   onResize()
 
+  // Switches to a lighter look when the game is too slow for this device (and when the tier is first applied).
+  const applyTier = (to: Tier) => {
+    const was = TIERS[tier]
+    tier = to
+    const now = TIERS[to]
+    if (!now.composer && postfx) {
+      postfx.dispose()
+      postfx = null
+    }
+    renderer.shadowMap.enabled = now.shadowMap > 0
+    sun.castShadow = now.shadowMap > 0
+    if (now.shadowMap > 0 && sun.shadow.mapSize.x !== now.shadowMap) {
+      sun.shadow.mapSize.set(now.shadowMap, now.shadowMap)
+      sun.shadow.map?.dispose()
+      sun.shadow.map = null
+    }
+    // switching shadows on or off changes the shaders, so every material has to be rebuilt once
+    if ((was.shadowMap > 0) !== (now.shadowMap > 0)) {
+      scene.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
+        for (const mm of Array.isArray(m) ? m : m ? [m] : []) mm.needsUpdate = true
+      })
+    }
+    onResize()
+  }
+  applyTier(tier)
+  const governor = createGovernor(tier, applyTier)
+  const governorOn = !/[?&]gov=0/.test(location.search) // ?gov=0 keeps the look fixed for screenshots
+
   const clearLevel = () => {
     tasks.length = 0
     moving = false
+    chest?.parts.dispose()
+    props?.dispose()
     for (const g of [level, fx]) {
       g.traverse((o) => {
+        // Free the graphics-card copy of every shape. The shared ones (box, ball...) simply get re-uploaded when used again.
+        if ((o as THREE.Mesh).isMesh || (o as THREE.Points).isPoints) (o as THREE.Mesh).geometry.dispose()
         if (o instanceof THREE.Sprite) {
           o.material.map?.dispose()
           o.material.dispose()
         } else if (o instanceof THREE.InstancedMesh) {
           o.dispose()
-          o.material.dispose()
+          if (o.userData.ownMat) o.material.dispose()
         } else if (o instanceof THREE.Points) {
           o.geometry.dispose()
           ;(o.material as THREE.Material).dispose()
@@ -188,12 +310,13 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     }
     views = []
     flames.length = 0
-    spinners.length = 0
+    gears.length = 0
+    gearMesh = null
     dust = null
     current = -1
     chest = null
+    props = null
     beacon = null
-    glow = null
     cage = null
   }
 
@@ -208,7 +331,8 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
 
   const inst = (geo: THREE.BufferGeometry, glow: boolean, items: { p: [number, number, number]; s: [number, number, number]; r?: [number, number, number]; c: number }[]) => {
     if (!items.length) return
-    const m = new THREE.InstancedMesh(geo, glow ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : new THREE.MeshLambertMaterial({ color: 0xffffff }), items.length)
+    const m = new THREE.InstancedMesh(geo, glow ? new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(GLOW), toneMapped: false }) : new THREE.MeshLambertMaterial({ color: 0xffffff }), items.length)
+    m.userData.ownMat = true
     const d = new THREE.Object3D()
     const col = new THREE.Color()
     items.forEach((it, i) => {
@@ -223,6 +347,79 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     level.add(m)
   }
 
+  // Walls, caps, floor tiles and edge shades: one instanced mesh per kind (a single draw call for all of them).
+  type Piece = { x: number; y: number; z: number; ry: number; c: number }
+  const pieces = (geo: THREE.BufferGeometry, material: THREE.Material, items: Piece[], cast: boolean, ownMat = false) => {
+    if (!items.length) return
+    const m = new THREE.InstancedMesh(geo, material, items.length)
+    const d = new THREE.Object3D()
+    const col = new THREE.Color()
+    items.forEach((it, i) => {
+      d.position.set(it.x, it.y, it.z)
+      d.rotation.set(0, it.ry, 0)
+      d.updateMatrix()
+      m.setMatrixAt(i, d.matrix)
+      m.setColorAt(i, col.set(it.c))
+    })
+    m.userData.ownMat = ownMat
+    m.castShadow = cast
+    m.receiveShadow = !cast || material instanceof THREE.MeshLambertMaterial
+    m.frustumCulled = false
+    level.add(m)
+  }
+
+  // Glues every piece marked with still() that shares a material into one mesh (and one draw call).
+  const mergeStatic = () => {
+    level.updateMatrixWorld(true)
+    const batches = new Map<string, { parent: THREE.Object3D; material: THREE.Material; meshes: THREE.Mesh[]; shapes: THREE.BufferGeometry[] }>()
+    level.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh || !m.userData.merge) return
+      const parent = m.userData.merge === 'world' ? level : m.parent!
+      const material = m.material as THREE.Material
+      const key = parent.uuid + material.uuid
+      const batch = batches.get(key) ?? { parent, material, meshes: [], shapes: [] }
+      batches.set(key, batch)
+      batch.meshes.push(m)
+      batch.shapes.push(m.geometry.clone().applyMatrix4(m.userData.merge === 'world' ? m.matrixWorld : m.matrix))
+    })
+    for (const { parent, material, meshes, shapes } of batches.values()) {
+      if (meshes.length > 1) {
+        const glued = new THREE.Mesh(mergeGeometries(shapes), material)
+        glued.receiveShadow = material instanceof THREE.MeshLambertMaterial
+        parent.add(glued)
+        for (const m of meshes) m.removeFromParent()
+      }
+      for (const g of shapes) g.dispose()
+    }
+  }
+
+  // Turns the list of gears into the single instanced mesh (needs the door groups' final places, so it runs after they exist).
+  const buildGears = () => {
+    if (!gears.length) return
+    level.updateMatrixWorld(true)
+    const m = new THREE.InstancedMesh(gearGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), gears.length)
+    const col = new THREE.Color()
+    gears.forEach((gear, i) => {
+      if (gear.parent) gear.base.premultiply(gear.parent.matrixWorld)
+      m.setColorAt(i, col.set(gear.c))
+    })
+    m.userData.ownMat = true
+    m.frustumCulled = false
+    level.add(m)
+    gearMesh = m
+    stepGears(0)
+  }
+  const spin = new THREE.Matrix4()
+  const stepGears = (dt: number) => {
+    if (!gearMesh) return
+    gears.forEach((gear, i) => {
+      gear.angle += gear.s * dt
+      gearMesh!.setMatrixAt(i, spin.makeRotationZ(gear.angle).premultiply(gear.base))
+    })
+    gearMesh.instanceMatrix.needsUpdate = true
+  }
+
   const applyRealm = (r: Realm) => {
     realm = r
     scene.background = new THREE.Color(r.bg)
@@ -232,6 +429,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     hemi.intensity = r.hemi[2]
     sun.color.set(r.sun[0])
     sun.intensity = r.sun[1]
+    sky.apply(r)
   }
 
   const load = (layout: Layout, r: Realm = REALMS[0]!) => {
@@ -244,9 +442,16 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     goalDir = layout.goal.heading
     const rnd = Math.random
     const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)]!
-    for (const [x, z] of layout.cells) {
-      level.add(cuboid(CELL, 0.2, CELL, (x + z) % 2 === 0 ? r.floor[0] : r.floor[1], x * CELL, -0.1, z * CELL))
-    }
+    pieces(
+      floorGeo,
+      texMat(0xffffff, surfaceTexture(r.style, 'floor'), `${r.style}:floor`),
+      layout.cells.map(([x, z]) => ({ x: x * CELL, y: -0.1, z: z * CELL, ry: 0, c: (x + z) % 2 === 0 ? r.floor[0] : r.floor[1] })),
+      false,
+    )
+    const wallPieces: Piece[] = []
+    const capPieces: Piece[] = []
+    const shadePieces: Piece[] = []
+    const tint = new THREE.Color()
     const leaves: Parameters<typeof inst>[2] = []
     const crystals: Parameters<typeof inst>[2] = []
     const strips: Parameters<typeof inst>[2] = []
@@ -256,24 +461,30 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
       const px = (w.x + DX[w.dir]! / 2) * CELL
       const pz = (w.z + DZ[w.dir]! / 2) * CELL
       const along = w.dir % 2 === 0
-      const [sx, sz] = along ? [CELL + 0.3, 0.3] : [0.3, CELL + 0.3]
-      level.add(cuboid(sx, WALL_H, sz, r.wall, px, WALL_H / 2, pz))
-      if (r.style === 'plain' || r.style === 'stone' || r.style === 'brass') level.add(cuboid(sx, 0.15, sz, r.wallTop, px, WALL_H + 0.07, pz))
+      // each wall gets a slightly different shade of the realm colour, so a long wall never looks stamped out
+      const shade = (c: number) => tint.set(c).offsetHSL(0, 0, (rnd() - 0.5) * 0.06).getHex()
+      const turn = along ? 0 : Math.PI / 2
+      wallPieces.push({ x: px, y: WALL_H / 2, z: pz, ry: turn, c: shade(r.wall) })
+      if (r.style === 'plain' || r.style === 'stone' || r.style === 'brass') capPieces.push({ x: px, y: WALL_H + 0.07, z: pz, ry: turn, c: r.wallTop })
+      for (const side of [-1, 1]) {
+        const [snx, snz] = along ? [0, 1] : [1, 0]
+        shadePieces.push({ x: px + snx * side * 0.7, y: 0.045, z: pz + snz * side * 0.7, ry: turn + (side < 0 ? Math.PI : 0), c: 0xffffff })
+      }
       const [tx, tz] = along ? [1, 0] : [0, 1]
       const [nx, nz] = along ? [0, 1] : [1, 0]
       const at = (t: number, off: number, y: number): [number, number, number] => [px + tx * t + nx * off, y, pz + tz * t + nz * off]
       const len = CELL + 0.3
       for (const side of [-1, 1]) {
         if (r.style === 'hedge') {
-          for (let i = 0; i < 9; i++) {
-            const rr = 0.32 + rnd() * 0.28
+          for (let i = 0; i < 3; i++) {
+            const rr = 0.3 + rnd() * 0.2
             leaves.push({ p: at((rnd() - 0.5) * len, side * (0.12 + rnd() * 0.12), 0.25 + rnd() * (WALL_H - 0.1)), s: [rr, rr, rr], c: pick([r.wall, r.wallTop, 0x256b30, 0x4aa856]) })
           }
           if (rnd() < 0.3) leaves.push({ p: at((rnd() - 0.5) * len, side * 0.42, 0.6 + rnd() * 2.6), s: [0.1, 0.1, 0.1], c: pick([0xff8fb8, 0xffffff, 0xffe14d, 0xc08bff]) })
         } else if (r.style === 'stone') {
           for (const y of [0.9, 1.9, 2.9]) bricks.push({ p: at(0, side * 0.16, y), s: [along ? len : 0.05, 0.07, along ? 0.05 : len], c: 0x4a433d })
           if (wi % 5 === 0) {
-            level.add(cuboid(0.14, 0.5, 0.14, 0x2b1d14, ...at(0, side * 0.3, 2.0)))
+            level.add(still(cuboid(0.14, 0.5, 0.14, 0x2b1d14, ...at(0, side * 0.3, 2.0))))
             const f = new THREE.Mesh(ball, glowMat(pick([0xffa040, 0xffc060])))
             f.scale.set(0.2, 0.3, 0.2)
             f.position.set(...at(0, side * 0.3, 2.45))
@@ -291,13 +502,14 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
           strips.push({ p: at(0, side * 0.16, 1.5), s: [along ? len : 0.05, 0.14, along ? 0.05 : len], c: 0x7a5a20 })
           for (let t = -1.6; t <= 1.6; t += 0.8) rivets.push({ p: at(t, side * 0.16, WALL_H - 0.35), s: [0.09, 0.09, 0.09], c: 0xfff0b0 })
           if (wi % 4 === side + 1 || (wi % 6 === 0 && side === 1)) {
-            const g = new THREE.Mesh(gearGeo, mat(pick([0x8a6420, 0xc79a3b, 0xe0b85a])))
+            const colour = pick([0x8a6420, 0xc79a3b, 0xe0b85a])
             const sc = 0.8 + rnd() * 0.9
-            g.scale.set(sc, sc, 1)
-            g.position.set(...at((rnd() - 0.5) * 1.6, side * 0.17, 2.1 + rnd() * 0.9))
-            if (!along) g.rotation.y = Math.PI / 2
-            spinners.push({ m: g, s: (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 0.4) })
-            level.add(g)
+            const spot = new THREE.Object3D()
+            spot.scale.set(sc, sc, 1)
+            spot.position.set(...at((rnd() - 0.5) * 1.6, side * 0.17, 2.1 + rnd() * 0.9))
+            if (!along) spot.rotation.y = Math.PI / 2
+            spot.updateMatrix()
+            gears.push({ base: spot.matrix.clone(), s: (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 0.4), angle: 0, c: colour })
           }
         } else if (r.style === 'neon') {
           const c = (w.x + w.z) % 2 === 0 ? 0x39f0ff : 0xff4fd8
@@ -307,12 +519,16 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
         }
       }
     })
-    inst(ball, false, leaves)
+    pieces(wallGeo, texMat(0xffffff, surfaceTexture(r.style, 'wall'), `${r.style}:wall`), wallPieces, true)
+    pieces(capGeo, mat(0xffffff), capPieces, true)
+    const edgeMat = new THREE.MeshBasicMaterial({ map: edgeShadeTexture(), transparent: true, depthWrite: false, fog: true })
+    pieces(shadeGeo, edgeMat, shadePieces, false, true)
+    inst(ballLo, false, leaves)
     inst(box, false, bricks)
     inst(cone, true, crystals)
     inst(box, true, strips.filter((s0) => r.style === 'neon' || false))
     inst(box, false, strips.filter(() => r.style === 'brass'))
-    inst(ball, true, rivets)
+    inst(ballTiny, false, rivets) // plain lit bolts: when seen up close, glowing ones turned into big white discs
 
     if (r.style === 'neon') {
       const n = 500
@@ -345,7 +561,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     dust = { pts, vel: pvel }
 
     layout.junctions.forEach((j) => {
-      level.add(cuboid(CELL - 0.8, 0.04, CELL - 0.8, r.pad, j.x * CELL, 0.02, j.z * CELL))
+      level.add(still(cuboid(CELL - 0.8, 0.04, CELL - 0.8, r.pad, j.x * CELL, 0.02, j.z * CELL)))
       const row: DoorView[] = j.exits.map((ex, e) => {
         const g = new THREE.Group()
         g.position.set((j.x + DX[ex.dir]! / 2) * CELL, 0, (j.z + DZ[ex.dir]! / 2) * CELL)
@@ -356,41 +572,43 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
         const dw = CELL - 1.1
         const hinge = new THREE.Group()
         hinge.position.x = -dw / 2
-        const panel = cuboid(dw, WALL_H - 0.5, 0.25, color, dw / 2, (WALL_H - 0.5) / 2, 0)
+        const panel = new THREE.Mesh(box, texMat(color, surfaceTexture(r.style, 'door'), `${r.style}:door`))
+        panel.scale.set(dw, WALL_H - 0.5, 0.25)
+        panel.position.set(dw / 2, (WALL_H - 0.5) / 2, 0)
         panel.userData.exit = e
         hinge.userData.face = face
         hinge.add(panel)
-        for (const z of [-0.17, 0.17]) hinge.add(blob(0.13, 0.13, 0.1, r.glow, dw - 0.4, 1.5, z))
-        for (const y of [0.6, WALL_H - 1.1]) hinge.add(cuboid(0.12, 0.35, 0.3, r.frame, 0.02, y, 0))
+        for (const z of [-0.17, 0.17]) hinge.add(still(blob(0.13, 0.13, 0.1, r.glow, dw - 0.4, 1.5, z), 'local'))
+        for (const y of [0.6, WALL_H - 1.1]) hinge.add(still(cuboid(0.12, 0.35, 0.3, r.frame, 0.02, y, 0), 'local'))
         g.add(
           hinge,
-          cuboid(0.4, WALL_H, 0.5, r.frame, -(CELL / 2 - 0.25), WALL_H / 2, 0),
-          cuboid(0.4, WALL_H, 0.5, r.frame, CELL / 2 - 0.25, WALL_H / 2, 0),
-          cuboid(CELL, 0.5, 0.5, r.frame, 0, WALL_H - 0.25, 0),
+          still(cuboid(0.4, WALL_H, 0.5, r.frame, -(CELL / 2 - 0.25), WALL_H / 2, 0)),
+          still(cuboid(0.4, WALL_H, 0.5, r.frame, CELL / 2 - 0.25, WALL_H / 2, 0)),
+          still(cuboid(CELL, 0.5, 0.5, r.frame, 0, WALL_H - 0.25, 0)),
         )
         if (r.style === 'hedge') {
-          for (let i = -4; i <= 4; i++) g.add(blob(0.3, 0.3, 0.3, pick([0x2f7d3a, 0x3f9a49, 0x4aa856]), i * 0.36, WALL_H - 0.1 + Math.cos(i * 0.4) * 0.15, 0.3 * (i % 2 ? 1 : -1)))
+          for (let i = -4; i <= 4; i++) g.add(still(bush(0.3, pick([0x2f7d3a, 0x3f9a49, 0x4aa856]), i * 0.36, WALL_H - 0.1 + Math.cos(i * 0.4) * 0.15, 0.3 * (i % 2 ? 1 : -1))))
         } else if (r.style === 'crystal' || r.style === 'neon') {
           for (const z of [-0.27, 0.27]) {
             const strip = new THREE.Mesh(box, glowMat(r.style === 'neon' ? [0x39f0ff, 0xff4fd8, 0xffe14d][e]! : 0x9ffcff))
             strip.scale.set(CELL - 0.2, 0.09, 0.05)
             strip.position.set(0, WALL_H - 0.5, z)
-            g.add(strip)
+            g.add(still(strip))
           }
           for (const x of [-1.25, 1.25]) for (const z of [-0.27, 0.27]) {
             const strip = new THREE.Mesh(box, glowMat(r.style === 'neon' ? [0x39f0ff, 0xff4fd8, 0xffe14d][e]! : 0x9ffcff))
             strip.scale.set(0.08, WALL_H - 0.6, 0.05)
             strip.position.set(x, WALL_H / 2 - 0.2, z)
-            g.add(strip)
+            g.add(still(strip))
           }
         } else if (r.style === 'brass') {
-          const gear = new THREE.Mesh(gearGeo, mat(0xe0b85a))
-          gear.scale.set(0.9, 0.9, 1)
-          gear.position.set(0, WALL_H + 0.35, -0.05)
-          spinners.push({ m: gear, s: e % 2 ? -0.5 : 0.5 })
-          g.add(gear)
+          const spot = new THREE.Object3D()
+          spot.scale.set(0.9, 0.9, 1)
+          spot.position.set(0, WALL_H + 0.35, -0.05)
+          spot.updateMatrix()
+          gears.push({ base: spot.matrix.clone(), parent: g, s: e % 2 ? -0.5 : 0.5, angle: 0, c: 0xe0b85a })
         } else if (r.style === 'stone') {
-          g.add(cuboid(0.9, 0.5, 0.6, 0x6d655e, 0, WALL_H + 0.25, 0))
+          g.add(still(cuboid(0.9, 0.5, 0.6, 0x6d655e, 0, WALL_H + 0.25, 0)))
         }
         const s = answerSign(color)
         s.mesh.userData.exit = e
@@ -407,31 +625,34 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     const { goal } = layout
     const gx = goal.x * CELL
     const gz = goal.z * CELL
-    level.add(cuboid(CELL - 0.8, 0.04, CELL - 0.8, r.pad, gx, 0.02, gz))
-    const g = new THREE.Group()
+    level.add(still(cuboid(CELL - 0.8, 0.04, CELL - 0.8, r.pad, gx, 0.02, gz)))
+    const parts = createChest()
+    const g = parts.group
     g.position.set(gx + DX[goal.heading]! * 1.3, 0, gz + DZ[goal.heading]! * 1.3)
     g.rotation.y = angleOf(goal.heading) + Math.PI
-    const lid = new THREE.Group()
-    lid.position.set(0, 0.8, -0.55)
-    lid.add(cuboid(1.7, 0.35, 1.1, 0xa06a35, 0, 0.175, 0.55), cuboid(0.25, 0.25, 0.15, 0xf2c94c, 0, 0.1, 1.1))
-    g.add(cuboid(1.7, 0.8, 1.1, 0x8b5a2b, 0, 0.4, 0), cuboid(1.5, 0.06, 0.9, 0xffd447, 0, 0.82, 0), lid)
+    g.traverse((o) => ((o as THREE.Mesh).isMesh && !((o as THREE.Mesh).material as THREE.Material).transparent ? (o.castShadow = true) : undefined))
     level.add(g)
-    chest = { g, lid }
-    const wedge = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.5, 16, 1, false, 0, Math.PI * 0.6), mat(0xffd23f))
-    wedge.position.set(gx - DX[goal.heading]! * 0.4 + DZ[goal.heading]! * 1.3, 0.25, gz - DZ[goal.heading]! * 0.4 - DX[goal.heading]! * 1.3)
+    chest = { g, lid: parts.lid, parts }
+    chestGlow = 0
+    const wedge = createCheeseWedge()
+    wedge.position.set(gx - DX[goal.heading]! * 0.4 + DZ[goal.heading]! * 1.3, 0, gz - DZ[goal.heading]! * 0.4 - DX[goal.heading]! * 1.3)
     level.add(wedge)
 
     // A tall beam of light over the chest. It stays hidden until the last door is opened (reveal), so it never
     // gives away which way to go, and then it shows exactly where the treasure is.
     beacon = new THREE.Mesh(
       new THREE.CylinderGeometry(0.35, 1.2, 18, 20, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe08a).multiplyScalar(1.3), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false, toneMapped: false }),
     )
     beacon.position.set(g.position.x, 9, g.position.z)
     beacon.visible = false
-    glow = new THREE.PointLight(0xffd447, 0, 16)
-    glow.position.set(g.position.x, 2.2, g.position.z)
-    level.add(beacon, glow)
+    level.add(beacon)
+
+    // extras on the floor and above the walls (flowers, sprinkles, icicles...), see props.ts
+    props = buildProps(layout, r, rnd)
+    level.add(props.group)
+    mergeStatic()
+    buildGears()
 
     const start = layout.junctions[0]!
     mouse.position.set(start.x * CELL, 0, start.z * CELL)
@@ -440,6 +661,9 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     resetTrail(start.x, start.z, start.heading)
     const [bx, bz] = trail[0]!
     cam.position.set(mouse.position.x + (bx - mouse.position.x) * ((BACK * zoom) / 8), 3.6, mouse.position.z + (bz - mouse.position.z) * ((BACK * zoom) / 8))
+    // Build the new shaders now, while the flyover starts, instead of freezing the first frames of the maze.
+    void renderer.compileAsync(scene, cam)
+    governor.reset(performance.now())
   }
 
   const turnToAngle = async (a: number) => {
@@ -520,11 +744,11 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     const metal = 0xb8c0cc
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), mat(metal))
+      const bar = new THREE.Mesh(cageBarGeo, mat(metal))
       bar.position.set(Math.cos(a) * 1.35, 1.2, Math.sin(a) * 1.35)
       c.add(bar)
     }
-    const top = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.08, 6, 20), mat(metal))
+    const top = new THREE.Mesh(cageRingGeo, mat(metal))
     top.rotation.x = Math.PI / 2
     top.position.y = 2.4
     c.add(top, cuboid(2.7, 0.08, 0.08, 0xb8c0cc, 0, 2.4, 0), cuboid(0.08, 0.08, 2.7, 0xb8c0cc, 0, 2.4, 0))
@@ -555,9 +779,9 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
       const e = ease(k)
       if (beacon) {
         beacon.visible = true
-        ;(beacon.material as THREE.MeshBasicMaterial).opacity = 0.32 * e
+        ;(beacon.material as THREE.MeshBasicMaterial).opacity = 0.2 * e
       }
-      if (glow) glow.intensity = 30 * e
+      chestGlow = 0.35 * e // a gentle halo before the lid even moves
     })
   }
 
@@ -607,7 +831,12 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   const openChest = () => {
     const c = chest
     if (c) sfx.chest()
-    return c ? tween(0.6, (k) => (c.lid.rotation.x = -1.3 * ease(k))) : Promise.resolve()
+    return c
+      ? tween(0.6, (k) => {
+          c.lid.rotation.x = -1.3 * ease(k)
+          chestGlow = 0.35 + 0.65 * ease(k)
+        })
+      : Promise.resolve()
   }
 
   const setDoor = (k: number, e: number, open: boolean) => {
@@ -680,6 +909,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     } else {
       rig.scale.y = 1 + Math.sin(time * 3) * 0.015
     }
+    rig.animate?.(time, moving) // ears, tail, eyes and feet move on their own (the bobbing above is the whole body)
 
     const inv = new THREE.Quaternion()
     views[current]?.forEach((d, e) => {
@@ -693,8 +923,10 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
       d.sign.scale.setScalar((d.sign.userData.pop ?? 1) * fit * hl)
     })
 
+    chest?.parts.update(dt, chestGlow)
+    props?.update(dt, time)
     flames.forEach((f, i) => f.scale.set(0.2 + Math.sin(time * 11 + i) * 0.04, 0.3 + Math.sin(time * 13 + i * 2) * 0.07, 0.2))
-    for (const sp of spinners) sp.m.rotation.z += sp.s * dt
+    stepGears(dt)
     if (dust) {
       const pos = dust.pts.geometry.getAttribute('position') as THREE.BufferAttribute
       const cx = mouse.position.x
@@ -775,9 +1007,35 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   }
 
   const clock = new THREE.Clock()
+  // The sun (and so the one shadow map) follows the mouse. In the victory view it covers the whole maze instead.
+  let shadowHalf = SHADOW_HALF
+  const aimSun = () => {
+    const wide = camMode === 'overview'
+    const half = wide ? Math.min(Math.max(bounds.size * 0.6, SHADOW_HALF), 130) : SHADOW_HALF
+    const k = half / SHADOW_HALF
+    if (half !== shadowHalf) {
+      shadowHalf = half
+      const sc = sun.shadow.camera
+      sc.left = sc.bottom = -half
+      sc.right = sc.top = half
+      sc.far = 60 * k
+      sc.updateProjectionMatrix()
+    }
+    sun.target.position.set(wide ? bounds.x : mouse.position.x, 0, wide ? bounds.z : mouse.position.z)
+    sun.position.copy(sun.target.position).addScaledVector(SUN_OFFSET, k)
+  }
+  renderer.info.autoReset = false
+  let cameraHook: ((c: THREE.PerspectiveCamera) => void) | null = null // dev tools only: a screenshot script can place the camera by hand
   renderer.setAnimationLoop(() => {
-    tick(Math.min(clock.getDelta(), 0.05))
-    renderer.render(scene, cam)
+    renderer.info.reset()
+    const dt = clock.getDelta()
+    tick(Math.min(dt, 0.05))
+    cameraHook?.(cam)
+    aimSun()
+    sky.follow(cam)
+    if (postfx) postfx.render(dt)
+    else renderer.render(scene, cam)
+    if (governorOn) governor.frame(dt * 1000, performance.now())
   })
 
   return {
@@ -806,6 +1064,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     overview,
     flyover,
     skipFlyover,
+    debug: { setCameraHook: (fn: typeof cameraHook) => (cameraHook = fn), renderer, scene, cam, mouse, tier: () => tier, setTier: applyTier, renderOnce: () => (postfx ? postfx.render(0.016) : renderer.render(scene, cam)), advance: (seconds: number) => { for (let t = 0; t < seconds; t += 1 / 30) tick(1 / 30) } },
   }
 }
 

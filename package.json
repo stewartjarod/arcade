@@ -19,6 +19,7 @@
     "@arcade/engine": "workspace:*",
     "@arcade/learning": "workspace:*",
     "@arcade/players": "workspace:*",
+    "postprocessing": "^6.39.5",
     "three": "^0.186.1"
   },
   "devDependencies": {

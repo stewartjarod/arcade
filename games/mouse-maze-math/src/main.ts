@@ -16,3 +16,8 @@ initUI({
   skin: () => world.setSkin(save.color, save.hat),
 })
 game.menu()
+
+// Developer helpers for screenshots and performance numbers (never in the shipped build).
+if (import.meta.env.DEV) {
+  void import('./debug').then((m) => m.installDebug(world))
+}

@@ -229,3 +229,104 @@ details.more > .sub, details.more > .row { margin-top: 10px; }
   .prize { font-size: 2.8rem; }
   .card { padding-bottom: 12px; }
 }
+
+/* ==== Toy-box look (v2): glossy candy UI over the 3D scene ====
+   Visual only. Sizes, paddings, min-heights, gaps and the landscape/portrait rules above are unchanged.
+   Shadows are box-shadow/filter (no backdrop-filter added); loops are switched off for reduced motion at the end. */
+
+/* Screen overlays: a darker translucent gradient instead of blurring the canvas behind (blur costs a lot on Chromebooks). */
+#screen { background: radial-gradient(ellipse at 50% 0%, rgba(140, 100, 235, 0.5), rgba(18, 12, 42, 0.9) 70%), linear-gradient(180deg, rgba(34, 22, 78, 0.66), rgba(14, 9, 34, 0.9)); backdrop-filter: none; }
+#leave { background: linear-gradient(180deg, rgba(44, 28, 98, 0.74), rgba(14, 9, 34, 0.86)); }
+
+/* Buttons: glossy violet candy with a highlight band and a chunky bottom lip. */
+.btn {
+  position: relative;
+  color: #fff;
+  background: linear-gradient(180deg, #9180f2 0%, #6a4fd0 50%, #5238b4 100%);
+  text-shadow: 0 2px 0 rgba(30, 16, 80, 0.45);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 6px 0 #33247a, 0 12px 16px rgba(14, 8, 40, 0.35);
+}
+.btn::before { content: ''; position: absolute; left: 12%; right: 12%; top: 7%; height: 38%; border-radius: 999px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0)); pointer-events: none; }
+.btn:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 #33247a; }
+.btn.primary { color: #4a2a00; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55); background: linear-gradient(180deg, #ffe784 0%, #ffc93c 52%, #f5a20a 100%); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.75), inset 0 -3px 0 rgba(150, 84, 0, 0.22), 0 6px 0 #b87400, 0 12px 18px rgba(120, 70, 0, 0.35); }
+.btn.primary::before { background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)); }
+.btn.primary:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), 0 2px 0 #b87400; }
+.btn:disabled { box-shadow: 0 2px 0 #33247a; }
+details.more > summary { position: relative; background: linear-gradient(180deg, #9180f2, #5238b4); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 5px 0 #33247a, 0 10px 14px rgba(14, 8, 40, 0.35); }
+
+/* Top bar chips: frosted-candy pills with an inner highlight (a ring, not a border, so sizes stay put). */
+.chip { background: linear-gradient(180deg, rgba(122, 96, 204, 0.94), rgba(46, 32, 100, 0.92)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.14), 0 3px 0 rgba(14, 8, 40, 0.4); text-shadow: 0 1px 0 rgba(20, 10, 50, 0.5); }
+button.chip.hud-home { background: linear-gradient(180deg, #9180f2, #5238b4); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.14), 0 4px 0 #33247a; }
+#streak { background: linear-gradient(180deg, #ffb070 0%, #ff6a4d 50%, #f0355e 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.2), 0 3px 0 #a3163c, 0 0 18px rgba(255, 110, 90, 0.45); }
+
+/* Progress: a candy-striped bar with a gloss on top, in a dark inset track. */
+#progress { background: rgba(14, 8, 40, 0.5); border-color: rgba(255, 255, 255, 0.22); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 2px 0 rgba(255, 255, 255, 0.1); }
+#bar { position: relative; background: repeating-linear-gradient(-45deg, #ffe66d 0 10px, #ffc93c 10px 20px); box-shadow: inset 0 -3px 0 rgba(150, 84, 0, 0.3), inset 0 0 6px rgba(255, 240, 180, 0.6); }
+#bar::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 50%; border-radius: 99px 99px 0 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.08)); }
+
+/* Question card: warm cream paper with a gold rim and a soft glow. */
+#q { background: linear-gradient(180deg, #fffdf5 0%, #fff1cf 100%); color: var(--dark); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.9), 0 0 0 3px rgba(255, 201, 60, 0.3), 0 0 24px rgba(255, 201, 60, 0.3), 0 6px 0 rgba(120, 70, 0, 0.42), 0 14px 22px rgba(10, 6, 30, 0.35); }
+#qhint { color: #5f5390; }
+
+/* Candy door tags: glossy in the door's own colour (--c), with a top highlight and a coloured lip. */
+.ans {
+  position: relative;
+  background: var(--c);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 62%, #fff) 0%, var(--c) 48%, color-mix(in srgb, var(--c) 72%, #000) 100%), var(--c);
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45), inset 0 -4px 0 rgba(0, 0, 0, 0.16), 0 7px 0 rgba(20, 10, 50, 0.45), 0 12px 18px rgba(10, 6, 30, 0.35);
+  animation: popin 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+.ans::before { content: ''; position: absolute; left: 10%; right: 10%; top: 6%; height: 34%; border-radius: 999px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)); pointer-events: none; }
+.ans:nth-child(2) { animation-delay: 0.06s; }
+.ans:nth-child(3) { animation-delay: 0.12s; }
+.ans .num { text-shadow: 0 3px 0 rgba(20, 10, 50, 0.35); }
+.ans:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 2px 0 rgba(20, 10, 50, 0.45); }
+.ans.good { background: linear-gradient(180deg, #b9ffd2 0%, var(--good) 48%, #13803f 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.5), 0 7px 0 #0f6b34, 0 0 22px rgba(34, 197, 94, 0.55); }
+.ans.bad { background: linear-gradient(180deg, #ffb3b3 0%, var(--bad) 48%, #b91c1c 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45), 0 7px 0 #7f1d1d; }
+#answers.picked .ans:not(.good):not(.bad) { box-shadow: 0 2px 0 rgba(20, 10, 50, 0.4); }
+@keyframes popin { from { transform: scale(0.4); opacity: 0; } }
+
+/* Toast: a glossy pill. */
+#toast { background: linear-gradient(180deg, rgba(110, 84, 196, 0.97), rgba(40, 26, 92, 0.97)); border-color: rgba(255, 255, 255, 0.95); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 6px 0 rgba(14, 8, 40, 0.4), 0 0 20px rgba(255, 201, 60, 0.25); text-shadow: 0 2px 0 rgba(20, 10, 50, 0.5); }
+#toast.good { background: linear-gradient(180deg, #b9ffd2, var(--good) 50%, #15803d); }
+#toast.bad { background: linear-gradient(180deg, #ffc0c0, var(--bad) 50%, #b91c1c); }
+
+/* Cards: deep purple with a soft top light, a gold-tinted rim and a corner sparkle. */
+.card {
+  position: relative;
+  background: radial-gradient(120% 55% at 50% 0%, rgba(170, 140, 255, 0.4), rgba(170, 140, 255, 0) 65%), linear-gradient(180deg, rgba(98, 70, 180, 0.97), rgba(40, 28, 88, 0.97));
+  border-color: rgba(255, 214, 120, 0.3);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 0 0 3px rgba(255, 201, 60, 0.12), 0 0 30px rgba(255, 190, 90, 0.2), 0 12px 0 rgba(10, 6, 30, 0.35), 0 18px 30px rgba(10, 6, 30, 0.4);
+}
+.card::before { content: ''; position: absolute; top: 12px; right: 14px; width: 18px; height: 18px; pointer-events: none; background: radial-gradient(circle, #fff 0 18%, rgba(255, 245, 200, 0.7) 26%, rgba(255, 255, 255, 0) 48%), linear-gradient(90deg, transparent 44%, #fff8d0 46%, #fff8d0 54%, transparent 56%), linear-gradient(0deg, transparent 44%, #fff8d0 46%, #fff8d0 54%, transparent 56%); opacity: 0.9; animation: twinkle 2.6s ease-in-out infinite; }
+@keyframes twinkle { 50% { opacity: 0.35; transform: scale(0.7) rotate(25deg); } }
+.card h1 { color: #ffd447; text-shadow: 0 -2px 0 #6b3300, 2px 0 0 #6b3300, -2px 0 0 #6b3300, 0 4px 0 #6b3300, 0 6px 10px rgba(0, 0, 0, 0.35); }
+.card h2 { color: #ffd447; text-shadow: 0 3px 0 #7a4300, 0 5px 8px rgba(0, 0, 0, 0.3); }
+.card h1 .mouse { display: inline-block; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.3)); }
+.stars { color: #5b5580; }
+.stars .on { background: linear-gradient(180deg, #fff6b8 0%, #ffd447 45%, #f09a00 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #7a4300); text-shadow: none; }
+.tag { background: linear-gradient(180deg, #7dffab, var(--good) 55%, #16a34a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 0 #0f6b34; text-shadow: 0 1px 0 rgba(0, 60, 20, 0.35); }
+
+/* Picker tiles, stickers, swatches and prize */
+.item { background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16), 0 4px 0 rgba(10, 6, 30, 0.3); }
+.item.on { background: linear-gradient(180deg, rgba(255, 228, 120, 0.3), rgba(255, 201, 60, 0.12)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), 0 0 0 2px rgba(255, 201, 60, 0.35), 0 4px 0 rgba(10, 6, 30, 0.3); }
+.swatch { box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 3px 0 rgba(10, 6, 30, 0.3); }
+.sticker { background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18), 0 4px 0 rgba(10, 6, 30, 0.3); }
+.prize { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.3)) drop-shadow(0 0 16px rgba(255, 215, 90, 0.5)); }
+.skill { background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14); }
+.skill i b { position: relative; background: linear-gradient(180deg, #ffe784 0%, #ffc93c 50%, #ff8a3d 100%); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5); }
+
+/* Subject chips, read-aloud, leave doors */
+.chip-subject { background: linear-gradient(180deg, rgba(160, 130, 240, 0.5), rgba(90, 64, 170, 0.35)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 3px 0 rgba(10, 6, 30, 0.3); }
+.chip-subject.on { background: linear-gradient(180deg, #fff09a, #ffd447 55%, #f5a50b); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), 0 3px 0 #b87400; color: #3a2a00; }
+.qsay { background: linear-gradient(180deg, #ffffff, #e4dcff); box-shadow: inset 0 -2px 0 rgba(120, 90, 200, 0.25), 0 3px 0 #b5a4ea; }
+.leave-btn.yes { background: linear-gradient(180deg, #7dffab 0%, var(--good) 50%, #16a34a 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45), 0 8px 0 #0f6b34, 0 14px 20px rgba(10, 6, 30, 0.35); }
+.leave-btn.no { background: linear-gradient(180deg, #ffa3a3 0%, var(--bad) 50%, #b91c1c 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), 0 8px 0 #7f1d1d, 0 14px 20px rgba(10, 6, 30, 0.35); }
+.ans.blocked { box-shadow: none; }
+
+/* Reduced motion: no looping wiggles, bobs, pulses or breathing. Short pops stay. */
+@media (prefers-reduced-motion: reduce) {
+  .btn.big, #streak, .card h1 .mouse, #qtext .qmark, .card::before { animation: none; }
+  .ans.nudge { animation: none; }
+}

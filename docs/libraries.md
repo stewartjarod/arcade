@@ -1,7 +1,7 @@
 # Libraries to reach for
 
 three.js and our own `@arcade/*` packages cover most games. This is a shopping list for when a game needs
-something they *don't* do. **Nothing here is installed yet.** Add a library only when a game actually needs it.
+something they *don't* do. **Only `postprocessing` is installed so far** (used by Mouse Maze Math, see below). Add a library only when a game actually needs it.
 
 ## Before you add one
 
@@ -19,7 +19,7 @@ something they *don't* do. **Nothing here is installed yet.** Add a library only
 | Library | Use it for | Notes |
 | --- | --- | --- |
 | **Rapier** (`@dimforge/rapier3d-compat`, or `rapier2d`) | Real physics: bouncing, stacking, knocking things over, marble runs, bowling | Best fit for three.js. Our `gravity()` and sphere collisions are enough for simple platformers. Reach for Rapier when things need to *tumble*. Wrap it as a `physicsBody()` behavior. |
-| **postprocessing** (pmndrs) | Bloom (glowing coins), outlines, vignette, color grading | The biggest "looks polished" gain for the least code. |
+| **postprocessing** (pmndrs) | Bloom (glowing coins), outlines, vignette, color grading | **Installed.** The biggest "looks polished" gain for the least code. Wrapped in `packages/engine/src/postfx.ts` (not re-exported from the engine index, so only games that import it by path bundle it). Only colours above 1.0 glow, so make glowing things `color.multiplyScalar(2.2)` with `toneMapped: false`. Mouse Maze Math picks a quality tier (`quality.ts`) and steps down on slow devices. |
 | **Howler.js** | Recorded music and voice clips | Our synth presets handle sound effects. Only add it for real audio files. |
 | **yuka** | Game AI: steering, wandering, pathfinding, state machines | Engine-agnostic. Good for smarter enemies and NPCs than `chase` and `patrol`. |
 | **three-mesh-bvh** | Fast raycasts and collisions against big or complex meshes | For maze and level games with lots of geometry. |
