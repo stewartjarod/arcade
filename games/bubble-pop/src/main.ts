@@ -167,7 +167,9 @@ function round(game: Game) {
   }
 
   function pop(b: (typeof live)[number]) {
-    if (phase !== 'ask') return
+    // Ignore taps in the first half second: a fast tap left over from the party or the last pop
+    // shouldn't count as an answer to a question nobody has read yet.
+    if (phase !== 'ask' || age < 0.5) return
     const right = moment.check(q, b.el.textContent!, { choices: live.length })
     if (right) {
       sfx.pop()
