@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { LANDS } from './lands'
-import { MAX_EXTRA_GATES, afterGate, landFor, mapDone, newMap, unlockedLands, wardrobe } from './quest'
+import {
+  MAX_EXTRA_GATES, afterGate, caught, chaseAnswer, creep, eaten, escaped, landFor, mapDone, monsterWakes, newChase, newMap, unlockedLands, wardrobe, type Chase,
+} from './quest'
 
 describe('candy quest rules', () => {
   it('gives older kids a longer map, never more pieces than a land has landmarks', () => {
@@ -40,5 +42,46 @@ describe('candy quest rules', () => {
   it('story text never uses the real kids as characters', () => {
     const text = JSON.stringify(LANDS)
     expect(text).not.toMatch(/\b(Ima|Millie)\b/i)
+  })
+})
+
+/** Play a chase second by second: each question takes `seconds` to answer, after `wrongFirst` wrong picks. */
+function playChase(grade: number, seconds: number, wrongFirst: number) {
+  const chase: Chase = newChase()
+  const { creep: rate } = landFor(grade)
+  for (let t = 0; t < 200; t++) {
+    creep(chase, 1, rate)
+    if (caught(chase)) return 'caught'
+    if ((t + 1) % seconds === 0) {
+      for (let w = 0; w < wrongFirst; w++) chaseAnswer(chase, false, false)
+      if (caught(chase)) return 'caught'
+      chaseAnswer(chase, true, wrongFirst === 0)
+      if (escaped(chase)) return 'escaped'
+    }
+  }
+  return 'caught'
+}
+
+describe('the candy monster', () => {
+  it('wakes on the second missed word, and only then', () => {
+    expect([0, 1, 2, 3, 4].map(monsterWakes)).toEqual([false, false, true, false, false])
+  })
+
+  it('a slow 1st grader who knows the words gets away (about 7 seconds a question, word read aloud first)', () => {
+    expect(playChase(0, 7, 0)).toBe('escaped')
+  })
+
+  it('but guessing slowly gets you caught, and doing nothing gets you caught too', () => {
+    expect(playChase(0, 8, 1)).toBe('caught')
+    expect(playChase(0, 999, 0)).toBe('caught')
+  })
+
+  it('older kids need to be quicker', () => {
+    expect(playChase(4, 4, 0)).toBe('escaped')
+    expect(playChase(4, 9, 0)).toBe('caught')
+  })
+
+  it('eats half the candies, rounded up', () => {
+    expect([0, 1, 2, 7].map(eaten)).toEqual([0, 1, 1, 4])
   })
 })

@@ -1,7 +1,8 @@
 import { Game, THREE, burst, confetti, ease, music, pick, rand, sfx, storage, tone, type Entity, type SceneFn } from '@arcade/engine'
-import { letterPad, peekLearner, practiceGrade, speak, startPractice } from '@arcade/learning'
+import { canPick, learner, letterPad, peekLearner, practiceGrade, speak, startPractice, type PickOptions, type Practice } from '@arcade/learning'
 import { LANDS } from './lands'
-import { afterGate, landFor, mapDone, newMap } from './quest'
+import { startChase } from './monster'
+import { afterGate, landFor, mapDone, monsterWakes, newMap } from './quest'
 import { landsButton, mapCard, titleCard, toast, touchButtons, type Look } from './ui'
 import { candyGate, chest, gumdrop, hero, landmark, pathPiece, scenery, taffy, wrappedCandy, xMark } from './world'
 
@@ -11,6 +12,7 @@ import { candyGate, chest, gumdrop, hero, landmark, pathPiece, scenery, taffy, w
 //  Gumdrops bounce you high (grab the candies up there!). Sticky taffy slows you down.
 //  A candy gate blocks the path every so often: spell the word to open it and win
 //  a piece of the treasure map. Finish the map, open the chest, and the next land opens.
+//  Miss two words in a land and the Candy Monster chases you (see monster.ts).
 // ------------------------------------------------------------------
 
 const game = new Game({ background: LANDS[0]!.sky, lights: true })
@@ -23,6 +25,8 @@ const TRIES = 3 // tries to spell a word before we show it
 const GRAVITY = 28
 const JUMP = 10 // how hard a jump pushes up
 const BOING = 14 // how hard a gumdrop pushes up
+// The chase asks "which is spelled right?": quick to tap, still spelling.
+const CHASE_QUESTIONS: PickOptions = { subjects: ['writing'], skills: ['writing.pick'], formats: ['choice'] }
 
 /** How high a gumdrop bounce has taken Buddy after running `ahead` more steps at `speed`. */
 const bounceHeight = (ahead: number, speed: number) => {
@@ -105,6 +109,9 @@ function runLand(index: number): SceneFn {
     let slow = 0 // seconds of sticky-taffy slowness left
     let candies = 0
     let state: 'ready' | 'run' | 'gate' | 'done' = 'ready'
+    let misses = 0 // gate words missed in this land
+    let chase: ReturnType<typeof startChase> | null = null
+    let chasePractice: Practice | undefined // made the first time the monster wakes
 
     const showCandies = () => game.hud.set('candies', `🍬 ${candies}`, 'top-left')
     showCandies()
@@ -167,14 +174,21 @@ function runLand(index: number): SceneFn {
       }
     }
 
+    // Stretches are filled far ahead of Buddy as they run (so a long monster chase never runs out of path).
+    let nextFill = 0
+    const fillAhead = () => {
+      while (nextFill > me.position.z - 70) {
+        fillStretch(nextFill)
+        nextFill -= STRETCH
+      }
+    }
+
     // --- Gates and the treasure ---
     let gate: { e: Entity; wall: THREE.Mesh; z: number } | null = null
     let treasure: { lid: THREE.Object3D; glow: THREE.PointLight; z: number } | null = null
-    let stretchStart = 0 // where the current stretch begins
 
-    /** The end of the next stretch: a gate if the map still needs pieces, else the X and the chest. */
-    function placeEnd() {
-      const z = stretchStart - STRETCH
+    /** At z (always where one stretch meets the next): a gate if the map still needs pieces, else the X and the chest. */
+    function placeEnd(z: number) {
       if (mapDone(map)) {
         game.add(xMark()).at(0, 0, z)
         const c = chest()
@@ -234,16 +248,41 @@ function runLand(index: number): SceneFn {
         // The landmark on the map pops up beside the path ahead
         const side = pick([-1, 1])!
         popIn(game.add(landmark(mark.emoji)).at(side * 5.5, 0, gate!.z - STRETCH / 2).with(behind(10)))
-      } else {
+      }
+      const gateZ = gate!.z
+      gate = null
+      game.after(0.5, () => (state = 'run'))
+
+      if (!solved) misses++
+      if (!solved && monsterWakes(misses) && canPick(learner(), CHASE_QUESTIONS)) return wakeMonster()
+      if (!piece) {
         game.hud.message('Nice try! 💪', { subtitle: 'One more gate to find this map piece.', seconds: 2.5 })
         speak('Nice try! One more gate to find this map piece.')
       }
+      placeEnd(gateZ - STRETCH)
+    }
 
-      stretchStart = gate!.z
-      gate = null
-      fillStretch(stretchStart - STRETCH) // things for the stretch after next, far out in the fog
-      placeEnd()
-      game.after(0.5, () => (state = 'run'))
+    /** Too many missed words: here comes the Candy Monster! No gate until the chase is over. */
+    function wakeMonster() {
+      chasePractice ??= startPractice(CHASE_QUESTIONS)
+      buttons.style.display = 'none' // the answer buttons go there (arrow keys still steer)
+      chase = startChase({
+        game,
+        me,
+        creepRate: rules.creep,
+        practice: chasePractice,
+        candies: () => candies,
+        eat: (n) => {
+          candies -= n
+          showCandies()
+        },
+        done: () => {
+          chase = null
+          buttons.style.display = 'flex'
+          // The next gate goes on the first stretch boundary at least 20 steps ahead
+          placeEnd(-Math.ceil((20 - me.position.z) / STRETCH) * STRETCH)
+        },
+      })
     }
 
     async function openChest() {
@@ -277,9 +316,8 @@ function runLand(index: number): SceneFn {
     }
 
     // --- Start: the first two stretches, the first gate, and the story ---
-    fillStretch(0)
-    fillStretch(-STRETCH)
-    placeEnd()
+    fillAhead()
+    placeEnd(-STRETCH)
     game.hud.message(`${land.emoji} ${land.name}`, { subtitle: land.intro, seconds: 3.5 })
     speak(land.intro)
     game.after(3, () => {
@@ -330,11 +368,14 @@ function runLand(index: number): SceneFn {
       if (state === 'run' && gate && me.position.z <= gate.z + 2.2) void atGate()
       if (state === 'run' && treasure && me.position.z <= treasure.z + 1) void openChest()
 
+      chase?.update(dt)
+      fillAhead()
       buildScenery(me.position.z - 90)
       ground.position.set(0, -0.25, me.position.z)
 
-      // The camera rides behind and above, leaning a little with the lanes
-      game.camera.position.lerp(new THREE.Vector3(me.position.x * 0.5, 4.6, me.position.z + 8.5), Math.min(1, dt * 6))
+      // The camera rides behind and above, leaning a little with the lanes (further back in a chase, to see the monster)
+      const cam = chase?.camera ?? new THREE.Vector3(0, 4.6, 8.5)
+      game.camera.position.lerp(new THREE.Vector3(me.position.x * 0.5, cam.y, me.position.z + cam.z), Math.min(1, dt * 3))
       game.camera.lookAt(me.position.x * 0.4, 1.2, me.position.z - 6)
     })
 
@@ -370,6 +411,7 @@ function runLand(index: number): SceneFn {
     }
 
     return () => {
+      chase?.stop()
       card.remove()
       buttons.remove()
       back.remove()

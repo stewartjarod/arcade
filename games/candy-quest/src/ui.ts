@@ -110,3 +110,48 @@ export function toast(text: string) {
   const el = div('position:fixed;left:50%;top:30%;transform:translateX(-50%);font:700 40px Fredoka,system-ui;color:#fff;text-shadow:0 3px 0 #d9480f,0 0 8px #0005;pointer-events:none;', text)
   el.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 -60px' }], { duration: 900, easing: 'ease-out' }).onfinish = () => el.remove()
 }
+
+/**
+ * The Candy Monster chase: a question at the top, three answer buttons at the bottom,
+ * and a strip showing how close the monster is (😀 ......... 👾).
+ */
+export function chasePanel() {
+  const el = div('position:fixed;inset:0;pointer-events:none;')
+  el.innerHTML = `
+    <div data-meter style="position:absolute;top:58px;left:50%;transform:translateX(-50%);width:min(70vw,360px);height:34px;background:#fff9;border-radius:999px;border:3px solid #9c36b5;">
+      <span data-me style="position:absolute;right:4px;top:0;font-size:26px">🏃</span>
+      <span data-monster style="position:absolute;top:0;font-size:26px;transition:left .3s">👾</span>
+    </div>
+    <div data-q style="position:absolute;top:104px;left:50%;transform:translateX(-50%);max-width:92vw;background:#fffe;border-radius:22px;padding:8px 18px;box-shadow:0 6px 0 #0002;text-align:center;pointer-events:auto"></div>
+    <div data-answers style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;width:min(94vw,560px);pointer-events:auto"></div>`
+  const $ = (k: string) => el.querySelector<HTMLElement>(`[data-${k}]`)!
+  const COLORS = ['#ff6b6b', '#ffa94d', '#4dabf7']
+  return {
+    /** gap 0 (caught) … max (far away). */
+    meter(gap: number, max: number) {
+      const far = Math.max(0, Math.min(1, gap / max)) // 1 = far away (left end), 0 = right next to Buddy
+      $('monster').style.left = `${(1 - far) * 85}%`
+    },
+    show(prompt: HTMLElement, options: string[], onPick: (i: number) => void) {
+      $('q').replaceChildren(prompt)
+      $('answers').innerHTML = options
+        .map((o, i) => `<button data-i="${i}" style="flex:1;min-width:0;border:4px solid #fff;border-radius:22px;background:${COLORS[i]};color:#fff;font:700 32px Fredoka,system-ui;padding:12px 4px;cursor:pointer;box-shadow:0 6px 0 #0004;text-shadow:0 2px 3px #000a"><span style="display:block;font-size:13px;opacity:.9">${i + 1}</span>${escapeHTML(o)}</button>`)
+        .join('')
+      $('answers').querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('pointerdown', (e) => {
+        e.preventDefault()
+        onPick(Number(b.dataset.i))
+      }))
+    },
+    /** Grey out a wrong button, or turn the right one green. */
+    mark(i: number, right: boolean) {
+      const b = $('answers').querySelectorAll<HTMLButtonElement>('button')[i]
+      if (!b) return
+      if (right) b.style.background = '#22c55e'
+      else {
+        b.disabled = true
+        b.style.opacity = '.35'
+      }
+    },
+    remove: () => el.remove(),
+  }
+}

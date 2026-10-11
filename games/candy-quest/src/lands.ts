@@ -146,3 +146,12 @@ export const LANDS: Land[] = [
     reward: { kind: 'hat', hat: 'crown', name: 'Crown' },
   },
 ]
+
+/** What the Candy Monster chase says out loud. */
+export const MONSTER_LINES = {
+  wake: 'Oh no! The Candy Monster! Answer fast to run away!',
+  escaped: 'You got away!',
+  chomp: 'Chomp! The Candy Monster ate some of your candy!',
+  hungry: 'You had no candy, so the Candy Monster went home hungry!',
+  burp: 'Burp! Now it is full. Keep running!',
+}

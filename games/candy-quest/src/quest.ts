@@ -12,6 +12,7 @@ export function landFor(grade: number) {
     pieces: { cozy: 4, explorer: 5, speedy: 6 }[style], // map pieces to find
     speed: { cozy: 6, explorer: 7, speedy: 8.5 }[style], // how fast Buddy runs
     puddles: { cozy: 1, explorer: 2, speedy: 3 }[style], // sticky taffy puddles between gates
+    creep: { cozy: 0.5, explorer: 0.8, speedy: 1.1 }[style], // how fast the Candy Monster catches up (gap per second)
   }
 }
 
@@ -53,3 +54,48 @@ export function wardrobe(finished: number) {
     hats: ['none' as const, ...won.filter((r): r is Extract<Reward, { kind: 'hat' }> => r.kind === 'hat').map((r) => r.hat)],
   }
 }
+
+// ------------------------------------------------------------------
+//  The Candy Monster. Miss two words in a land and it wakes up and chases you.
+//  The "gap" is how far behind it is. It shrinks every second; right answers push it back.
+// ------------------------------------------------------------------
+
+/** The monster wakes on this many missed gate words in a land (only once a land). */
+export const MONSTER_AFTER_MISSES = 2
+export const monsterWakes = (misses: number) => misses === MONSTER_AFTER_MISSES
+
+/** Right answers needed to get away. */
+export const ESCAPE_ANSWERS = 3
+export const START_GAP = 10
+export const MAX_GAP = 14
+
+export interface Chase {
+  gap: number
+  escapes: number
+}
+
+export const newChase = (): Chase => ({ gap: START_GAP, escapes: 0 })
+
+/** Time passes: the monster stomps closer. */
+export function creep(chase: Chase, seconds: number, rate: number) {
+  chase.gap = Math.max(0, chase.gap - seconds * rate)
+}
+
+/**
+ * An answer during the chase. Right on the first try is a big speed boost; right after a
+ * wrong pick still counts, but only a small one. A wrong pick lets the monster close in.
+ */
+export function chaseAnswer(chase: Chase, right: boolean, firstTry: boolean) {
+  if (right) {
+    chase.escapes++
+    chase.gap = Math.min(MAX_GAP, chase.gap + (firstTry ? 4 : 1.5))
+  } else {
+    chase.gap = Math.max(0, chase.gap - 1.5)
+  }
+}
+
+export const escaped = (chase: Chase) => chase.escapes >= ESCAPE_ANSWERS
+export const caught = (chase: Chase) => chase.gap <= 0
+
+/** CHOMP! How many candies the monster eats: half (rounded up), so you always keep some if you had two. */
+export const eaten = (candies: number) => Math.ceil(candies / 2)

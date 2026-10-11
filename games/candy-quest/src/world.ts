@@ -190,3 +190,30 @@ export function pathPiece(length: number, color: string, kind: Scenery) {
   const river = (x: number) => box({ size: [5, 0.1, length], color: '#7b4a2a' }).translateX(x).translateY(-0.05)
   return group(road, river(-7), river(7))
 }
+
+/** The Candy Monster: a big wobbly gummy blob with candy-corn horns and a hungry grin. */
+export function candyMonster() {
+  const jelly = new THREE.MeshStandardMaterial({ color: '#9c36b5', roughness: 0.25, transparent: true, opacity: 0.92 })
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 16), jelly)
+  body.scale.set(1, 0.9, 1)
+  body.position.y = 1.45
+  body.castShadow = true
+  const eye = (x: number) => {
+    const white = ball({ radius: 0.38, color: '#fff' })
+    const pupil = ball({ radius: 0.17, color: '#222' })
+    pupil.position.z = -0.28 // it looks toward Buddy (down the path, -z)
+    return group(white, pupil).translateX(x).translateY(2.2).translateZ(-1.2)
+  }
+  const mouth = box({ size: [1.4, 0.35, 0.2], color: '#3b0a45' }).translateY(1.25).translateZ(-1.5)
+  const teeth = [-0.45, 0, 0.45].map((x) => cone({ radius: 0.12, height: 0.25, color: '#fff' }).translateX(x).translateY(1.35).translateZ(-1.6))
+  teeth.forEach((t) => (t.rotation.x = Math.PI))
+  const horn = (x: number) => {
+    const bits = ['#fff', '#ffd43b', '#ff922b'].map((color, i) => cone({ radius: 0.3 - i * 0.08, height: 0.25, color }).translateY(i * 0.22))
+    const h = group(...bits)
+    h.position.set(x, 2.8, -0.2)
+    h.rotation.z = -x * 0.4
+    return h
+  }
+  const feet = [-0.8, 0.8].map((x) => ball({ radius: 0.45, color: '#862e9c' }).translateX(x).translateY(0.3))
+  return group(body, eye(-0.55), eye(0.55), mouth, ...teeth, horn(-0.9), horn(0.9), ...feet)
+}

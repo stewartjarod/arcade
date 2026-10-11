@@ -4,8 +4,8 @@ import { shake, styleCard } from './card'
 import { renderPrompt } from './prompt'
 
 /**
- * A pop-up letter keyboard for spelling — ABC order (easier than QWERTY for young kids),
- * and a real keyboard works too.
+ * A pop-up letter keyboard for spelling, laid out like a real QWERTY keyboard (the same one
+ * the kids see at school and on tablets), and a real keyboard works too.
  *
  *   const word = await letterPad().ask({ title: 'Spell it!', prompt: q.prompt, listen: true })
  */
@@ -19,7 +19,8 @@ export interface LetterPad {
 let pad: LetterPad | undefined
 export const letterPad = (): LetterPad => (pad ??= create())
 
-const KEYS = "abcdefghijklmnopqrstuvwxyz'".split('')
+const ROWS = ['qwertyuiop', "asdfghjkl'", 'zxcvbnm']
+const KEYS = ROWS.join('').split('')
 const MAX = 14
 
 function create(): LetterPad {
@@ -29,17 +30,23 @@ function create(): LetterPad {
 .letter-pad-word { min-height: 1.5em; margin: 6px auto 0; padding: .1em .5em; width: fit-content; min-width: 5em; font-size: clamp(1.8rem, 8vw, 2.3rem);
   font-weight: 700; letter-spacing: .08em; border-radius: 16px; border: 4px solid var(--pad-accent); background: #fff; }
 .letter-pad-word:empty::after { content: '…'; opacity: .3; }
-.letter-pad-keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
-.letter-pad-keys button { font-size: clamp(1.05rem, 4.4vw, 1.35rem); padding: .3em 0; }
-.letter-pad-keys .wide { grid-column: span 2; }`
+.letter-pad-keys { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.letter-pad-row { display: flex; justify-content: center; gap: 4px; }
+.letter-pad-keys button { flex: 0 0 calc(10% - 4px); min-width: 0; font-size: clamp(1.05rem, 4.4vw, 1.35rem); padding: .3em 0; }
+.letter-pad-keys .wide { flex-basis: calc(20% - 4px); }`
   document.head.append(style)
 
   const el = document.createElement('div')
   el.className = 'lp-card letter-pad'
   el.hidden = true
-  const keys = KEYS.map((k) => `<button type="button" class="lp-key" data-key="${k}">${k}</button>`).join('')
+  const key = (k: string) => `<button type="button" class="lp-key" data-key="${k}">${k}</button>`
+  // Bottom row: the last letters, then delete and a wide check button
+  const rows = ROWS.map((row, i) => {
+    const extra = i === ROWS.length - 1 ? `<button type="button" class="lp-key" data-key="back" aria-label="Delete">⌫</button><button type="button" class="lp-key go wide" data-key="go" aria-label="Check">✓</button>` : ''
+    return `<div class="letter-pad-row">${row.split('').map(key).join('')}${extra}</div>`
+  }).join('')
   el.innerHTML = `<div class="lp-title"></div><div class="letter-pad-prompt"></div><div class="letter-pad-word" aria-live="polite"></div>
-    <div class="letter-pad-keys">${keys}<button type="button" class="lp-key" data-key="back" aria-label="Delete">⌫</button><button type="button" class="lp-key go wide" data-key="go" aria-label="Check">✓</button></div>
+    <div class="letter-pad-keys">${rows}</div>
     <div class="lp-msg"></div>`
   document.body.append(el)
   const $ = (sel: string) => el.querySelector(sel) as HTMLElement
