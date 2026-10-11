@@ -1,6 +1,6 @@
 # Candy Quest — spec
 
-Status: ready-for-agent
+Status: done (2026-10-11, commit 69f6dfe and follow-up)
 
 A spelling adventure. Buddy (pink) auto-runs along a candy path through a chain of lands.
 Every correct word opens a candy gate and gives a treasure-map piece. A full map leads to a treasure chest,
@@ -12,6 +12,7 @@ then the next land opens. Progress saves per player.
 - **Spelling:** candy gates block the path every so often. Run stops, the letter pad pops up (`writing.spell`, `letters` format only,
   read aloud). Right → gate melts, you get a map piece. Wrong → a few tries, then the answer is shown; the gate still opens
   (no fail), but no map piece for that gate, and the land adds one more gate so the map can still be finished.
+  At most 2 extra gates per land; after that a missed gate still gives the piece ("Here is a map piece to help you!").
 - **Clues = map pieces:** a map card (HUD, top-right) with N tiles; each correct word reveals one tile and a line of the story.
 - **Obstacles:** sticky taffy puddles / sour drops — touching one makes Buddy wobble and slow down. You can't lose.
 - **End of land:** map complete → the path ends at the X; treasure chest opens with confetti and a reward (a new hat or color for Buddy),
@@ -25,5 +26,5 @@ then the next land opens. Progress saves per player.
 
 ## Done when
 - `pnpm dev candy-quest` plays one land start to finish: run, lanes, jump, bounce, slow-down, gates with spelling, map tiles, chest, next land.
-- Land progress + rewards persist per player; homepage card shows the land reached.
+- Land progress + rewards persist per player (`finished`, `color`, `hat`); `best` = most candies grabbed in one land (shows on the homepage card).
 - `pnpm typecheck && pnpm test && pnpm build` pass.
