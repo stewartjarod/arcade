@@ -509,23 +509,31 @@ function partBuild(key: string): ItemSpec | null {
     }
   }
   if (!p || !q) return null
-  // Level 2: what part is shaded. Level 3: what part is NOT shaded (the other part).
-  const shaded = `${p}/${q}`
-  const ans = L === 3 ? `${q - p}/${q}` : shaded
-  const near = [shaded, `${q - p}/${q}`, `${p + 1}/${q}`].filter((f) => FRACTIONS.includes(f))
-  const text = L === 3 ? 'What fraction of the shape is NOT shaded?' : 'What fraction of the shape is shaded?'
+  // Level 2: what part is green. Level 3: what part is NOT green (the other part).
+  // 1st and 2nd graders learn these as words ("one third"), not as "1/3" or the word "fraction": that's 3rd grade.
+  const green = `${p}/${q}`
+  const ans = fractionWords(L === 3 ? `${q - p}/${q}` : green)
+  const near = [green, `${q - p}/${q}`, `${p + 1}/${q}`].filter((f) => FRACTIONS.includes(f)).map(fractionWords)
+  const text = `This shape has ${q} equal parts. How much of it is ${L === 3 ? 'NOT green' : 'green'}?`
   return {
     key,
     prompt: { text, say: text, svg: strip(q, p) },
     answer: ans,
     formats: CHOICE,
-    wrong: (n) => wrongFrom(ans, n, FRACTIONS, near),
+    wrong: (n) => wrongFrom(ans, n, FRACTIONS.map(fractionWords), near),
   }
+}
+
+/** "2/3" → "two thirds", the way 1st and 2nd grade say it. */
+function fractionWords(f: string) {
+  const [p, q] = f.split('/').map(Number) as [number, number]
+  const part = ['', '', 'half', 'third', 'fourth'][q]!
+  return `${['', 'one', 'two', 'three'][p]} ${p === 1 ? part : part === 'half' ? 'halves' : `${part}s`}`
 }
 
 const equalParts = keyedSkill({
   id: 'equalParts',
-  label: (L) => ['Count the equal parts', 'Fractions of a shape: halves, thirds, fourths', 'Fractions: the part not shaded'][L - 1]!,
+  label: (L) => ['Count the equal parts', 'Identify halves, thirds, and fourths', 'Halves, thirds, and fourths: the part not colored'][L - 1]!,
   maxLevel: 3,
   formats: CHOICE,
   key: (L) => {
