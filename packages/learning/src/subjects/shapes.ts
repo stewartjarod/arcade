@@ -68,7 +68,7 @@ function sidesItem(name: string): ItemSpec {
   }
 }
 
-const NAME_LABELS = ['Two-dimensional shapes', 'Name the two-dimensional shape', 'Name polygons: up to 8 sides']
+const NAME_LABELS = ['Two-dimensional shapes', 'Name the two-dimensional shape', 'Name polygons: up to 12 sides']
 const SIDE_LABELS = ['Count sides', 'Count sides and corners', 'Count sides and vertices']
 
 export const shapes: Skill = {

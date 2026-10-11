@@ -191,7 +191,7 @@ const longVowels = rowSkill(
     [
       r('We ride our ___ to the park.', 'bike', 'sock', 'lamp', 'mop'),
       r('Fly your ___ high in the sky.', 'kite', 'hat', 'mug', 'bus'),
-      r('Pick the shape with six square sides: a ___.', 'cube', 'ball', 'book', 'star'),
+      r('Pick the shape with six square faces: a ___.', 'cube', 'ball', 'book', 'star'),
       r('An ice cream ___ is pointy at the bottom.', 'cone', 'bowl', 'cup', 'ball'),
       r('The mouse ran back to its ___.', 'home', 'shoe', 'pen', 'sun'),
       r('Tug on the ___ with both hands.', 'rope', 'cup', 'pen', 'bed'),

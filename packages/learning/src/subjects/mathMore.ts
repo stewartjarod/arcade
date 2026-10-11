@@ -445,11 +445,19 @@ const CEREAL_BOX = svg(
   <ellipse cx="55" cy="95" rx="24" ry="30" fill="#fff"/>
   <text x="55" y="103" font-size="22" text-anchor="middle" fill="#e8590c">O O</text>`,
 )
+// The cone is drawn too: 🍦 is mostly a swirl of ice cream, with only a little cone showing.
+const CONE = svg(
+  120,
+  170,
+  `<path d="M14 40 L60 162 L106 40 Z" fill="#e9b872" stroke="#495057" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M34 92 L78 46 M46 124 L98 62 M86 92 L42 46 M74 124 L22 62" stroke="#b07a3a" stroke-width="2.5"/>
+  <ellipse cx="60" cy="40" rx="46" ry="14" fill="#f3d19c" stroke="#495057" stroke-width="3"/>`,
+)
 const OBJECTS: { word: string; emoji: string; svg?: string; phrase: string; shape: string }[] = [
   { word: 'ball', emoji: '⚽', phrase: 'a ball', shape: 'sphere' },
   { word: 'die', emoji: '🎲', phrase: 'a die', shape: 'cube' },
   { word: 'can', emoji: '🥫', phrase: 'a soup can', shape: 'cylinder' },
-  { word: 'cone', emoji: '🍦', phrase: 'an ice cream cone', shape: 'cone' },
+  { word: 'cone', emoji: '', svg: CONE, phrase: 'an ice cream cone', shape: 'cone' },
   { word: 'box', emoji: '', svg: CEREAL_BOX, phrase: 'a cereal box', shape: 'rectangular prism' },
 ]
 // A cube is also a rectangular prism, so the two are never offered as wrong answers to each other. Level 1 has no box.
@@ -484,7 +492,7 @@ function solidBuild(key: string): ItemSpec | null {
 
 const solids = keyedSkill({
   id: 'solids',
-  label: (L) => ['Name the 3D shape', 'Name more 3D shapes', 'Describe a 3D shape'][L - 1]!,
+  label: (L) => ['Name the three-dimensional shape', 'Name the three-dimensional shape', 'Attributes of three-dimensional shapes'][L - 1]!,
   maxLevel: 3,
   formats: CHOICE,
   key: (L) => (L === 1 ? `1:${pick(['ball', 'die', 'can', 'cone'])}` : L === 2 ? `2:${pick(OBJECTS.map((o) => o.word))}` : `3:${pick(['nofaces', 'point'])}`),

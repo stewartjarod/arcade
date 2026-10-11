@@ -129,7 +129,7 @@ const sameDifferent = keyedSkill({
 const REAL_SHAPES = [
   { ask: 'Which one is shaped like a ball?', answers: ['⚽', '🏀', '🎾'], wrong: ['📦', '🥫', '🍦', '🎁'] },
   { ask: 'Which one is shaped like a box?', answers: ['📦', '🎁'], wrong: ['⚽', '🥫', '🍦', '🏀'] },
-  { ask: 'Which one is shaped like a can?', answers: ['🥫', '🧻'], wrong: ['⚽', '📦', '🍦', '🎁'] },
+  { ask: 'Which one is shaped like a can?', answers: ['🥫'], wrong: ['⚽', '📦', '🍦', '🎁'] },
 ]
 
 const realShapes = keyedSkill({
@@ -140,7 +140,8 @@ const realShapes = keyedSkill({
   build: (key) => {
     const [L = 1, i = 0] = nums(key)
     const s = REAL_SHAPES[L - 1]!
-    return choice(key, plain(s.ask), s.answers[i]!, s.wrong)
+    // min(): a saved key can point past the end of a list that got shorter.
+    return choice(key, plain(s.ask), s.answers[Math.min(i, s.answers.length - 1)]!, s.wrong)
   },
 })
 
@@ -246,7 +247,8 @@ const venn = keyedSkill({
   },
   build: (key) => {
     const [L = 1, circlesOnly = 0, both = 0, blueOnly = 0] = nums(key)
-    const ask = L === 1 ? 'How many shapes are in both circles?' : L === 2 ? 'How many shapes are in the two circles altogether?' : 'How many are circles, but not blue?'
+    // Say "rings", not "circles": one group IS circles, so "in the two circles" could mean the circle shapes.
+    const ask = L === 1 ? 'How many shapes are inside both rings?' : L === 2 ? 'How many shapes are inside the rings altogether?' : 'How many are circles, but not blue?'
     const ans = L === 1 ? both : L === 2 ? circlesOnly + both + blueOnly : circlesOnly
     return numeric(key, { text: ask, say: ask, svg: vennPic(circlesOnly, both, blueOnly) }, ans, [circlesOnly, both, blueOnly, circlesOnly + both, both + blueOnly, ans + 1, ans - 1])
   },
@@ -507,7 +509,8 @@ const relateFracDec = keyedSkill({
 
 // --- Shape and item patterns (grade 4) -------------------------------------------------------------
 
-const PATTERN_ITEMS = ['🔺', '⭐', '🟦', '🟥', '⬛', '🔶']
+// Every item is a different shape AND color, so a pattern can't be read two ways (three squares made 🟦🟥🟦🟥 → 🟦 or ⬛?).
+const PATTERN_ITEMS = ['🔺', '⭐', '🟦', '🔴', '🔶', '🌙']
 
 const shapePattern = keyedSkill({
   id: 'shapePattern',

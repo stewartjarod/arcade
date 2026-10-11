@@ -535,7 +535,7 @@ function gridPic(w: number, h: number): string {
 
 const gridSquares = keyedSkill({
   id: 'gridSquares',
-  label: (L) => ['Count squares in a rectangle', 'Area: how many squares', 'Walk around the edge'][L - 1]!,
+  label: (L) => ['Count squares in a rectangle', 'Area: how many squares', 'Perimeter of figures on grids'][L - 1]!,
   formats: NUMBER_CHOICE,
   key: (L) => {
     if (L === 1) return `1:${rand(2, 5)}:${rand(2, 4)}`
@@ -551,7 +551,7 @@ const gridSquares = keyedSkill({
       return numeric(key, { text, say: text, svg: gridPic(w, h) }, ans, [ans - 4, w * h, ans + 2, ans - 2])
     }
     const ans = w * h
-    const text = L === 1 ? 'How many squares are in this rectangle?' : 'How many squares cover this rectangle?'
+    const text = L === 1 ? 'How many squares are in this shape?' : 'How many squares cover this rectangle?'
     return numeric(key, { text, say: text, svg: gridPic(w, h) }, ans, [w + h, ans + w, ans - h, ans + 1])
   },
 })

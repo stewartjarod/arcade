@@ -300,7 +300,7 @@ const measurement = factSkill(
     { id: 'mlLiter', level: 3, q: 'How many milliliters are in one liter?', a: '1000', wrong: ['100', '10', '500'] },
     { id: 'secMin', level: 3, q: 'How many seconds are in one minute?', a: '60', wrong: ['100', '30', '12'] },
     { id: 'gramKg', level: 3, q: 'How many grams are in one kilogram?', a: '1000', wrong: ['100', '10', '500'] },
-    { id: 'cylinder', level: 3, q: 'Which lab tool measures liquid volume most precisely?', a: 'a graduated cylinder', wrong: ['a ruler', 'a balance', 'a stopwatch'] },
+    { id: 'cylinder', level: 3, q: 'Which lab tool measures liquid volume?', a: 'a graduated cylinder', wrong: ['a ruler', 'a balance', 'a stopwatch'] },
     { id: 'stopwatch', level: 3, q: 'Which tool times how long something takes?', a: 'a stopwatch', wrong: ['a graduated cylinder', 'a thermometer', 'a ruler'] },
     { id: 'beaker', level: 4, q: 'Which lab container holds liquids and can be heated?', a: 'a beaker', wrong: ['a microscope', 'a magnet', 'a ruler'] },
     { id: 'microscope', level: 4, q: 'Which lab tool makes very tiny things look much bigger?', a: 'a microscope', wrong: ['a balance', 'a beaker', 'a thermometer'] },
