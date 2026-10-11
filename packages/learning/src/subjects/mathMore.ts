@@ -435,12 +435,22 @@ const measure = keyedSkill({
 // --- Three-dimensional shapes (names only) --------------------------------------------------
 
 // Keys name the object ("1:ball"), so an old key made with a different list gives null.
-const OBJECTS = [
+// The box is a tall cereal box, drawn: the 📦 emoji looks like a cube, and a box can be one, so "a box" had two right answers.
+const CEREAL_BOX = svg(
+  130,
+  170,
+  `<path d="M20 30 L45 10 L115 10 L90 30 Z" fill="#ffd8a8" stroke="#495057" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M90 30 L115 10 L115 140 L90 160 Z" fill="#e8590c" stroke="#495057" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="20" y="30" width="70" height="130" fill="${COLORS[1]}" stroke="#495057" stroke-width="3"/>
+  <ellipse cx="55" cy="95" rx="24" ry="30" fill="#fff"/>
+  <text x="55" y="103" font-size="22" text-anchor="middle" fill="#e8590c">O O</text>`,
+)
+const OBJECTS: { word: string; emoji: string; svg?: string; phrase: string; shape: string }[] = [
   { word: 'ball', emoji: '⚽', phrase: 'a ball', shape: 'sphere' },
   { word: 'die', emoji: '🎲', phrase: 'a die', shape: 'cube' },
   { word: 'can', emoji: '🥫', phrase: 'a soup can', shape: 'cylinder' },
   { word: 'cone', emoji: '🍦', phrase: 'an ice cream cone', shape: 'cone' },
-  { word: 'box', emoji: '📦', phrase: 'a box', shape: 'rectangular prism' },
+  { word: 'box', emoji: '', svg: CEREAL_BOX, phrase: 'a cereal box', shape: 'rectangular prism' },
 ]
 // A cube is also a rectangular prism, so the two are never offered as wrong answers to each other. Level 1 has no box.
 const SOLID_ALSO_TRUE: Record<string, string[]> = { cube: ['rectangular prism'], 'rectangular prism': ['cube'] }
@@ -465,7 +475,7 @@ function solidBuild(key: string): ItemSpec | null {
   const text = `What 3D shape is ${obj.phrase}?`
   return {
     key,
-    prompt: { text, say: text, emoji: obj.emoji },
+    prompt: obj.svg ? { text, say: text, svg: obj.svg } : { text, say: text, emoji: obj.emoji },
     answer: obj.shape,
     formats: CHOICE,
     wrong: (n) => wrongFrom(obj.shape, n, usable.map((o) => o.shape).filter((s) => !(SOLID_ALSO_TRUE[obj.shape] ?? []).includes(s))),
