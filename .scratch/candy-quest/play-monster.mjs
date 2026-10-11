@@ -18,6 +18,9 @@ const chaseUp = () => evalJs(`!!document.querySelector('[data-answers] button')`
 
 try {
   await sleep(1500)
+  await evalJs(`localStorage.setItem('arcade:p:guest:candy-quest:taught', 'true')`) // skip the first-time lesson
+  await evalJs(`location.reload()`)
+  await sleep(4000)
   await evalJs(`document.querySelector('[data-land="0"]').click()`)
   let gates = 0
   let answered = 0

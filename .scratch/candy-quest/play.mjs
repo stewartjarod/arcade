@@ -15,12 +15,13 @@ const hudText = () => evalJs(`document.body.innerText`)
 try {
   await sleep(1500)
   await shot(out + '1-title.png')
+  await evalJs(`localStorage.setItem('arcade:p:guest:candy-quest:taught', 'true')`) // skip the first-time lesson
+  await evalJs(`location.reload()`)
+  await sleep(4000)
   await evalJs(`document.querySelector('[data-land="0"]').click()`)
   await sleep(1500)
   await shot(out + '2-intro.png')
   await sleep(3000)
-  // switch lanes and jump with the touch buttons
-  await evalJs(`document.querySelectorAll('button')[[...document.querySelectorAll('button')].findIndex(b => b.textContent === '➡')].dispatchEvent(new PointerEvent('pointerdown'))`)
   await sleep(700)
   await shot(out + '3-running.png')
 
