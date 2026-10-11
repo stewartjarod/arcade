@@ -655,7 +655,7 @@ function volumeItem(L: number, l: number, w: number, h: number): ItemSpec {
   }
   const text =
     L === 1
-      ? `A box is ${l} cubes long, ${w} cubes wide, and ${h} cubes tall. How many unit cubes fill it?`
+      ? `A box is ${l} cubes long, ${w} cubes wide, and ${h} cubes tall. How many unit cubes fill it? (Some are hidden inside.)`
       : `A box is ${l} cm long, ${w} cm wide, and ${h} cm tall. What is its volume in cubic cm?`
   return {
     key: `vol:${L}:${l},${w},${h}`,

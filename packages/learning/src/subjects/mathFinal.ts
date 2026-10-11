@@ -1178,6 +1178,7 @@ const SHAPE_POINTS: Record<string, [number, number][]> = {
   parallelogram: [[30, 35], [100, 35], [80, 90], [10, 90]],
   trapezoid: [[20, 40], [100, 40], [85, 90], [35, 90]],
   irregular: [[60, 15], [95, 45], [60, 95], [30, 60]],
+  kite: [[60, 15], [92, 42], [60, 95], [28, 42]],
   triangle: [[60, 20], [100, 90], [20, 90]],
 }
 
@@ -1201,7 +1202,8 @@ const QUAD_LEVELS: { ask: string; right: string; others: string[] }[] = [
   { ask: 'Which shape has exactly one pair of parallel sides?', right: 'trapezoid', others: ['rectangle', 'parallelogram', 'irregular'] },
   { ask: 'Which shape has four right angles?', right: 'rectangle', others: ['trapezoid', 'parallelogram', 'irregular'] },
   { ask: 'Which shape is a parallelogram?', right: 'parallelogram', others: ['trapezoid', 'irregular', 'triangle'] },
-  { ask: 'Which shape is a trapezoid?', right: 'trapezoid', others: ['parallelogram', 'rectangle', 'irregular'] },
+  // No parallelogram or rectangle here: some books count them as trapezoids too, so they'd be a second right answer.
+  { ask: 'Which shape is a trapezoid?', right: 'trapezoid', others: ['kite', 'triangle', 'irregular'] },
 ]
 
 const quads4 = keyedSkill({
@@ -1601,7 +1603,8 @@ const regularPts = (n: number, r = 45): [number, number][] =>
   })
 
 /** Corners of a polygon with n sides and unequal sides: the corners sit at different distances from the center. */
-const IRREGULAR_RADII: Record<number, number[]> = { 3: [45, 30, 38], 4: [45, 28, 40, 22], 6: [45, 30, 40, 25, 45, 35] }
+// Spread far apart, so an irregular shape never looks almost regular next to a regular one.
+const IRREGULAR_RADII: Record<number, number[]> = { 3: [45, 30, 38], 4: [48, 18, 30, 40], 6: [45, 20, 42, 25, 46, 18] }
 const irregularPts = (n: number): [number, number][] =>
   Array.from({ length: n }, (_, i) => {
     const r = IRREGULAR_RADII[n]![i]!
@@ -1612,8 +1615,8 @@ const irregularPts = (n: number): [number, number][] =>
 const TRI: Record<string, [number, number][]> = {
   right: [[20, 90], [20, 20], [90, 90]],
   acute: [[60, 15], [20, 95], [100, 95]],
-  obtuse: [[10, 90], [50, 50], [110, 90]],
-  scalene: [[20, 90], [100, 90], [50, 30]],
+  obtuse: [[10, 90], [50, 60], [110, 90]], // about 117° on top, so it can't be mistaken for a right angle
+  scalene: [[20, 90], [100, 90], [40, 30]], // sides 80, 63 and 85: clearly not equal
   equilateral: [[20, 90], [100, 90], [60, 21]],
 }
 
@@ -1833,7 +1836,7 @@ const moneyTime5 = keyedSkill({
  */
 const TRI_LEVELS: { ask: string; right: string; others: string[] }[] = [
   { ask: 'Which triangle is a right triangle?', right: 'right', others: ['acute', 'obtuse', 'scalene'] },
-  { ask: 'Which triangle is equilateral?', right: 'equilateral', others: ['acute', 'scalene', 'right'] },
+  { ask: 'Which triangle is equilateral?', right: 'equilateral', others: ['obtuse', 'scalene', 'right'] }, // the acute one looks too close to equilateral
   { ask: 'Which triangle is obtuse?', right: 'obtuse', others: ['acute', 'right', 'scalene'] },
 ]
 const triangles5 = keyedSkill({
@@ -1951,7 +1954,7 @@ const POLYGON_LEVELS: { ask: string; right: () => string; others: (() => string)
 ]
 const polygonTypes5 = keyedSkill({
   id: 'polygonTypes5',
-  labels: ['Is it a polygon?', 'Number of sides in polygons', 'Regular and irregular polygons', 'Sort polygons into Venn diagrams'],
+  labels: ['Is it a polygon?', 'Number of sides in polygons', 'Regular and irregular polygons', 'Properties of polygons'],
   formats: CHOICE,
   key: (L) => `${L}:${rand(0, 3)}`,
   build: (key) => {

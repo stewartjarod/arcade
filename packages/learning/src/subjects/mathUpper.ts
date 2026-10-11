@@ -73,9 +73,9 @@ function areaItem(L: number, a: number, b: number): ItemSpec {
   if (L === 2) {
     return { key: `area:2:${a}:${b}`, prompt: { text: 'What is the area of this rectangle? (square units)', say: 'What is the area of this rectangle?', svg: rectSVG(a, b, color, a, b) }, answer: String(area), wrong: (k) => numberWrongs(area, k, near), seconds: 10 }
   }
-  // The figure shows the width and a "?" for the length (its true shape doesn't give the answer away).
+  // The figure shows the width and a "?" for the length, drawn in proportion so the picture never disagrees with the numbers.
   const text = `A rectangle has an area of ${area} square units. Its width is ${a}. What is its length?`
-  return { key: `area:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(2, 1, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [area - a, area + a, b + a, a]), seconds: 14 }
+  return { key: `area:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(a, b, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [area - a, area + a, b + a, a]), seconds: 14 }
 }
 
 export const area: Skill = {
@@ -104,7 +104,7 @@ function perimeterItem(L: number, a: number, b: number): ItemSpec {
   const p = 2 * (a + b)
   // The figure marks the side we want with "?" and gives the top side.
   const text = `A rectangle has a perimeter of ${p}. Its top side is ${a}. How long is its left side?`
-  return { key: `perim:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(2, 1, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [p - a, p / 2, p - 2 * a, a]), seconds: 16 }
+  return { key: `perim:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(a, b, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [p - a, p / 2, p - 2 * a, a]), seconds: 16 }
 }
 
 export const perimeter: Skill = {

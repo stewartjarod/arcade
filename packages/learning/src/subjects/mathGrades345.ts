@@ -156,7 +156,7 @@ const regular = (n: number): Pts =>
 const SHAPES: Record<string, { pts: Pts; lines: number }> = {
   rectangle: { pts: [[10, 35], [110, 35], [110, 85], [10, 85]], lines: 2 },
   square: { pts: [[25, 25], [95, 25], [95, 95], [25, 95]], lines: 4 },
-  trapezoid: { pts: [[30, 30], [90, 30], [110, 95], [10, 95]], lines: 0 },
+  trapezoid: { pts: [[30, 30], [90, 30], [110, 95], [10, 95]], lines: 1 }, // drawn the same on both sides
   parallelogram: { pts: [[30, 25], [105, 25], [90, 95], [15, 95]], lines: 0 },
   rhombus: { pts: [[60, 10], [95, 60], [60, 110], [25, 60]], lines: 2 },
   kite: { pts: [[60, 10], [90, 40], [60, 110], [30, 40]], lines: 1 },
@@ -175,7 +175,9 @@ const angleSvg = (deg: number) => {
   const ey = 100 - 60 * Math.sin(t)
   const ax = 60 + r * Math.cos(t)
   const ay = 100 - r * Math.sin(t)
-  return svg(140, 120, line(60, 100, 120, 100, 4) + line(60, 100, ex, ey, 4) + `<path d="M 82 100 A ${r} ${r} 0 0 0 ${ax} ${ay}" fill="none" stroke="#ff6b6b" stroke-width="3"/>`)
+  // A right angle gets the little square corner mark, like in books; other angles get an arc.
+  const mark = deg === 90 ? `<path d="M 76 100 L 76 84 L 60 84" fill="none" stroke="#ff6b6b" stroke-width="3"/>` : `<path d="M 82 100 A ${r} ${r} 0 0 0 ${ax} ${ay}" fill="none" stroke="#ff6b6b" stroke-width="3"/>`
+  return svg(140, 120, line(60, 100, 120, 100, 4) + line(60, 100, ex, ey, 4) + mark)
 }
 
 /** Bars: one bar per name, each `square` tall, with the scale written beside the grid lines. */
@@ -616,7 +618,7 @@ const POLY_NAMES: string[][] = [
   ['triangle', 'square', 'pentagon', 'hexagon', 'octagon'],
   // Level 3 counts the sides that are the same length, so every choice is about sides (and exactly one is right).
   ['none', 'one', 'two', 'all three'],
-  ['trapezoid', 'kite', 'parallelogram', 'rectangle'],
+  ['trapezoid', 'kite', 'parallelogram', 'rectangle', 'square'],
 ]
 const SAME_SIDES: Record<string, string> = { 'equilateral triangle': 'all three', 'isosceles triangle': 'two', 'scalene triangle': 'none' }
 const POLY_QUESTIONS = ['What is this shape called?', 'What is this polygon called?', 'How many sides of this triangle are the same length?', 'What is this four-sided shape called?']
@@ -631,15 +633,16 @@ const polygons = keyed({
   build: (L, [idx = 0]) => {
     const shape = POLY_LEVELS[L - 1]![idx]!
     const answer = L === 3 ? SAME_SIDES[shape.name]! : shape.name
-    // A square is also a rectangle, so "rectangle" is never a wrong choice for a square.
-    const names = answer === 'square' ? POLY_NAMES[L - 1]!.filter((n) => n !== 'rectangle') : POLY_NAMES[L - 1]!
+    // A square is also a rectangle, and some books count a parallelogram as a trapezoid, so those are never wrong choices.
+    const alsoTrue: Record<string, string> = { square: 'rectangle', parallelogram: 'trapezoid' }
+    const names = POLY_NAMES[L - 1]!.filter((n) => n !== alsoTrue[answer])
     return spec(prompt(POLY_QUESTIONS[L - 1]!, { svg: shapeSvg(shape.pts) }), answer, from(answer, names))
   },
 })
 
 const LINE_PICS = [
   svg(120, 120, line(15, 40, 105, 40, 4) + line(15, 80, 105, 80, 4)),
-  svg(120, 120, line(60, 15, 60, 105, 4) + line(15, 60, 105, 60, 4)),
+  svg(120, 120, line(60, 15, 60, 105, 4) + line(15, 60, 105, 60, 4) + `<path d="M 74 60 L 74 46 L 60 46" fill="none" stroke="#ff6b6b" stroke-width="3"/>`),
   svg(120, 120, line(15, 100, 105, 20, 4) + line(15, 40, 105, 90, 4)),
 ]
 const LINE_NAMES = ['parallel', 'perpendicular', 'neither']
@@ -647,11 +650,12 @@ const LINE_NAMES = ['parallel', 'perpendicular', 'neither']
 const angles = keyed({
   tag: 'ang',
   id: 'angles',
-  labels: ['Right, acute, or obtuse', 'Parallel and perpendicular lines', 'Measure an angle'],
+  labels: ['Acute, right, obtuse, and straight angles', 'Parallel, perpendicular, and intersecting lines', 'Measure an angle'],
   formats: CHOICE,
   unlocksAfter: [{ skill: 'perimeter', level: 2 }],
   roll: (L) => {
-    if (L === 1) return [pick([30, 45, 60, 70, 75, 80, 90, 100, 110, 120, 135, 150])]
+    // No angles close to 90°: telling 80° from a right angle by eye isn't fair.
+    if (L === 1) return [pick([30, 45, 60, 70, 90, 110, 120, 135, 150])]
     if (L === 2) return [rand(0, 2)]
     return [5 * rand(4, 32)]
   },
