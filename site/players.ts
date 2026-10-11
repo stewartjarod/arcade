@@ -2,7 +2,7 @@ import {
   AVATARS, GRADES, PLAYER_COLORS, createPlayer, currentPlayer, deletePlayer, listPlayers,
   onPlayersChanged, selectPlayer, updatePlayer, type Player,
 } from '@arcade/players'
-import { SUBJECTS, gradeName, peekLearner, skillSummary, subjectSummary, type SkillInfo } from '@arcade/learning'
+import { SUBJECTS, peekLearner, skillSummary, subjectSummary } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  "Who's playing?" — pick, make, edit and delete players.
@@ -62,22 +62,12 @@ function playerRow(changed: () => void): HTMLElement[] {
   return [title, row]
 }
 
-/** "· 85 proficient" next to a skill: where they are in the level, IXL-style. */
-function smartNote(k: SkillInfo) {
-  const sm = k.smart
-  if (!sm) return ''
-  if (sm.band === 'placing') return ' · placing…'
-  const word = sm.band === 'challenge' ? 'challenge zone' : sm.band === 'proficient' ? 'proficient' : ''
-  return ` · ${sm.score}${word ? ` ${word}` : ''}`
-}
-
 /** What the current player is learning, in every subject (shared by every game). */
 function learningCard() {
   const player = currentPlayer()
   const l = peekLearner(player.id)
   const card = el('section', 'learning')
-  const grade = player.grade !== undefined ? ` · ${GRADES[player.grade]} grade` : ''
-  card.append(el('h3', 'learning-title', `🧠 What ${player.name} is learning${grade}`))
+  card.append(el('h3', 'learning-title', `🧠 What ${player.name} is learning`))
   const grid = el('div', 'subjects')
   for (const s of subjectSummary(l)) {
     const tile = el('details', 'subject')
@@ -89,13 +79,13 @@ function learningCard() {
     summary.append(
       el('span', 'subject-emoji', s.emoji),
       el('span', 'subject-name', s.name + (player.focus === s.id ? ' 📌' : '')),
-      el('span', 'subject-now', (s.started ? s.current : `Ready: ${s.current}`) + (s.ixlGrade !== undefined ? ` · IXL ${gradeName(Math.round(s.ixlGrade))}` : '')),
+      el('span', 'subject-now', (s.started ? s.current : `Ready: ${s.current}`)),
       bar,
     )
     if (s.review) summary.append(el('span', 'subject-review', `🔁 ${s.review} to practice again`))
     const skills = el('ul', 'subject-skills')
     for (const k of skillSummary(l, s.id)) {
-      skills.append(el('li', k.unlocked ? (k.mastered ? 'done' : '') : 'locked', `${k.mastered ? '⭐' : k.unlocked ? '▸' : '🔒'} ${k.label}${k.unlocked ? smartNote(k) : ' — coming soon'}`))
+      skills.append(el('li', k.unlocked ? (k.mastered ? 'done' : '') : 'locked', `${k.mastered ? '⭐' : k.unlocked ? '▸' : '🔒'} ${k.label}${k.unlocked ? '' : ' — coming soon'}`))
     }
     tile.append(summary, skills)
     grid.append(tile)
@@ -151,7 +141,7 @@ function openEditor(player: Player | null, changed: () => void) {
     colors.append(b)
   }
 
-  // Grade is just a label — everyone starts every skill at zero and the game finds their level.
+  // The grade is where a new player starts (on IXL's scale); the games then find their real level quickly, up or down.
   const grades = el('div', 'choices words')
   GRADES.forEach((g, i) => {
     const b = choice(g, i === grade, () => {
@@ -200,7 +190,7 @@ function openEditor(player: Player | null, changed: () => void) {
   form.append(
     el('h2', '', player ? `Change ${player.name}` : 'New player'),
     preview, name, el('h3', '', 'Pick a buddy'), avatars, el('h3', '', 'Pick a color'), colors,
-    el('h3', '', 'What grade are you in? (just for fun)'), grades, el('h3', '', 'Practice more of…'), focuses, buttons,
+    el('h3', '', 'What grade are you in?'), grades, el('h3', '', 'Practice more of…'), focuses, buttons,
   )
   dialog.append(form)
   dialog.addEventListener('close', () => dialog.remove())

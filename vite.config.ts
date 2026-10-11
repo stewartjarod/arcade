@@ -18,6 +18,7 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         home: resolve(root, 'index.html'),
+        parent: resolve(root, 'parent/index.html'),
         ...Object.fromEntries(games.map((g) => [g, resolve(root, 'games', g, 'index.html')])),
       },
     },

@@ -66,17 +66,16 @@ interface Coin {
   mm: number
   fill: string
   edge: string
-  label: string
 }
 export const COINS: Coin[] = [
-  { name: 'penny', cents: 1, mm: 19, fill: '#c77b30', edge: '#8a4f1c', label: 'ONE CENT' },
-  { name: 'nickel', cents: 5, mm: 21, fill: '#c9ccd1', edge: '#8d9199', label: 'FIVE CENTS' },
-  { name: 'dime', cents: 10, mm: 17.9, fill: '#d6d9de', edge: '#8d9199', label: 'ONE DIME' },
-  { name: 'quarter', cents: 25, mm: 24.3, fill: '#cfd3d8', edge: '#868b93', label: 'QUARTER' },
+  { name: 'penny', cents: 1, mm: 19, fill: '#c77b30', edge: '#8a4f1c' },
+  { name: 'nickel', cents: 5, mm: 21, fill: '#c9ccd1', edge: '#8d9199' },
+  { name: 'dime', cents: 10, mm: 17.9, fill: '#d6d9de', edge: '#8d9199' },
+  { name: 'quarter', cents: 25, mm: 24.3, fill: '#cfd3d8', edge: '#868b93' },
 ]
 const coin = (name: string) => COINS.find((c) => c.name === name)!
 
-/** A row of coins as SVG, sized like the real ones. */
+/** A row of coins as SVG, sized like the real ones. Each is labeled with its value ("5¢"), which fits on a phone. */
 export function coinsSVG(names: string[]) {
   let x = 4
   const parts = names.map((n) => {
@@ -86,41 +85,68 @@ export function coinsSVG(names: string[]) {
     x += r * 2 + 6
     return `<g><circle cx="${cx}" cy="30" r="${r}" fill="${c.fill}" stroke="${c.edge}" stroke-width="2"/>
       <circle cx="${cx}" cy="30" r="${r - 4}" fill="none" stroke="${c.edge}" stroke-width="0.8" opacity=".6"/>
-      <text x="${cx}" y="30" font-size="${c.label.length > 8 ? 5.2 : 6}" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${c.edge}" font-family="system-ui, sans-serif">${c.label}</text></g>`
+      <text x="${cx}" y="30" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${c.edge}" font-family="system-ui, sans-serif">${c.cents}¢</text></g>`
   })
   return `<svg viewBox="0 0 ${Math.max(x, 60)} 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Coins">${parts.join('')}</svg>`
 }
 
 const plural = (n: number, name: string) => `${n} ${name === 'penny' ? (n === 1 ? 'penny' : 'pennies') : n === 1 ? name : `${name}s`}`
 
+/** The coin is drawn and the kid names it ("What is this coin called?" → nickel), like IXL's coin pictures. */
+function coinNameItem(c: Coin): ItemSpec {
+  // The key keeps its old wording so facts a kid already missed still come back.
+  const key = `Which coin is worth ${c.cents}¢?`
+  return { key, prompt: { text: 'What is this coin called?', svg: coinsSVG([c.name]) }, answer: c.name, formats: ['choice'], wrong: (n) => wrongFrom(c.name, n, COINS.map((x) => x.name)) }
+}
+
+/** "How many cents is a nickel worth?" with the coin drawn. */
+function coinValueItem(c: Coin): ItemSpec {
+  const text = `How many cents is a ${c.name} worth?`
+  return {
+    key: text,
+    prompt: { text, svg: coinsSVG([c.name]) },
+    answer: String(c.cents),
+    wrong: (n) => wrongFrom(String(c.cents), n, COINS.map((x) => String(x.cents)), ['2', '50', '100']),
+  }
+}
+
+/** Making change: you have `total`, the toy costs `price`. */
+function changeItem(total: number, price: number): ItemSpec {
+  const left = total - price
+  const text = `You have ${total}¢. You buy a toy for ${price}¢. How much is left?`
+  return {
+    key: text,
+    prompt: { text },
+    answer: String(left),
+    wrong: (n) => wrongFrom(String(left), n, [left + 5, left - 5, total + price, price].filter((v) => v > 0 && v !== left).map(String), [String(left + 10), String(left - 10)].filter((v) => Number(v) > 0)),
+    seconds: 20,
+  }
+}
+
+/** Some coins to count (names in any order). The picture and the total come from the names. */
+function groupItem(names: string[]): ItemSpec {
+  const total = names.reduce((t, n) => t + coin(n).cents, 0)
+  const counts = COINS.map((c) => [c.name, names.filter((n) => n === c.name).length] as const).filter(([, k]) => k > 0)
+  const text = `${counts.map(([n, k]) => plural(k, n)).join(' and ')}: how many cents?`
+  return {
+    key: text,
+    prompt: { text, svg: coinsSVG(names) },
+    answer: String(total),
+    // Common slips: counting every coin as 1¢ or 5¢, or being off by one coin.
+    wrong: (n) => wrongFrom(String(total), n, [total + 1, total - 1, total + 10, total - 10, total + 25].filter((v) => v > 0).map(String), [String(names.length), String(total + 5), String(total - 5)].filter((v) => Number(v) > 0 && v !== String(total))),
+    seconds: 6 + names.length * 2,
+  }
+}
+
 function coinItem(level: number): ItemSpec {
   if (level === 1) {
     const c = pick(COINS)
-    if (Math.random() < 0.5) {
-      const text = `Which coin is worth ${c.cents}¢?`
-      return { key: text, prompt: { text }, answer: c.name, formats: ['choice'], wrong: (n) => wrongFrom(c.name, n, COINS.map((x) => x.name)) }
-    }
-    const text = `How many cents is a ${c.name} worth?`
-    return {
-      key: text,
-      prompt: { text, svg: coinsSVG([c.name]) },
-      answer: String(c.cents),
-      wrong: (n) => wrongFrom(String(c.cents), n, COINS.map((x) => String(x.cents)), ['2', '50', '100']),
-    }
+    return Math.random() < 0.5 ? coinNameItem(c) : coinValueItem(c)
   }
   if (level === 5) {
     // Making change: you have 20¢–$1, the toy costs at least 5¢ less.
     const total = 5 * rand(4, 20)
-    const price = total - 5 * rand(1, total / 5 - 1)
-    const left = total - price
-    const text = `You have ${total}¢. You buy a toy for ${price}¢. How much is left?`
-    return {
-      key: text,
-      prompt: { text },
-      answer: String(left),
-      wrong: (n) => wrongFrom(String(left), n, [left + 5, left - 5, total + price, price].filter((v) => v > 0 && v !== left).map(String), [String(left + 10), String(left - 10)].filter((v) => Number(v) > 0)),
-      seconds: 20,
-    }
+    return changeItem(total, total - 5 * rand(1, total / 5 - 1))
   }
   // Level 2: same coins. 3: mixed up to 50¢. 4: mixed up to $1.
   let names: string[]
@@ -138,19 +164,38 @@ function coinItem(level: number): ItemSpec {
       names.push(c.name)
       total += c.cents
     }
-    names.sort((a, b) => coin(b).cents - coin(a).cents) // biggest first, like counting on
   }
-  const total = names.reduce((t, n) => t + coin(n).cents, 0)
-  const counts = COINS.map((c) => [c.name, names.filter((n) => n === c.name).length] as const).filter(([, k]) => k > 0)
-  const text = `${counts.map(([n, k]) => plural(k, n)).join(' and ')}: how many cents?`
-  return {
-    key: text,
-    prompt: { text, svg: coinsSVG(names) },
-    answer: String(total),
-    // Common slips: counting every coin as 1¢ or 5¢, or being off by one coin.
-    wrong: (n) => wrongFrom(String(total), n, [total + 1, total - 1, total + 10, total - 10, total + 25].filter((v) => v > 0).map(String), [String(names.length), String(total + 5), String(total - 5)].filter((v) => Number(v) > 0 && v !== String(total))),
-    seconds: 6 + names.length * 2,
+  names.sort((a, b) => coin(b).cents - coin(a).cents) // biggest first, like counting on
+  return groupItem(names)
+}
+
+/** Rebuild a coin question from its text (the text is its key). Returns null for text it does not know. */
+function coinFromKey(key: string): ItemSpec | null {
+  const name = key.match(/^Which coin is worth (\d+)¢\?$/)
+  if (name) {
+    const c = COINS.find((x) => x.cents === Number(name[1]))
+    return c ? coinNameItem(c) : null
   }
+  const value = key.match(/^How many cents is a (\w+) worth\?$/)
+  if (value) {
+    const c = COINS.find((x) => x.name === value[1])
+    return c ? coinValueItem(c) : null
+  }
+  const change = key.match(/^You have (\d+)¢\. You buy a toy for (\d+)¢\. How much is left\?$/)
+  if (change) return changeItem(Number(change[1]), Number(change[2]))
+  const group = key.match(/^(.+): how many cents\?$/)
+  if (group) {
+    const names: string[] = []
+    for (const part of group[1]!.split(' and ')) {
+      const m = part.match(/^(\d+) (\w+)$/)
+      const c = m && COINS.find((x) => [x.name, x.name === 'penny' ? 'pennies' : `${x.name}s`].includes(m[2]!))
+      if (!m || !c) return null
+      names.push(...Array(Number(m[1])).fill(c.name))
+    }
+    names.sort((a, b) => coin(b).cents - coin(a).cents)
+    return groupItem(names)
+  }
+  return null
 }
 
 export const clocksCoins: Subject = {
@@ -175,6 +220,7 @@ export const clocksCoins: Subject = {
       maxLevel: 5,
       formats: ['number', 'choice'],
       generate: coinItem,
+      fromKey: (key) => coinFromKey(key),
     },
   ],
 }

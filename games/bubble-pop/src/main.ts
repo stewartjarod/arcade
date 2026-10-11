@@ -1,7 +1,7 @@
 import { Game, confetti, currentPlayer, rand, sfx, storage } from '@arcade/engine'
 import { cloud as skyCloud } from '@arcade/assets'
-import { settingsFor } from './difficulty'
-import { escapeHTML, findSubject, gradeName, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
+import { heartsMatter, QUICK_POINTS, quickPopSeconds, settingsFor, styleFor } from './difficulty'
+import { escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  Bubble Pop
@@ -43,11 +43,13 @@ function sparkle(from: HTMLElement) {
 function round(game: Game) {
   for (let i = 0; i < 5; i++) game.add(skyCloud()).at(rand(-20, 20), rand(2, 10), rand(-15, -5))
 
-  const { grade, known } = practiceGrade(peekLearner(), subjectId)
+  const { grade } = practiceGrade(peekLearner(), subjectId)
   const { bubbles: bubbleCount, fallSeconds } = settingsFor(grade)
   const practice = startPractice({ subjects: [subjectId], formats: ['choice'] })
 
+  const style = styleFor(grade)
   let hearts = HEARTS
+  let bonus = 0 // ⚡ points for quick pops (speedy style)
   let asked = 0
   let popped = 0
   let streak = 0
@@ -66,7 +68,7 @@ function round(game: Game) {
   const play = root.querySelector<HTMLElement>('#bp-play')!
 
   const showTop = () => {
-    top.innerHTML = `<span style="font-size:26px;font-weight:700;color:#1c4a7a">${'❤️'.repeat(hearts)}${'🖤'.repeat(HEARTS - hearts)} &nbsp; 🫧 ${popped}/${QUESTIONS_PER_ROUND} &nbsp; ${streak >= 2 ? `🔥 ${streak} in a row &nbsp; ` : ''}${known ? `${escapeHTML(gradeName(grade))} ` : ''}${escapeHTML(subjectName.toLowerCase())}</span>`
+    top.innerHTML = `<span style="font-size:26px;font-weight:700;color:#1c4a7a">${heartsMatter(style) ? `${'❤️'.repeat(hearts)}${'🖤'.repeat(HEARTS - hearts)} &nbsp; ` : ''}🫧 ${popped}/${QUESTIONS_PER_ROUND} &nbsp; ${streak >= 2 ? `🔥 ${streak} in a row &nbsp; ` : ''}${bonus > 0 ? `⚡ ${bonus} &nbsp; ` : ''}${escapeHTML(subjectName.toLowerCase())}</span>`
   }
   showTop()
 
@@ -112,10 +114,14 @@ function round(game: Game) {
       sfx.pop()
       sfx.good(streak++)
       popped++
+      // Speedy style: a quick first-try pop earns bonus points.
+      const quickLimit = quickPopSeconds(style)
+      const quick = quickLimit > 0 && live.length === bubbleCount && (performance.now() - q.askedAt) / 1000 <= quickLimit
+      if (quick) bonus += QUICK_POINTS
       sparkle(b.el)
       b.el.style.background = '#22c55e'
       b.el.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.6)', opacity: 0 }], { duration: 350, fill: 'forwards' })
-      qBox.insertAdjacentHTML('beforeend', `<div style="color:#2b8a3e;font-weight:700;font-size:22px">${CHEERS[streak % CHEERS.length]}</div>`)
+      qBox.insertAdjacentHTML('beforeend', `<div style="color:#2b8a3e;font-weight:700;font-size:22px">${quick ? `⚡ Quick! +${QUICK_POINTS}` : CHEERS[streak % CHEERS.length]}</div>`)
       showTop()
       waiting = true
       setTimeout(() => (popped >= QUESTIONS_PER_ROUND ? win() : nextQuestion()), 600)
@@ -150,21 +156,22 @@ function round(game: Game) {
     streak = 0
     moment.record(q, false, { choices: live.length })
     sfx.bad()
-    hearts--
+    if (heartsMatter(style)) hearts--
     showTop()
-    qBox.insertAdjacentHTML('beforeend', `<div style="color:#c92a2a;font-weight:700">It was ${escapeHTML(q.answer)}!</div>`)
+    // Cozy style (K–1): nothing is lost, the question is simply shown and a new one comes.
+    qBox.insertAdjacentHTML('beforeend', `<div style="color:#c92a2a;font-weight:700">It was ${escapeHTML(q.answer)}!${heartsMatter(style) ? '' : " Let's try another!"}</div>`)
     setTimeout(() => (hearts <= 0 ? lose() : nextQuestion()), 1400)
   }
 
   function win() {
     over = true
     play.replaceChildren() // clear the leftover bubbles
-    const score = Math.max(1, popped * 10 + hearts * 5)
+    const score = Math.max(1, popped * 10 + (heartsMatter(style) ? hearts * 5 : 0) + bonus)
     const record = save.highScore(score)
     sfx.win?.()
     confetti()
     game.hud.message('You popped them all! 🎉', {
-      subtitle: `${hearts} ${hearts === 1 ? 'heart' : 'hearts'} left · score ${score}${record ? ' — NEW RECORD!' : ''}`,
+      subtitle: `${heartsMatter(style) ? `${hearts} ${hearts === 1 ? 'heart' : 'hearts'} left · ` : ''}score ${score}${bonus ? ` (⚡ ${bonus})` : ''}${record ? ' — NEW RECORD!' : ''}`,
       button: 'Play again',
       onClick: () => game.restart(),
     })

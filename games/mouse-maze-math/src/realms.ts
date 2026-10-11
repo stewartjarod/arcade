@@ -33,12 +33,28 @@ export const REALMS: Realm[] = [
     runs: [1, 2], len: [2, 3], music: { wave: 'triangle', tempo: 1 },
   },
   {
+    id: 'candy', name: 'Candy Kitchen', emoji: '🍭', blurb: 'Sprinkles, sugar and sweet corridors', from: 1.2,
+    bg: 0xffd6e8, fog: [0xffd6e8, 14, 34], hemi: [0xffffff, 0xf7a8c8, 1.7], sun: [0xfff0f6, 1.4],
+    floor: [0xfff3d6, 0xffe9c2], pad: 0xff9ecb, wall: 0xf48fb1, wallTop: 0xffc1d9, frame: 0xc2185b,
+    doors: [0xff6f91, 0x4dd0e1, 0xffd54f], style: 'plain', glow: 0xfff59d,
+    particles: { color: 0xffffff, size: 0.12, motion: 'fall', count: 60 },
+    runs: [1, 2], len: [2, 3], music: { wave: 'triangle', tempo: 1.05, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]] },
+  },
+  {
     id: 'garden', name: 'Hedge Labyrinth', emoji: '🌿', blurb: 'Long leafy twists under the sun', from: 2.5,
     bg: 0x9fd6f2, fog: [0x9fd6f2, 14, 34], hemi: [0xffffff, 0x6fa35a, 1.7], sun: [0xfff6d0, 1.5],
     floor: [0x7fbf5a, 0x74b352], pad: 0xe9d9a0, wall: 0x2f7d3a, wallTop: 0x3f9a49, frame: 0x8a5a2b,
     doors: [0xd9482f, 0x2f8fd6, 0xf0b400], style: 'hedge', glow: 0xfff07a,
     particles: { color: 0xfff07a, size: 0.14, motion: 'float', count: 60 },
     runs: [2, 3], len: [2, 3], music: { wave: 'triangle', tempo: 0.95, chords: [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]] },
+  },
+  {
+    id: 'frozen', name: 'Frozen Pantry', emoji: '❄️', blurb: 'Icy shelves and snowy sparkles', from: 3.5,
+    bg: 0xcfeaff, fog: [0xcfeaff, 10, 28], hemi: [0xeaf6ff, 0x8fb8e8, 1.6], sun: [0xffffff, 1.2],
+    floor: [0xe3f2fd, 0xd6ebfb], pad: 0x90caf9, wall: 0x7fb7e6, wallTop: 0xcfe9ff, frame: 0x3b6ea5,
+    doors: [0xff7043, 0x26a69a, 0xffca28], style: 'crystal', glow: 0xbbefff,
+    particles: { color: 0xffffff, size: 0.1, motion: 'fall', count: 80 },
+    runs: [2, 3], len: [2, 3], music: { wave: 'sine', tempo: 0.95, chords: [[0, 4, 7], [2, 5, 9], [4, 7, 11], [2, 5, 9]] },
   },
   {
     id: 'cellar', name: 'Torch Cellars', emoji: '🔥', blurb: 'Old stone halls lit by torches', from: 4.5,
@@ -80,4 +96,13 @@ export const realmForDepth = (depth: number) => {
     if (depth >= r.from) i = k
   })
   return i
+}
+
+// Realms were saved by their number in this list. New realms were slipped in between the old ones, so saves from
+// before need their numbers translated (by realm id) once.
+const OLD_REALM_IDS = ['cupboard', 'garden', 'cellar', 'crystal', 'clockwork', 'star']
+export const migrateRealmIndex = (oldIndex: number) => {
+  if (oldIndex < 0) return oldIndex // -1 means "auto"
+  const i = REALMS.findIndex((r) => r.id === OLD_REALM_IDS[oldIndex])
+  return i < 0 ? 0 : i
 }

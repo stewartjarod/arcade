@@ -19,7 +19,7 @@ interface Fact {
 const WORLD: Fact[] = [
   // 1
   { level: 1, q: 'How many continents are there?', a: '7', pool: ['5', '6', '8', '9'], emoji: '🌍' },
-  { level: 1, q: 'Which continent do we live on?', a: 'North America', pool: CONTINENTS, emoji: '🏡' },
+  { level: 1, q: 'Which continent is the United States in?', a: 'North America', pool: CONTINENTS, emoji: '🇺🇸' },
   { level: 1, q: 'Which continent is covered in ice?', a: 'Antarctica', pool: CONTINENTS, emoji: '🧊' },
   { level: 1, q: 'How many oceans are there?', a: '5', pool: ['3', '4', '6', '7'], emoji: '🌊' },
   { level: 1, q: 'Which is the biggest ocean?', a: 'Pacific', pool: OCEANS, emoji: '🐋' },
@@ -27,10 +27,10 @@ const WORLD: Fact[] = [
   { level: 2, q: 'Which is the biggest continent?', a: 'Asia', pool: CONTINENTS, emoji: '🗺️' },
   { level: 2, q: 'Which continent do kangaroos come from?', a: 'Australia', pool: CONTINENTS, emoji: '🦘' },
   { level: 2, q: 'Which continent has the Sahara, a giant desert?', a: 'Africa', pool: CONTINENTS, emoji: '🐪' },
-  { level: 2, q: 'Which continent is right below North America?', a: 'South America', pool: CONTINENTS, emoji: '⬇️' },
+  { level: 2, q: 'Which continent is south of North America?', a: 'South America', pool: CONTINENTS, emoji: '🌎' },
   { level: 2, q: 'Which ocean is between America and Europe?', a: 'Atlantic', pool: OCEANS, emoji: '🚢' },
   { level: 2, q: 'Which ocean is at the North Pole?', a: 'Arctic', pool: OCEANS, emoji: '🐻‍❄️' },
-  { level: 2, q: 'Where do penguins live in the wild, far in the south?', a: 'Antarctica', pool: CONTINENTS, emoji: '🐧' },
+  { level: 2, q: 'Which continent is home to emperor penguins?', a: 'Antarctica', pool: CONTINENTS, emoji: '🐧' },
   // 3 — countries
   { level: 3, q: 'Which continent is Brazil in?', a: 'South America', pool: CONTINENTS, emoji: '🇧🇷' },
   { level: 3, q: 'Which continent is France in?', a: 'Europe', pool: CONTINENTS, emoji: '🇫🇷' },
@@ -41,7 +41,7 @@ const WORLD: Fact[] = [
   { level: 3, q: 'Which continent is Japan in?', a: 'Asia', pool: CONTINENTS, emoji: '🇯🇵' },
   { level: 3, q: 'Which continent is Kenya in?', a: 'Africa', pool: CONTINENTS, emoji: '🇰🇪' },
   { level: 3, q: 'Which ocean is around Antarctica?', a: 'Southern', pool: OCEANS, emoji: '🧊' },
-  { level: 3, q: 'Which ocean is below India?', a: 'Indian', pool: OCEANS, emoji: '🐘' },
+  { level: 3, q: 'Which ocean is south of India?', a: 'Indian', pool: OCEANS, emoji: '🐘' },
 ]
 
 // Capitals, grouped by region. The Mountain West comes first because it's closest to home —

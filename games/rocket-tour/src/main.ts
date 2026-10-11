@@ -3,7 +3,8 @@ import {
   type AnswerSign, type Entity,
 } from '@arcade/engine'
 import { planetModel, rocketModel, starPickup, sunModel, PLANET_COLOR, PLANET_SIZE, type PlanetName } from '@arcade/assets'
-import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, gradeName, peekLearner, practiceGrade, speak, startPractice, type Moment, type Question } from '@arcade/learning'
+import { QUICK_DUST, quickSeconds, startingChoices, styleFor } from './difficulty'
+import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, peekLearner, practiceGrade, speak, startPractice, type Moment, type Question } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  🚀 Rocket Tour
@@ -134,18 +135,13 @@ function title(game: Game) {
     game.camera.lookAt(middle, 0, 0)
   })
 
-  // The tour's questions follow the player's level in space, which lines up with IXL science (Astronomy).
-  const ixlLine = () => {
-    const { grade, known } = practiceGrade(peekLearner(), 'space')
-    return known ? ` · 🎓 IXL ${gradeName(grade)} science` : ''
-  }
   const player = currentPlayer()
   const visited: string[] = save.get('visited', [])
   const color = save.get('rocketColor', ROCKET_COLORS[0]!)
   const screen = ui('screen')
   screen.innerHTML = `<div class="card">
     <h1>🚀 Rocket Tour</h1>
-    <div class="sub">${esc(player.avatar)} ${esc(player.name)} · Planets visited: ${visited.length} / 8 · Tours: ${save.get('tours', 0)}${ixlLine()}</div>
+    <div class="sub">${esc(player.avatar)} ${esc(player.name)} · Planets visited: ${visited.length} / 8 · Tours: ${save.get('tours', 0)}</div>
     <div>Pick your rocket's color</div>
     <div class="swatches">${ROCKET_COLORS.map((c) => `<button class="swatch${c === color ? ' on' : ''}" style="background:${c}" data-color="${c}" aria-label="Rocket color"></button>`).join('')}</div>
     <div class="row"><button class="btn go" data-act="tour">🚀 Start the tour</button></div>
@@ -235,6 +231,7 @@ type Phase = 'intro' | 'cruise' | 'gate' | 'bounce' | 'land' | 'card' | 'done'
 function tour(game: Game) {
   addSpace(game)
   const practice = startPractice({ subjects: ['space'], formats: ['choice'] })
+  const style = styleFor(practiceGrade(peekLearner(), 'space').grade)
 
   // The Sun behind the start, and every planet along the way.
   game.add(sunModel()).at(0, 0, 45).with(spinGlobe(0.05))
@@ -302,6 +299,12 @@ function tour(game: Game) {
     options = q.options(3)
     open = new Set([0, 1, 2])
     bubbles = options.map((opt, i) => makeBubble(opt, i))
+    // Cozy style (K–1): one wrong answer floats away, leaving two to choose from.
+    if (startingChoices(style) < options.length) {
+      const wrongLane = options.findIndex((o) => o !== q!.answer)
+      open.delete(wrongLane)
+      bubbles[wrongLane]!.entity.destroy()
+    }
     banner = ui('question')
     banner.innerHTML = `<span class="q">${esc(q.text)}</span><button class="say" aria-label="Hear it">🔊</button>
       <div class="hint">Tap an answer to blast off! (or steer ⬅ ➡ and press ⬆)</div>`
@@ -387,7 +390,14 @@ function tour(game: Game) {
       b.sign.draw(picked, 'good')
       sfx.good(streak++)
       burst(game, b.entity.position, { color: ['#ffe066', LANE_COLORS[lane]!, '#ffffff'], count: 30 })
-      toast(`Yes! ${picked} ✓`, 'good')
+      // Speedy style (grades 4–5): a quick first-try answer earns bonus stardust.
+      const limit = quickSeconds(style)
+      const quick = limit > 0 && open.size === startingChoices(style) && (performance.now() - q!.askedAt) / 1000 <= limit
+      if (quick) {
+        stardust += QUICK_DUST
+        dust.textContent = `✨ ${stardust}`
+      }
+      toast(quick ? `⚡ Quick! +${QUICK_DUST} ✨ ${picked} ✓` : `Yes! ${picked} ✓`, 'good')
       say(`Yes! ${picked}!`)
       for (const x of bubbles) game.tweens.to(x.entity.scale, { x: 0, y: 0, z: 0 }, 0.4).then(() => x.entity.destroy())
       banner?.remove()

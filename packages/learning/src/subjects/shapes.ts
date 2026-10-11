@@ -23,7 +23,8 @@ function drawing(name: string, color: string) {
   let body: string
   if (name === 'circle') body = `<circle cx="60" cy="60" r="48" fill="${color}"/>`
   else if (name === 'rectangle') body = `<rect x="6" y="28" width="108" height="64" fill="${color}"/>`
-  else if (name === 'rhombus') body = `<polygon points="60,6 112,60 60,114 8,60" fill="${color}"/>`
+  // A rhombus leans: its diagonals are clearly unequal, so it does not look like a tilted square.
+  else if (name === 'rhombus') body = `<polygon points="60,20 112,60 60,100 8,60" fill="${color}"/>`
   else if (name === 'square') body = `<rect x="14" y="14" width="92" height="92" fill="${color}"/>`
   else body = polygon(SIDES[name]!, color)
   return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
@@ -43,13 +44,16 @@ const SIDE_SHAPES: string[][] = [
 ]
 const sidesOf = (name: string) => (name === 'rectangle' || name === 'rhombus' ? 4 : SIDES[name]!)
 
+// A square is also a rectangle and a rhombus, and a rectangle is not a square: never offer a name that is also true.
+const ALSO_TRUE: Record<string, string[]> = { square: ['rectangle', 'rhombus'], rectangle: ['square'], rhombus: ['square'] }
+
 function nameItem(name: string, level: number): ItemSpec {
   return {
     key: `shape:${name}`,
     prompt: { text: 'What shape is this?', say: 'What shape is this?', svg: drawing(name, pick(COLORS)) },
     answer: name,
     // Wrong answers come only from shapes this level teaches, so a kindergartner never sees "heptagon".
-    wrong: (n) => wrongFrom(name, n, NAMES[level - 1]!),
+    wrong: (n) => wrongFrom(name, n, NAMES[level - 1]!.filter((s) => !(ALSO_TRUE[name] ?? []).includes(s))),
   }
 }
 

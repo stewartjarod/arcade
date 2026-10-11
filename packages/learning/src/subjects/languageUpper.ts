@@ -85,7 +85,7 @@ const verbTense = rowSkill(
       ['Pick the right word: Yesterday, Sam ___ his bike. (fix)', 'fixed', 'fix', 'fixing', 'fixes'],
       ['Pick the right word: Yesterday we ___ to the beach. (walk)', 'walked', 'walk', 'walking', 'walks'],
       ['Pick the right word: Last night the dog ___ at the mail carrier. (bark)', 'barked', 'barks', 'barking', 'bark'],
-      ['Pick the right word: Every day, Mom ___ dinner. (cook)', 'cooks', 'cooked', 'cooking', 'cook'],
+      ['Pick the right word: Yesterday, Mom ___ dinner. (cook)', 'cooked', 'cooks', 'cooking', 'cook'],
       ['Pick the right word: Yesterday, Ana ___ her room. (clean)', 'cleaned', 'cleans', 'cleaning', 'clean'],
     ],
     [
@@ -402,7 +402,7 @@ const mainIdea = rowSkill(
       ['Stories are a great way to learn about the past. Many old tales show how people lived long ago. Reading them helps us understand history. What is the main idea?', 'Stories help us learn about history.', 'People did not live long ago.', 'Old tales are always true.', 'Reading is hard work.'],
     ],
     [
-      ["Ms. Lee's class started a garden. The students planted seeds, watered them each day, and pulled weeds. By fall, the garden grew tomatoes and beans. What is the main idea?", 'Hard work and care turn an empty space into something useful.', 'Tomatoes are the best vegetable.', 'Weeds grow faster than seeds.', 'Ms. Lee is a strict teacher.'],
+      ["Ms. Lee's class started a garden. The students planted seeds, watered them each day, and pulled weeds. By fall, the garden grew tomatoes and beans. What is the main idea?", "Ms. Lee's class worked hard to grow a garden.", 'Tomatoes are the best vegetable.', 'Weeds grow faster than seeds.', 'Ms. Lee is a strict teacher.'],
       ['Some people think school is only about tests. But learning also happens in art, music, and on the playground. Every part of school teaches us something. What is the main idea?', 'School teaches us in many ways, not just with tests.', 'Tests are the most important part of school.', 'Playgrounds are the best part of school.', 'Art and music are not useful.'],
       ['Owls are birds that hunt at night. Their eyes are very big, and they help them see in the dark. Their soft feathers let them fly without a sound. What is the main idea?', 'Owls have special features that help them hunt at night.', 'Owls cannot see at all.', 'Owls are noisy when they fly.', 'Owls only eat fish.'],
     ],

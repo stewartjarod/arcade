@@ -1,5 +1,9 @@
 import type { ItemSpec, Skill, Subject } from '../core/types'
 import { GRADE5_MATH } from './mathGrade5'
+import { MATH_345 } from './mathGrades345'
+import { MATH_EARLY } from './mathEarly'
+import { MATH_FINAL } from './mathFinal'
+import { MATH_LAST } from './mathLast'
 import { MORE_MATH } from './mathMore'
 import { UPPER_MATH } from './mathUpper'
 import { shapes, sides } from './shapes'
@@ -141,49 +145,67 @@ function opSkill(op: Op, o: Pick<Skill, 'label' | 'unlocksAfter'> & { max: numbe
 
 // --- Place value: tens and ones, hundreds, expanded form, 10 more / 100 less ---
 
-function placeValue(L: number): ItemSpec {
+// Keys: "place:L:numbers..." (the same key always rebuilds the same question, so a missed one can come back).
+const cnt = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+function placeKey(L: number): string {
+  if (L === 1) return `place:1:${rand(1, 9)}:${rand(0, 9)}`
+  if (L === 2) return `place:2:${rand(11, 99)}:${rand(0, 1)}` // last: 1 = tens digit, 0 = ones digit
+  if (L === 3) return `place:3:${rand(1, 9)}:${rand(0, 9)}:${rand(0, 9)}`
+  if (L === 4) return `place:4:${rand(1, 9)}:${rand(1, 9)}:${rand(0, 9)}`
+  if (L === 5) return `place:5:${rand(101, 899)}:${pick([10, 100])}:${rand(0, 1)}` // last: 1 = more, 0 = less
+  return `place:6:${rand(1, 9)}:${rand(0, 9)}:${rand(0, 9)}:${rand(0, 9)}`
+}
+
+function placeBuild(key: string): ItemSpec | null {
+  const parts = key.split(':')
+  if (parts[0] !== 'place' || parts.length < 3) return null
+  const L = Number(parts[1])
+  const v = parts.slice(2).map(Number)
   let text: string
   let answer: number
-  let near: number[] = []
-  if (L === 1) {
-    const [t, o] = [rand(1, 9), rand(0, 9)]
-    text = `${t} tens and ${o} ones`
+  let wrong: (n: number) => string[]
+  if (L === 1 && v.length === 2) {
+    const [t, o] = v as [number, number]
+    text = `${cnt(t, 'ten', 'tens')} and ${cnt(o, 'one', 'ones')}`
     answer = t * 10 + o
-    near = [o * 10 + t, t + o, t * 10]
-  } else if (L === 2) {
-    const n = rand(11, 99)
-    const tens = Math.random() < 0.5
+    wrong = (n) => numberWrongs(answer, n, [o * 10 + t, t + o, t * 10])
+  } else if (L === 2 && v.length === 2) {
+    const [n, tens] = v as [number, number]
+    const digit = tens ? Math.floor(n / 10) : n % 10
+    const other = tens ? n % 10 : Math.floor(n / 10)
     text = `What digit is in the ${tens ? 'tens' : 'ones'} place of ${n}?`
-    answer = tens ? Math.floor(n / 10) : n % 10
-    near = [tens ? n % 10 : Math.floor(n / 10), n]
-  } else if (L === 3) {
-    const [h, t, o] = [rand(1, 9), rand(0, 9), rand(0, 9)]
-    text = `${h} hundreds, ${t} tens and ${o} ones`
+    answer = digit
+    // Wrong answers are other digits (a digit is never 10 or more).
+    wrong = (k) => wrongFrom(String(digit), k, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], [String(other)])
+  } else if (L === 3 && v.length === 3) {
+    const [h, t, o] = v as [number, number, number]
+    text = `${cnt(h, 'hundred', 'hundreds')}, ${cnt(t, 'ten', 'tens')} and ${cnt(o, 'one', 'ones')}`
     answer = h * 100 + t * 10 + o
-    near = [h * 100 + o * 10 + t, t * 100 + h * 10 + o, h + t + o]
-  } else if (L === 4) {
-    const [h, t, o] = [rand(1, 9), rand(1, 9), rand(0, 9)]
+    wrong = (n) => numberWrongs(answer, n, [h * 100 + o * 10 + t, t * 100 + h * 10 + o, h + t + o])
+  } else if (L === 4 && v.length === 3) {
+    const [h, t, o] = v as [number, number, number]
     text = `${h * 100} + ${t * 10} + ${o}`
     answer = h * 100 + t * 10 + o
-    near = [h * 100 + o * 10 + t, h + t + o, h * 10 + t + o]
-  } else if (L === 5) {
-    const n = rand(101, 899)
-    const [d, word] = pick([[10, 'more'], [10, 'less'], [100, 'more'], [100, 'less']] as const)
-    text = `What is ${d} ${word} than ${n}?`
-    answer = word === 'more' ? n + d : n - d
-    near = [word === 'more' ? n - d : n + d, n + (d === 10 ? 100 : 10), n + 1]
-  } else {
-    const [th, h, t, o] = [rand(1, 9), rand(0, 9), rand(0, 9), rand(0, 9)]
-    text = `${th} thousands, ${h} hundreds, ${t} tens and ${o} ones`
+    wrong = (n) => numberWrongs(answer, n, [h * 100 + o * 10 + t, h + t + o, h * 10 + t + o])
+  } else if (L === 5 && v.length === 3) {
+    const [n, d, more] = v as [number, number, number]
+    text = `What is ${d} ${more ? 'more' : 'less'} than ${n}?`
+    answer = more ? n + d : n - d
+    wrong = (k) => numberWrongs(answer, k, [more ? n - d : n + d, n + (d === 10 ? 100 : 10), n + 1])
+  } else if (L === 6 && v.length === 4) {
+    const [th, h, t, o] = v as [number, number, number, number]
+    text = `${cnt(th, 'thousand', 'thousands')}, ${cnt(h, 'hundred', 'hundreds')}, ${cnt(t, 'ten', 'tens')} and ${cnt(o, 'one', 'ones')}`
     answer = th * 1000 + h * 100 + t * 10 + o
-    near = [th * 1000 + t * 100 + h * 10 + o, th * 100 + h * 10 + t + o]
+    wrong = (n) => numberWrongs(answer, n, [th * 1000 + t * 100 + h * 10 + o, th * 100 + h * 10 + t + o])
+  } else {
+    return null
   }
-  const sum = L === 1 || L === 3 || L === 4 || L === 6
   return {
-    key: text,
-    prompt: { text, sum },
+    key,
+    prompt: { text, sum: L === 1 || L === 3 || L === 4 || L === 6 },
     answer: String(answer),
-    wrong: (n) => numberWrongs(answer, n, near),
+    wrong,
     seconds: 6 + L,
   }
 }
@@ -220,29 +242,34 @@ function countItem(n: number): ItemSpec {
 const COMPARE_MAX = [5, 10, 20, 100, 1000]
 const COMPARE_LABELS = ['Comparing up to 5', 'Comparing up to 10', 'Comparing up to 20', 'Comparing up to 100', 'Comparing numbers up to 1,000']
 
+// Four numbers are shown, so the wrong choices can always come from the list itself (the answer's rivals).
 function compareItem(L: number): ItemSpec {
   const hi = COMPARE_MAX[L - 1]!
   const nums = new Set<number>()
-  while (nums.size < 3) nums.add(rand(L <= 3 ? 0 : Math.floor(hi / 10), hi))
+  while (nums.size < 4) nums.add(rand(L <= 3 ? 0 : Math.floor(hi / 10), hi))
   return compareFrom([...nums], Math.random() < 0.5, L)
 }
 
+// Keys: "cmp:max|min:n,n,n,n". Old keys with three numbers no longer rebuild (they give null).
 function compareFrom(nums: number[], greatest: boolean, L: number): ItemSpec {
   const answer = greatest ? Math.max(...nums) : Math.min(...nums)
   const text = `Which is ${greatest ? 'greatest' : 'least'}? ${nums.join(', ')}`
-  const hi = COMPARE_MAX[L - 1]!
+  // The other listed numbers come first (picking the greatest when asked for the least is the classic slip), then numbers a little off.
+  const rivals = nums.filter((v) => v !== answer).map(String)
+  const nearby = [answer + 1, answer - 1, answer + 10, answer - 10].filter((v) => v >= 0).map(String)
   return {
     key: `cmp:${greatest ? 'max' : 'min'}:${nums.join(',')}`,
     prompt: { text, say: text.replace(/, /g, ' or ') },
     answer: String(answer),
-    wrong: (n) => wrongFrom(String(answer), n, Array.from({ length: Math.min(hi, 12) + 1 }, (_, i) => String(i)), nums.map(String)),
+    wrong: (n) => wrongFrom(String(answer), n, nearby, rivals),
     seconds: 4 + L,
   }
 }
 
 // --- Skip counting: 10s, 5s, 2s, from any start, 100s and 3s, backwards ---
 
-function skipCount(L: number): ItemSpec {
+// Keys: "skip:start:step:direction" (direction 1 counts up, -1 counts back).
+function skipKey(L: number): string {
   let step: number
   let start: number
   let dir = 1
@@ -250,22 +277,29 @@ function skipCount(L: number): ItemSpec {
   else if (L === 2) (step = 5), (start = 5 * rand(1, 8))
   else if (L === 3) (step = 2), (start = 2 * rand(1, 10))
   else if (L === 4) (step = pick([10, 5])), (start = step * rand(1, 10) + (step === 10 ? rand(1, 9) : 0))
-  else if (L === 5) (step = pick([100, 3, 4])), (start = step * rand(1, 6))
+  else if (L === 5) (step = pick([100, 5])), (start = step * rand(1, 20))
   else (step = pick([2, 5, 10])), (dir = -1), (start = step * rand(6, 15))
+  return `skip:${start}:${step}:${dir}`
+}
+
+function skipBuild(key: string): ItemSpec | null {
+  const parts = key.split(':')
+  if (parts[0] !== 'skip' || parts.length !== 4) return null
+  const [start, step, dir] = parts.slice(1).map(Number) as [number, number, number]
   const seq = [0, 1, 2].map((i) => start + dir * step * i)
   const answer = start + dir * step * 3
-  const text = `${seq.join(', ')}, __`
+  // Wrong answers are the next jump, or one off. Numbers already shown in the sequence are never offered.
   return {
-    key: text,
-    prompt: { text },
+    key,
+    prompt: { text: `${seq.join(', ')}, __` },
     answer: String(answer),
-    wrong: (n) => numberWrongs(answer, n, [answer + step * dir, answer + dir, answer - dir, seq[2]!]),
-    seconds: 5 + L,
+    wrong: (n) => numberWrongs(answer, n, [answer + step * dir, answer + dir, answer - dir]),
+    seconds: 7,
   }
 }
 
 
-const SKIP_LABELS = ['Skip-count by tens', 'Skip-count by fives', 'Skip-count by twos', 'Count on from any number', 'Skip-count by hundreds, threes and fours', 'Count backwards']
+const SKIP_LABELS = ['Skip-count by tens', 'Skip-count by fives', 'Skip-count by twos', 'Count on from any number', 'Skip-count by hundreds and fives', 'Count backwards']
 const PLACE_LABELS = ['Tens and ones', 'Tens place and ones place', 'Hundreds, tens and ones', 'Adding up place values', '10 more, 100 less', 'Thousands']
 
 export const math: Subject = {
@@ -311,7 +345,8 @@ export const math: Subject = {
       generate: compareItem,
       fromKey: (key, level) => {
         const m = key.match(/^cmp:(max|min):([\d,]+)$/)
-        return m ? compareFrom(m[2]!.split(',').map(Number), m[1] === 'max', level) : null
+        const list = m ? m[2]!.split(',').map(Number) : []
+        return m && list.length === 4 ? compareFrom(list, m[1] === 'max', level) : null
       },
     },
     shapes,
@@ -321,17 +356,23 @@ export const math: Subject = {
       label: (L) => PLACE_LABELS[L - 1]!,
       maxLevel: PLACE_LABELS.length,
       formats: ['number', 'choice'],
-      generate: placeValue,
+      generate: (L) => placeBuild(placeKey(L))!,
+      fromKey: (key, L) => (key.startsWith(`place:${L}:`) ? placeBuild(key) : null),
     },
     {
       id: 'skip',
       label: (L) => SKIP_LABELS[L - 1]!,
       maxLevel: SKIP_LABELS.length,
       formats: ['number', 'choice'],
-      generate: skipCount,
+      generate: (L) => skipBuild(skipKey(L))!,
+      fromKey: (key) => skipBuild(key),
     },
     ...UPPER_MATH,
     ...GRADE5_MATH,
     ...MORE_MATH,
+    ...MATH_345,
+    ...MATH_EARLY,
+    ...MATH_LAST,
+    ...MATH_FINAL,
   ],
 }

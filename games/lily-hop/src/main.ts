@@ -1,6 +1,6 @@
 import { Game, THREE, ball, box, cylinder, group, lerp, storage, confetti, burst, ease, sfx, currentPlayer } from '@arcade/engine'
-import { escapeHTML, findSubject, gradeName, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
-import { pondFor } from './difficulty'
+import { escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
+import { gatorHunts, pondFor, styleFor, superHopSeconds } from './difficulty'
 
 // ------------------------------------------------------------------
 //  Lily Hop
@@ -34,8 +34,9 @@ window.addEventListener('keydown', (e) => {
 })
 
 function level(game: Game) {
-  const { grade, known } = practiceGrade(peekLearner(), subjectId)
+  const { grade } = practiceGrade(peekLearner(), subjectId)
   const pond = pondFor(grade)
+  const style = styleFor(grade)
   const padZ = (row: number) => -row * SPACING
   const practice = startPractice({ subjects: [subjectId], formats: ['choice'] })
 
@@ -71,6 +72,7 @@ function level(game: Game) {
   // The gator: a long green box with a snout, swimming up the middle
   const gator = group(box({ size: [1.4, 0.6, 3], color: '#2b8a3e' }), box({ size: [1, 0.4, 1.2], color: '#2f9e44' }).translateZ(-2))
   const gatorEntity = game.add(gator).at(0, 0.2, padZ(gatorRow))
+  gator.visible = gatorHunts(style) // cozy (K–1): no gator at all
 
   // The camera rides along, a little behind and above the frog
   game.onUpdate(() => {
@@ -90,13 +92,14 @@ function level(game: Game) {
   }
 
   async function moveGator() {
+    if (!gatorHunts(style)) return
     gatorRow++
     sfx.bad()
     await game.tweens.to(gatorEntity.position, { z: padZ(gatorRow) }, 0.5)
     if (gatorRow >= frogRow) lose()
   }
   // From grade 2 up the gator also swims by itself, so there's a little hurry
-  if (pond.gatorEvery) game.every(pond.gatorEvery, () => !busy && !over && moveGator())
+  if (pond.gatorEvery && gatorHunts(style)) game.every(pond.gatorEvery, () => !busy && !over && moveGator())
 
   // --- The question and the three answer buttons ---
   const root = document.createElement('div')
@@ -115,7 +118,7 @@ function level(game: Game) {
 
   const showTop = () => {
     game.hud.set('pads', `🪷 ${frogRow} / ${pond.pads}`, 'top-left')
-    game.hud.set('grade', `🐸 Lily Hop · ${known ? `${gradeName(grade)} ` : ''}${subjectName.toLowerCase()}${streak >= 2 ? ` · 🔥 ${streak}` : ''}`, 'top')
+    game.hud.set('grade', `🐸 Lily Hop · ${subjectName.toLowerCase()}${streak >= 2 ? ` · 🔥 ${streak}` : ''}`, 'top')
     game.hud.set('best', `🏆 ${save.get('best', 0)}`, 'top-right')
   }
 
@@ -145,10 +148,14 @@ function level(game: Game) {
     if (right) {
       sfx.good(streak++)
       button.style.background = '#22c55e'
-      await hopTo(nextRow, lane)
-      frogRow = nextRow
+      // Speedy style: a quick first-try answer is a ⚡ super hop over two pads (if there are two left).
+      const limit = superHopSeconds(style)
+      const superHop = limit > 0 && open.size === 3 && nextRow + 1 <= pond.pads && (performance.now() - q.askedAt) / 1000 <= limit
+      const target = superHop ? nextRow + 1 : nextRow
+      await hopTo(target, lane)
+      frogRow = target
       burst(game, frogEntity.position)
-      game.hud.message(CHEERS[streak % CHEERS.length]!, { seconds: 0.7 })
+      game.hud.message(superHop ? '⚡ Super hop! 2 pads!' : CHEERS[streak % CHEERS.length]!, { seconds: 0.9 })
       showTop()
       if (frogRow >= pond.pads) return win()
       ask()
@@ -165,7 +172,7 @@ function level(game: Game) {
       if (!missedThisQuestion) {
         missedThisQuestion = true
         wrong++
-        game.hud.message('Splash! The gator is closer!', { seconds: 1.1 })
+        game.hud.message(gatorHunts(style) ? 'Splash! The gator is closer!' : 'Splash! Try another pad!', { seconds: 1.1 })
         await moveGator()
       }
     }

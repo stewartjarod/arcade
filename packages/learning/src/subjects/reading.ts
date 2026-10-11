@@ -1,5 +1,12 @@
 import type { ItemSpec, Subject } from '../core/types'
 import { rhyme, syllables, wordMeaning } from './language'
+import { READING_EARLY } from './languageEarly'
+import { READING_E2 } from './languageEarly2'
+import { READING_FE } from './languageFinalEarly'
+import { READING_PH } from './languagePhonemes'
+import { READING_FU } from './languageFinalUpper'
+import { READING_G5 } from './languageGrade5'
+import { READING_U2 } from './languageUpper2'
 import { READING_MORE } from './languageMore'
 import { READING_UPPER } from './languageUpper'
 import { pick, rand, upToLevel, wrongFrom } from './util'
@@ -153,7 +160,7 @@ export const reading: Subject = {
   skills: [
     {
       id: 'sounds',
-      label: (L) => ['Identify the first sound', 'Identify the first sound: b, d, p', 'Choose the correct digraph: sh, ch, th, wh'][L - 1]!,
+      label: (L) => ['Identify the first sound', 'Identify the first sound: look-alike letters', 'Choose the correct digraph: sh, ch, th, wh'][L - 1]!,
       maxLevel: 3,
       formats: ['choice'],
       generate: firstSoundItem,
@@ -188,5 +195,12 @@ export const reading: Subject = {
     },
     ...READING_UPPER,
     ...READING_MORE,
+    ...READING_G5,
+    ...READING_EARLY,
+    ...READING_U2,
+    ...READING_E2,
+    ...READING_FU,
+    ...READING_FE,
+    ...READING_PH,
   ],
 }

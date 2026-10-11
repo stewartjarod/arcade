@@ -11,7 +11,6 @@ import { numberWrongs, pick, rand, shuffle, wrongFrom } from './util'
 
 const COLORS = ['#ff6b6b', '#ffa94d', '#51cf66', '#4dabf7', '#9775fa', '#f783ac']
 const svg = (w: number, h: number, body: string) => `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-weight="700">${body}</svg>`
-const label = (x: number, y: number, t: string | number) => `<text x="${x}" y="${y}" font-size="16" text-anchor="middle" fill="#333">${t}</text>`
 const int = (s: string) => Number(s)
 
 // --- Rounding ------------------------------------------------------------------------------
@@ -55,9 +54,13 @@ const gridSVG = (w: number, h: number, color: string) => {
   return svg(w * cell + 8, h * cell + 8, squares.join(''))
 }
 const rectSVG = (w: number, h: number, color: string, top: string | number, side: string | number) => {
-  const pw = 150
-  const ph = Math.max(50, Math.min(110, Math.round((pw * h) / w)))
-  return svg(pw + 60, ph + 50, `<rect x="40" y="26" width="${pw}" height="${ph}" fill="${color}" opacity=".85"/>${label(40 + pw / 2, 18, top)}${label(20, 26 + ph / 2 + 5, side)}`)
+  // Draw it in proportion (a 3 by 6 rectangle is taller than wide, a square is square) inside a 150 by 80 box (short, so the question card never covers the doors).
+  const scale = Math.min(150 / w, 80 / h)
+  const pw = Math.max(28, Math.round(w * scale))
+  const ph = Math.max(28, Math.round(h * scale))
+  // Big labels: the picture is shown small on a phone.
+  const big = (x: number, y: number, t: string | number) => `<text x="${x}" y="${y}" font-size="24" text-anchor="middle" fill="#333">${t}</text>`
+  return svg(pw + 70, ph + 60, `<rect x="48" y="34" width="${pw}" height="${ph}" fill="${color}" opacity=".85"/>${big(48 + pw / 2, 26, top)}${big(24, 34 + ph / 2 + 8, side)}`)
 }
 
 function areaItem(L: number, a: number, b: number): ItemSpec {
@@ -70,8 +73,9 @@ function areaItem(L: number, a: number, b: number): ItemSpec {
   if (L === 2) {
     return { key: `area:2:${a}:${b}`, prompt: { text: 'What is the area of this rectangle? (square units)', say: 'What is the area of this rectangle?', svg: rectSVG(a, b, color, a, b) }, answer: String(area), wrong: (k) => numberWrongs(area, k, near), seconds: 10 }
   }
+  // The figure shows the width and a "?" for the length (its true shape doesn't give the answer away).
   const text = `A rectangle has an area of ${area} square units. Its width is ${a}. What is its length?`
-  return { key: `area:3:${a}:${b}`, prompt: { text, say: text }, answer: String(b), wrong: (k) => numberWrongs(b, k, [area - a, area + a, b + a, a]), seconds: 14 }
+  return { key: `area:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(2, 1, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [area - a, area + a, b + a, a]), seconds: 14 }
 }
 
 export const area: Skill = {
@@ -98,8 +102,9 @@ function perimeterItem(L: number, a: number, b: number): ItemSpec {
     return { key: `perim:2:${a}:${b}`, prompt: { text: `What is the perimeter of a square with sides of ${a}?`, say: `What is the perimeter of a square with sides of ${a}?`, svg: rectSVG(1, 1, color, a, a) }, answer: String(p), wrong: (k) => numberWrongs(p, k, [a * a, 2 * a, a + 4, 3 * a]), seconds: 10 }
   }
   const p = 2 * (a + b)
-  const text = `A rectangle has a perimeter of ${p}. One side is ${a}. What is the length of the side next to it?`
-  return { key: `perim:3:${a}:${b}`, prompt: { text, say: text }, answer: String(b), wrong: (k) => numberWrongs(b, k, [p - a, p / 2, p - 2 * a, a]), seconds: 16 }
+  // The figure marks the side we want with "?" and gives the top side.
+  const text = `A rectangle has a perimeter of ${p}. Its top side is ${a}. How long is its left side?`
+  return { key: `perim:3:${a}:${b}`, prompt: { text, say: text, svg: rectSVG(2, 1, color, a, '?') }, answer: String(b), wrong: (k) => numberWrongs(b, k, [p - a, p / 2, p - 2 * a, a]), seconds: 16 }
 }
 
 export const perimeter: Skill = {
@@ -135,6 +140,11 @@ const barSVG = (n: number, d: number, color: string) => {
   return svg(268, 54, parts.join(''))
 }
 
+// Read aloud the way kids say them: "three fifths", "one fifth" (not "3 5ths").
+const SPOKEN_ONE: Record<number, string> = { 2: 'half', 3: 'third', 4: 'fourth', 5: 'fifth', 6: 'sixth', 7: 'seventh', 8: 'eighth', 9: 'ninth', 10: 'tenth', 11: 'eleventh', 12: 'twelfth' }
+const SPOKEN_MANY: Record<number, string> = { 2: 'halves', 3: 'thirds', 4: 'fourths', 5: 'fifths', 6: 'sixths', 7: 'sevenths', 8: 'eighths', 9: 'ninths', 10: 'tenths', 11: 'elevenths', 12: 'twelfths' }
+const spoken = (n: number, d: number) => (n === 1 ? `one ${SPOKEN_ONE[d]}` : `${n} ${SPOKEN_MANY[d]}`)
+
 function fractionItem(L: number, p: number[]): ItemSpec {
   if (L === 1) {
     const [n, d] = p as [number, number]
@@ -149,7 +159,7 @@ function fractionItem(L: number, p: number[]): ItemSpec {
     const answer = `${Math.max(...ns)}/${d}`
     const text = `Which fraction is greatest? ${all.join(', ')}`
     const pool = Array.from({ length: d - 1 }, (_, i) => `${i + 1}/${d}`)
-    return { key: `frac:2:${[d, ...ns].join(':')}`, prompt: { text, say: text.replace(/(\d+)\/(\d+)/g, '$1 $2ths') }, answer, wrong: (k) => wrongFrom(answer, k, pool.filter((f) => int(f.split('/')[0]!) < Math.max(...ns)), all), seconds: 10 }
+    return { key: `frac:2:${[d, ...ns].join(':')}`, prompt: { text, say: text.replace(/(\d+)\/(\d+)/g, (_, n: string, dn: string) => spoken(Number(n), Number(dn))) }, answer, wrong: (k) => wrongFrom(answer, k, pool.filter((f) => int(f.split('/')[0]!) < Math.max(...ns)), all), seconds: 10 }
   }
   if (L === 3) {
     const [n, d, k] = p as [number, number, number]
@@ -162,7 +172,7 @@ function fractionItem(L: number, p: number[]): ItemSpec {
   const answer = `${a + b}/${d}`
   const text = `${a}/${d} + ${b}/${d} = ?`
   const near = [`${a + b}/${d * 2}`, `${a + b + 1}/${d}`, `${a + b - 1}/${d}`, `${a * b}/${d}`, `${a + b}/${d + d + 1}`, `${a + b}/${d + 1}`]
-  return { key: `frac:4:${a}:${b}:${d}`, prompt: { text, say: `${a} ${d}ths plus ${b} ${d}ths`, sum: false }, answer, wrong: (c) => fractionWrongs(answer, c, near), seconds: 12 }
+  return { key: `frac:4:${a}:${b}:${d}`, prompt: { text, say: `${spoken(a, d)} plus ${spoken(b, d)}`, sum: false }, answer, wrong: (c) => fractionWrongs(answer, c, near), seconds: 12 }
 }
 
 const EQUIVALENT: [number, number][] = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [1, 5], [2, 5]]
@@ -261,7 +271,14 @@ export const decimals: Skill = {
       while (t.size < 3) t.add(rand(11, 99))
       return decimalItem(2, [...t].map((x) => (x % 10 === 0 ? x + 1 : x)))
     }
-    if (L === 3) return decimalItem(3, [rand(11, 59), rand(11, 59), rand(0, 1)])
+    if (L === 3) {
+      // Taking away needs two different numbers, so the answer is never 0.0.
+      const x = rand(11, 59)
+      const minus = rand(0, 1)
+      let y = rand(11, 59)
+      while (minus && y === x) y = rand(11, 59)
+      return decimalItem(3, [x, y, minus])
+    }
     return decimalItem(4, [rand(3, 9)])
   },
   fromKey: (key, L) => {

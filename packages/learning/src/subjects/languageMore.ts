@@ -142,7 +142,7 @@ const letterSounds = rowSkill(
   ],
 )
 
-// --- Reading: phonemes (kindergarten to grade 2) ----------------------------------------------
+// --- Reading: phonemes (kindergarten to grade 2) — written but NOT exported: spelled-out sounds are read aloud as letter names. Needs real sound audio. ---
 
 const phonemes = rowSkill(
   'phonemes',
@@ -153,9 +153,9 @@ const phonemes = rowSkill(
       p('☀️', 'Blend these sounds: s - u - n. Which word is it?', 'sun', 'bed', 'hat', 'map'),
       p('🐸', 'Blend these sounds: f - r - o - g. Which word is it?', 'frog', 'fog', 'fish', 'flag'),
       p('🚌', 'Blend these sounds: b - u - s. Which word is it?', 'bus', 'bug', 'but', 'bud'),
-      p('🧢', 'Blend these sounds: h - a - t. Which word is it?', 'hat', 'hen', 'hit', 'hot'),
+      p('🎩', 'Blend these sounds: h - a - t. Which word is it?', 'hat', 'hen', 'hit', 'hot'),
       p('🐷', 'Blend these sounds: p - i - g. Which word is it?', 'pig', 'pin', 'pen', 'pot'),
-      p('🧹', 'Blend these sounds: m - o - p. Which word is it?', 'mop', 'map', 'mug', 'top'),
+      r('Blend these sounds: m - o - p. Which word is it?', 'mop', 'map', 'mug', 'top'),
       p('🛏', 'Blend these sounds: b - e - d. Which word is it?', 'bed', 'bad', 'bag', 'red'),
     ],
     [
@@ -214,12 +214,12 @@ const longVowels = rowSkill(
       r('We build a snowman out of ___.', 'snow', 'sand', 'mud', 'paper'),
       r("Let's ___ our drawings to the class.", 'show', 'eat', 'sleep', 'sing'),
       r('Please ___ your shoe before you run.', 'tie', 'eat', 'sing', 'drink'),
-      r('The sky is ___ today.', 'blue', 'green', 'red', 'yellow'),
+      r('On a clear, sunny day, the sky is ___.', 'blue', 'green', 'red', 'yellow'),
       r('Plants need water and sun to ___.', 'grow', 'sleep', 'swim', 'sing'),
       r('A baby may ___ when she is hungry.', 'cry', 'laugh', 'dance', 'hop'),
       r('We use ___ to stick the paper.', 'glue', 'ruler', 'eraser', 'pencil'),
       r('Toothpaste comes in a ___.', 'tube', 'cup', 'sock', 'lamp'),
-      r('My shoes are ___ and shiny.', 'new', 'old', 'wet', 'tall'),
+      r('My feet grew, so I need ___ shoes.', 'new', 'old', 'wet', 'tall'),
     ],
   ],
 )
@@ -732,7 +732,7 @@ const conjunctions = rowSkill(
       r('Which word shows a time?\n\nCall me ___ you get home.', 'when', 'because', 'although', 'unless'),
       r('Which word means "if not"?\n\nWe cannot play outside ___ it stops raining.', 'unless', 'because', 'although', 'when'),
       r('Which word shows a contrast?\n\nShe finished her homework ___ she was very tired.', 'although', 'because', 'unless', 'if'),
-      r('Which word shows a condition?\n\nYou can go outside ___ you finish your homework.', 'if', 'because', 'although', 'when'),
+      r('Which word shows a condition?\n\nYou can go outside ___ you finish your homework.', 'if', 'because', 'although', 'unless'),
       r('Which word shows the order?\n\nWe brushed our teeth ___ we went to bed.', 'before', 'after', 'because', 'although'),
       r('Which word shows the order?\n\nWe wash the dishes ___ we eat dinner.', 'after', 'before', 'because', 'although'),
       r('Which word shows a reason?\n\nShe smiled ___ she got a gift.', 'because', 'although', 'unless', 'if'),
@@ -753,7 +753,6 @@ const conjunctions = rowSkill(
 export const READING_MORE: Skill[] = [
   letters,
   letterSounds,
-  phonemes,
   longVowels,
   rVowels,
   questionWords,
@@ -776,7 +775,6 @@ const e = (grade: number, category: string): IxlRef => ({ subject: 'ela', grade,
 export const LANGUAGE_MORE_IXL: Record<string, IxlRef[]> = {
   'reading.letters': [e(0, 'Letter identification'), e(0, 'Lowercase and uppercase letters'), e(0, 'Consonants and vowels')],
   'reading.letterSounds': [e(0, 'Beginning and ending sounds'), e(0, 'Short vowel sounds'), e(0, 'Long vowel sounds')],
-  'reading.phonemes': [e(0, 'Phoneme blending and segmenting'), e(1, 'Phoneme manipulation'), e(2, 'Phoneme manipulation')],
   'reading.longVowels': [e(1, 'Silent e'), e(1, 'Vowel teams'), e(2, 'Long vowel patterns')],
   'reading.rVowels': [e(1, 'R-controlled vowels'), e(2, 'R-controlled vowels'), e(2, 'Variant vowels')],
   'reading.questionWords': [e(0, 'Question words'), e(0, 'Question words'), e(0, 'Question words')],

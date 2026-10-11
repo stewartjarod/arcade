@@ -1,6 +1,7 @@
 import { SUBJECTS } from '../subjects'
-import { gradeName, ixlRef, type IxlRef } from '../ixl/map'
-import { CALIBRATION_ANSWERS, Learner } from './learner'
+import { gradeName, ixlRef, IXL_LEVELS, type IxlRef } from '../ixl/map'
+import { ixlScore, POINTS_PER_GRADE } from '../ixl/placement'
+import { Learner, PLACING_ANSWERS } from './learner'
 
 /**
  * A SmartScore-style 0–100 for the level they're on, with IXL's bands: 80 = proficient, 90+ = the
@@ -82,14 +83,16 @@ export interface SubjectInfo {
   ixlGrade?: number
 }
 
-/** Average IXL grade across the subject's mapped, practiced, placed skills. */
+/**
+ * The IXL grade they're working at in a subject, from their placement (1.4 = 140). Undefined until we know
+ * something: no grade on their profile and nothing practiced yet, or a subject we haven't mapped to IXL.
+ */
 export function ixlGradeFor(l: Learner, subjectId: string): number | undefined {
-  const grades = SUBJECTS.find((s) => s.id === subjectId)!
-    .skills.map((k) => `${subjectId}.${k.id}`)
-    .filter((id) => l.seen(id) >= CALIBRATION_ANSWERS || (l.seen(id) > 0 && !l.isCalibrating(id)))
-    .map((id) => ixlRef(id, Math.round(l.rating(id)))?.grade)
-    .filter((g): g is number => g !== undefined)
-  return grades.length ? Math.round((grades.reduce((a, b) => a + b, 0) / grades.length) * 10) / 10 : undefined
+  const subject = SUBJECTS.find((s) => s.id === subjectId)
+  if (!subject?.skills.some((k) => IXL_LEVELS[`${subjectId}.${k.id}`])) return undefined
+  const { grade, answers } = l.placement(subjectId)
+  if (answers === 0 && l.grade === undefined) return undefined
+  return Math.round(grade * 10) / 10
 }
 
 export function subjectSummary(l: Learner): SubjectInfo[] {
@@ -121,7 +124,7 @@ export const subjectDepth = (l: Learner, subjectId: string) =>
  * Handy for in-game rewards like new worlds.
  */
 export const subjectGrowth = (l: Learner, subjectId: string) =>
-  Math.max(0, subjectDepth(l, subjectId) - subjectDepth(new Learner(l.playerId, null, {}), subjectId))
+  Math.max(0, subjectDepth(l, subjectId) - subjectDepth(new Learner(l.playerId, null, { grade: l.grade, focus: l.focus }), subjectId))
 
 /**
  * The grade a game should use to set its difficulty in a subject. Subjects we've mapped to IXL give a real grade
@@ -130,6 +133,83 @@ export const subjectGrowth = (l: Learner, subjectId: string) =>
  */
 export function practiceGrade(l: Learner, subjectId: string): { grade: number; known: boolean } {
   const own = ixlGradeFor(l, subjectId)
-  if (own !== undefined) return { grade: Math.round(own), known: true }
-  return { grade: Math.round(ixlGradeFor(l, 'math') ?? 0), known: false }
+  if (own !== undefined) return { grade: l.playGrade(subjectId, Math.round(own)), known: true }
+  return { grade: l.playGrade('math', Math.round(ixlGradeFor(l, 'math') ?? 0)), known: false }
+}
+
+/** A round is starting in these subjects: remember the grade it plays at (see Learner.playGrade). */
+export function notePracticeGrades(l: Learner, subjectIds: string[]) {
+  for (const id of subjectIds) l.notePlayed(id, practiceGrade(l, id).grade)
+}
+
+/**
+ * How a game should play for an IXL grade (0 = Kindergarten), so every game changes its *mechanics*, not just its size:
+ * cozy (K–1: gentle, nothing can be lost), explorer (2–3: real stakes) and speedy (4–5: stakes plus a bonus for answering fast).
+ */
+export type PlayStyle = 'cozy' | 'explorer' | 'speedy'
+export const playStyleFor = (grade: number): PlayStyle => (grade <= 1 ? 'cozy' : grade <= 3 ? 'explorer' : 'speedy')
+
+
+// ---------------------------------------------------------------------------------------------
+//  The grown-up report: IXL-style scores. Kids don't see these (see the parent page).
+// ---------------------------------------------------------------------------------------------
+
+export interface ReportSkill {
+  id: string
+  label: string
+  /** The IXL topic for their current level. */
+  ixl?: IxlRef
+  /** 0–600 on the IXL-style scale (100 per grade). Absent for skills we haven't mapped. */
+  score?: number
+  level: number
+  /** Answers so far. 0 = never asked yet; the score is then just where we'd start them. */
+  seen: number
+  band: ScoreBand | 'new'
+  smart?: number
+}
+
+export interface ReportSubject {
+  id: string
+  name: string
+  emoji: string
+  /** Their spot on the scale, 0–600. Absent for subjects we haven't mapped to IXL. */
+  score?: number
+  /** Answers that spot rests on; low means it's still a rough guess. */
+  answers: number
+  placing: boolean
+  skills: ReportSkill[]
+  review: number
+}
+
+export function ixlReport(l: Learner): ReportSubject[] {
+  return SUBJECTS.map((s) => {
+    const grade = ixlGradeFor(l, s.id)
+    const { answers } = l.placement(s.id)
+    const skills = s.skills.map((k): ReportSkill => {
+      const id = `${s.id}.${k.id}`
+      const r = l.rating(id)
+      const level = Math.min(Math.max(Math.round(r), 1), k.maxLevel)
+      const sm = r > 0 ? smartScore(r, l.isCalibrating(id)) : undefined
+      return {
+        id,
+        label: k.label(level),
+        ixl: r > 0 ? ixlRef(id, level) : undefined,
+        score: r > 0 ? ixlScore(id, r) : undefined,
+        level: r > 0 ? level : 0,
+        seen: l.seen(id),
+        band: l.seen(id) === 0 ? 'new' : sm!.band,
+        smart: sm?.score,
+      }
+    })
+    return {
+      id: s.id,
+      name: s.name,
+      emoji: s.emoji,
+      score: grade === undefined ? undefined : Math.round(grade * POINTS_PER_GRADE),
+      answers,
+      placing: answers < PLACING_ANSWERS,
+      skills,
+      review: l.reviewCount(s.id),
+    }
+  })
 }

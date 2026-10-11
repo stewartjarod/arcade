@@ -95,6 +95,8 @@ const FRACTION_POOL = [
   ...range(2, 12).flatMap((d) => range(1, 3 * d).filter((n) => gcd(n, d) === 1).map((n) => `${n}/${d}`)),
   ...range(1, 12).map(String),
 ]
+/** Just the fractions (no whole numbers), for when the answer is a fraction: "9" is a silly wrong answer for 1/2. */
+const FRACTIONS_ONLY = FRACTION_POOL.filter((f) => f.includes('/'))
 
 /** Decimals with up to two places, for decimal answers. */
 const DECIMAL_POOL = [...range(1, 999).map((n) => fmtDec(n, 2)), ...range(1, 9).map(String)]
@@ -119,16 +121,19 @@ function primeItem(nums: number[]): ItemSpec {
   }
 }
 
-function gcfItem(a: number, b: number): ItemSpec {
-  const answer = gcd(a, b)
-  const text = `What is the greatest common factor of ${a} and ${b}?`
-  // A common factor divides both numbers, so it can never be a wrong answer that looks right.
-  const notCommon = (v: number) => !(a % v === 0 && b % v === 0)
+// Numbers with plenty of factors to pick from, for "Which number is a factor of 24?"
+const FACTOR_NUMBERS = [12, 18, 20, 24, 28, 30, 36, 40, 42, 45, 48, 60]
+
+function factorItem(N: number, d: number): ItemSpec {
+  const answer = String(d)
+  const text = `Which number is a factor of ${N}?`
+  // A factor divides N with no remainder, so every wrong choice must NOT divide N (else it could be right too).
+  const notFactor = (v: number) => v >= 2 && v < N && N % v !== 0
   return {
-    key: `gcf:2:${a},${b}`,
+    key: `fac:2:${N},${d}`,
     prompt: { text, say: text },
-    answer: String(answer),
-    wrong: (k) => wrongChoices(String(answer), k, [lcm(a, b), a, b, a * b].filter(notCommon).map(String), range(2, 60).filter(notCommon).map(String)),
+    answer,
+    wrong: (k) => wrongChoices(answer, k, [d + 1, d - 1, d + 2, 2 * d - 1].filter(notFactor).map(String), range(2, 20).filter(notFactor).map(String), (x, y) => x === y),
     seconds: 14,
   }
 }
@@ -145,12 +150,6 @@ function lcmItem(a: number, b: number): ItemSpec {
     wrong: (k) => wrongChoices(String(answer), k, [a + b, gcd(a, b), a, b].filter(notMultiple).map(String), range(2, 99).filter(notMultiple).map(String)),
     seconds: 16,
   }
-}
-
-const gcfPair = (): [number, number] => {
-  const g = rand(2, 11)
-  const [m1, n1] = tryUntil((): [number, number] => [rand(2, 9), rand(2, 9)], ([x, y]) => x !== y && gcd(x, y) === 1)
-  return [g * m1, g * n1]
 }
 
 const lcmPair = (): [number, number] => {
@@ -303,7 +302,7 @@ function addSubItem(L: number, sign: number, a: number, b: number, c: number, d:
     key: `fas:${L}:${sign},${a},${b},${c},${d}`,
     prompt: { text, sum: true },
     answer,
-    wrong: (k) => wrongChoices(answer, k, near, FRACTION_POOL),
+    wrong: (k) => wrongChoices(answer, k, near, FRACTIONS_ONLY),
     seconds: 14 + L * 2,
   }
 }
@@ -367,7 +366,7 @@ function multItem(L: number, a: number, b: number, c: number, d: number): ItemSp
 
 // --- Dividing fractions and whole numbers ---
 
-function fracDivItem(L: number, p: number, q: number, r = 0): ItemSpec {
+function fracDivItem(L: 1 | 2, p: number, q: number): ItemSpec {
   if (L === 1) {
     // A whole number divided by a unit fraction, like 3 ÷ 1/4 = 12: each whole holds `q` fourths.
     const answer = String(p * q)
@@ -380,26 +379,30 @@ function fracDivItem(L: number, p: number, q: number, r = 0): ItemSpec {
       seconds: 14,
     }
   }
-  if (L === 2) {
-    // A unit fraction divided by a whole number, like 1/2 ÷ 4 = 1/8.
-    const answer = reducedText(1, p * q)
-    const text = `1/${p} ÷ ${q}`
-    return {
-      key: `fdiv:2:${p},${q}`,
-      prompt: { text, sum: true },
-      answer,
-      wrong: (k) => wrongChoices(answer, k, [fracText(1, p + q), fracText(q, p), String(p * q)], FRACTION_POOL),
-      seconds: 14,
-    }
-  }
-  // A whole number divided by a fraction, like 4 ÷ 2/3 = 6. Here `p` is a multiple of `q`.
-  const answer = String((p * r) / q)
-  const text = `${p} ÷ ${q}/${r}`
+  // A unit fraction divided by a whole number, like 1/2 ÷ 4 = 1/8.
+  const answer = reducedText(1, p * q)
+  const text = `1/${p} ÷ ${q}`
   return {
-    key: `fdiv:3:${p},${q},${r}`,
+    key: `fdiv:2:${p},${q}`,
     prompt: { text, sum: true },
     answer,
-    wrong: (k) => wrongChoices(answer, k, [fracText(p, q), String(p / q), String(p * q)], FRACTION_POOL),
+    wrong: (k) => wrongChoices(answer, k, [fracText(1, p + q), fracText(q, p), String(p * q)], FRACTIONS_ONLY),
+    seconds: 14,
+  }
+}
+
+// Sharing a whole number of things, like 5 pizzas among 8 kids: each kid gets 5/8 of a pizza (p is less than q).
+// Grade 5 is about fractions as division (sharing), not dividing by a fraction like 2/3, which comes later.
+function shareItem(p: number, q: number): ItemSpec {
+  const answer = reducedText(p, q)
+  const text = `${p} pizzas are shared equally by ${q} kids. What fraction of a pizza does each kid get?`
+  // The kid might flip the fraction, or change one number, so offer those as the close wrong answers.
+  const near = [`${q}/${p}`, `${p}/${q + 1}`, `${p + 1}/${q}`, `${p - 1}/${q}`]
+  return {
+    key: `fdiv:3:${p},${q}`,
+    prompt: { text, say: text },
+    answer,
+    wrong: (k) => wrongChoices(answer, k, near, FRACTIONS_ONLY),
     seconds: 18,
   }
 }
@@ -417,7 +420,7 @@ function decFracItem(L: number, a: number, b = 1): ItemSpec {
       key: `dfr:1:${a}`,
       prompt: { text, say: text },
       answer,
-      wrong: (k) => wrongChoices(answer, k, [`10/${a}`, `${a}/100`, `${a + 1}/10`], FRACTION_POOL),
+      wrong: (k) => wrongChoices(answer, k, [`10/${a}`, `${a}/100`, `${a + 1}/10`], FRACTIONS_ONLY),
       seconds: 12,
     }
   }
@@ -429,7 +432,7 @@ function decFracItem(L: number, a: number, b = 1): ItemSpec {
       key: `dfr:2:${a}`,
       prompt: { text, say: text },
       answer,
-      wrong: (k) => wrongChoices(answer, k, [`${a}/10`, `${a}/1000`, `${100 - a}/100`, `10/${a}`], FRACTION_POOL),
+      wrong: (k) => wrongChoices(answer, k, [`${a}/10`, `${a}/1000`, `${100 - a}/100`, `10/${a}`], FRACTIONS_ONLY),
       seconds: 14,
     }
   }
@@ -468,11 +471,13 @@ function placeItem(L: number, a: number, b: number, c: number): ItemSpec {
     // Words to a decimal: 5 and 23 hundredths is 5.23. `c` is 10 (tenths) or 100 (hundredths).
     const answer = fmtDec(a * 100 + b * (100 / c), 2)
     const text = `Write as a decimal: ${a} and ${b} ${c === 10 ? 'tenths' : 'hundredths'}`
+    // Slips: the digits written the wrong way round (5.32 for 5 and 23 hundredths), or the tenths written as "0.b".
+    const reversed = `${a}.${String(b).padStart(2, '0').split('').reverse().join('')}`
     return {
       key: `dpl:2:${a},${b},${c}`,
       prompt: { text, say: text },
       answer,
-      wrong: (k) => wrongChoices(answer, k, [`${a}.0${b}`, `${a + 1}.${b}`, `0.${b}`], DECIMAL_POOL),
+      wrong: (k) => wrongChoices(answer, k, [c === 10 ? `${a}.0${b}` : reversed, `${a + 1}.${b}`, `0.${b}`], DECIMAL_POOL),
       seconds: 14,
     }
   }
@@ -600,15 +605,49 @@ function coordItem(L: number, idx: number, pts: [number, number][]): ItemSpec {
 
 // --- Volume of rectangular prisms ---
 
+/**
+ * A box drawn in 3D (length, width, height), so a kid can see it. With `grid`, every unit cube is marked
+ * so it can be counted. With `labels` ([length, width, height]), the sides are named instead.
+ */
+function boxSVG(l: number, w: number, h: number, labels?: string[], grid = false) {
+  const c = Math.cos(Math.PI / 6)
+  const u = Math.min(230 / (c * (l + w)), 180 / ((l + w) / 2 + h)) // pixels per unit
+  const M = 46 // room on each side for labels
+  const ox = w * c * u + M
+  const oy = h * u + 14
+  // A 3D corner (x along the length, y along the width, z up) on the flat picture.
+  const P = (x: number, y: number, z: number): [number, number] => [ox + (x - y) * c * u, oy + ((x + y) / 2 - z) * u]
+  const pt = (p: [number, number]) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`
+  const face = (corners: [number, number][], fill: string) => `<polygon points="${corners.map(pt).join(' ')}" fill="${fill}" stroke="#1c7ed6" stroke-width="2"/>`
+  const seg = (a: [number, number], b: [number, number]) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#1c7ed6" stroke-width="1.5"/>`
+  let body = face([P(0, 0, h), P(l, 0, h), P(l, w, h), P(0, w, h)], '#d0ebff') + face([P(l, 0, 0), P(l, w, 0), P(l, w, h), P(l, 0, h)], '#339af0') + face([P(0, w, 0), P(l, w, 0), P(l, w, h), P(0, w, h)], '#74c0fc')
+  if (grid) {
+    for (let i = 1; i < l; i++) body += seg(P(i, 0, h), P(i, w, h)) + seg(P(i, w, 0), P(i, w, h))
+    for (let j = 1; j < w; j++) body += seg(P(0, j, h), P(l, j, h)) + seg(P(l, j, 0), P(l, j, h))
+    for (let k = 1; k < h; k++) body += seg(P(l, 0, k), P(l, w, k)) + seg(P(0, w, k), P(l, w, k))
+  }
+  if (labels) {
+    const mid = (a: [number, number], b: [number, number]): [number, number] => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+    const text = (x: number, y: number, t: string, anchor: string) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="14" text-anchor="${anchor}" fill="#333">${t}</text>`
+    const [lx, ly] = mid(P(0, w, 0), P(l, w, 0))
+    const [wx, wy] = mid(P(l, 0, 0), P(l, w, 0))
+    const [hx, hy] = mid(P(0, w, 0), P(0, w, h))
+    body += text(lx, ly + 20, labels[0]!, 'middle') + text(wx + 8, wy + 5, labels[1]!, 'start') + text(hx - 8, hy + 5, labels[2]!, 'end')
+  }
+  const width = (l + w) * c * u + 2 * M
+  const height = oy + ((l + w) / 2) * u + 34
+  return svg(width, height, body)
+}
+
 function volumeItem(L: number, l: number, w: number, h: number): ItemSpec {
   const V = l * w * h
   const surface = 2 * (l * w + w * h + l * h)
   if (L === 3) {
-    // Find the missing height from the volume and the base
+    // Find the missing height from the volume and the base. The picture names the two sides we know, and "?" for the height.
     const text = `A box has a volume of ${V} cubic cm. It is ${l} cm long and ${w} cm wide. How tall is it?`
     return {
       key: `vol:3:${l},${w},${h}`,
-      prompt: { text, say: text },
+      prompt: { text, say: text, svg: boxSVG(l, w, h, [`${l} cm`, `${w} cm`, '?']) },
       answer: String(h),
       wrong: (k) => numberWrongs(h, k, [l * w, w * h, l * h, l + w]),
       seconds: 18,
@@ -620,7 +659,8 @@ function volumeItem(L: number, l: number, w: number, h: number): ItemSpec {
       : `A box is ${l} cm long, ${w} cm wide, and ${h} cm tall. What is its volume in cubic cm?`
   return {
     key: `vol:${L}:${l},${w},${h}`,
-    prompt: { text, say: text },
+    // Level 1 marks every cube so it can be counted; level 2 names the sides in cm.
+    prompt: { text, say: text, svg: L === 1 ? boxSVG(l, w, h, undefined, true) : boxSVG(l, w, h, [`${l} cm`, `${w} cm`, `${h} cm`]) },
     answer: String(V),
     wrong: (k) => numberWrongs(V, k, [l * w, l + w + h, surface]),
     seconds: 14,
@@ -671,15 +711,15 @@ function statPick(L: number): number[] {
 export const GRADE5_MATH: Skill[] = [
   {
     id: 'factors',
-    label: (L) => ['Prime numbers', 'Greatest common factor', 'Least common multiple'][L - 1]!,
+    label: (L) => ['Prime numbers', 'Identify factors', 'Least common multiple'][L - 1]!,
     maxLevel: 3,
     formats: ['number', 'choice'],
     unlocksAfter: [{ skill: 'mul', level: 8 }],
     generate: (L) => {
       if (L === 1) return primeItem(shuffle([pick(PRIMES), ...shuffle([...COMPOSITES]).slice(0, 3)]))
       if (L === 2) {
-        const [a, b] = gcfPair()
-        return gcfItem(a, b)
+        const N = pick(FACTOR_NUMBERS)
+        return factorItem(N, pick(range(2, Math.floor(N / 2)).filter((v) => N % v === 0)))
       }
       const [a, b] = lcmPair()
       return lcmItem(a, b)
@@ -690,8 +730,8 @@ export const GRADE5_MATH: Skill[] = [
         return n && primeItem(n)
       }
       if (L === 2) {
-        const n = parseKey(key, 'gcf', 2, 2)
-        return n && gcfItem(n[0]!, n[1]!)
+        const n = parseKey(key, 'fac', 2, 2)
+        return n && factorItem(n[0]!, n[1]!)
       }
       const n = parseKey(key, 'lcm', 3, 2)
       return n && lcmItem(n[0]!, n[1]!)
@@ -781,21 +821,23 @@ export const GRADE5_MATH: Skill[] = [
   },
   {
     id: 'fractionDivision',
-    label: (L) => ['Divide a whole number by a unit fraction', 'Divide a unit fraction by a whole number', 'Divide a whole number by a fraction'][L - 1]!,
+    label: (L) => ['Divide a whole number by a unit fraction', 'Divide a unit fraction by a whole number', 'Understand fractions as division: sharing'][L - 1]!,
     maxLevel: 3,
     formats: ['choice'],
     unlocksAfter: [{ skill: 'multiplyFractions', level: 2 }],
     generate: (L) => {
       if (L === 1) return fracDivItem(1, rand(2, 9), rand(2, 8))
       if (L === 2) return fracDivItem(2, rand(2, 6), rand(2, 5))
-      // A whole number that the fraction's top number divides into evenly, like 4 ÷ 2/3 = 6
-      const n = rand(2, 5)
-      const d = rand(n + 1, 8)
-      return fracDivItem(3, rand(1, 6) * n, n, d)
+      const q = rand(3, 8)
+      return shareItem(rand(2, q - 1), q)
     },
     fromKey: (key, L) => {
-      const n = parseKey(key, 'fdiv', L, L === 3 ? 3 : 2)
-      return n && fracDivItem(L, n[0]!, n[1]!, n[2])
+      if (L === 3) {
+        const n = parseKey(key, 'fdiv', 3, 2)
+        return n && shareItem(n[0]!, n[1]!)
+      }
+      const n = parseKey(key, 'fdiv', L, 2)
+      return n && fracDivItem(L === 1 ? 1 : 2, n[0]!, n[1]!)
     },
   },
   {
@@ -846,7 +888,8 @@ export const GRADE5_MATH: Skill[] = [
     generate: (L) => {
       if (L === 1) return decOpItem(1, rand(11, 999), pick([10, 100, 1000]))
       if (L === 2) return decOpItem(2, rand(11, 999), rand(2, 9))
-      if (L === 3) return decOpItem(3, rand(2, 19), rand(2, 19))
+      // Leave out 10 (it is 1.0, a trivial times-one), so both decimals really get multiplied.
+      if (L === 3) return decOpItem(3, tryUntil(() => rand(2, 19), (x) => x !== 10), tryUntil(() => rand(2, 19), (x) => x !== 10))
       if (L === 4) return decOpItem(4, rand(11, 999), pick([10, 100, 1000]))
       return decOpItem(5, rand(11, 99), rand(2, 9))
     },
@@ -924,7 +967,8 @@ const ref = (grade: number, category: string, levels: number) => Array.from({ le
 export const GRADE5_MATH_IXL: Record<string, IxlRef[]> = {
   'math.factors': ref(5, 'Factors, multiples, and divisibility', 3),
   'math.expressions': ref(5, 'Numerical expressions', 3),
-  'math.powers': ref(5, 'Powers of ten', 3),
+  // Level 1 and 3 multiply a whole number by 10, 100, or 1,000 (IXL's "Multiplication" category); level 2 is powers of ten.
+  'math.powers': [m(5, 'Multiplication'), m(5, 'Powers of ten'), m(5, 'Multiplication')],
   'math.addSubFractions': [
     m(4, 'Add and subtract fractions with unlike denominators'),
     m(4, 'Add and subtract fractions with unlike denominators'),

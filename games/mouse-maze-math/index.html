@@ -15,7 +15,7 @@
     <canvas id="c"></canvas>
     <div id="hud" hidden>
       <div class="hud-row">
-        <button class="chip btn" data-act="menu">☰ Menu</button>
+        <button class="chip hud-home" data-act="leave" aria-label="Leave the maze">🏠</button>
         <span id="lvl" class="chip"></span>
         <span class="spacer"></span>
         <span id="streak" class="chip"></span>
@@ -27,6 +27,17 @@
     <div id="answers" class="off"></div>
     <div id="toast"></div>
     <div id="screen" hidden></div>
+    <!-- "Leave the maze?" sits above everything. The round keeps running behind it. -->
+    <div id="leave" hidden>
+      <div class="card">
+        <h2>Leave the maze?</h2>
+        <div class="sub" id="leave-sub">Cheese you earned is kept.</div>
+        <div class="row leave-row">
+          <button class="btn leave-btn yes" data-act="leave-yes" aria-label="Yes, leave the maze">✔</button>
+          <button class="btn leave-btn no" data-act="leave-no" aria-label="No, stay in the maze">✖</button>
+        </div>
+      </div>
+    </div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

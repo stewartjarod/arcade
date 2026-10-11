@@ -11,8 +11,9 @@ export type { Format, Item, ItemSpec, Prompt, Skill, Subject } from './core/type
 export { learner, peekLearner, Learner, MAX_MOMENT_DROP, type Fact, type LegacyMath } from './core/learner'
 export { pickItem, canPick, type PickOptions } from './core/scheduler'
 export { startPractice, Practice, Moment, Question, normalize, type PracticeOptions } from './core/practice'
-export { skillSummary, subjectSummary, subjectDepth, subjectGrowth, ixlGradeFor, practiceGrade, smartScore, gradeName, type SkillInfo, type SubjectInfo, type Smart, type ScoreBand } from './core/summary'
+export { skillSummary, subjectSummary, subjectDepth, subjectGrowth, ixlGradeFor, ixlReport, practiceGrade, playStyleFor, smartScore, gradeName, type SkillInfo, type SubjectInfo, type ReportSkill, type ReportSubject, type Smart, type ScoreBand, type PlayStyle } from './core/summary'
 export { ixlRef, IXL_LEVELS, type IxlRef } from './ixl/map'
+export { ixlScore, scoreLabel, startLevel, itemGrade, POINTS_PER_GRADE } from './ixl/placement'
 
 // Subjects.
 export { SUBJECTS, findSkill, findSubject } from './subjects'
@@ -23,7 +24,7 @@ export { challenge, mathChallenge, type ChallengeOptions, type ChallengeResult }
 export { numberPad, type NumberPad } from './ui/numberPad'
 export { choicePad, type ChoicePad } from './ui/choicePad'
 export { letterPad, type LetterPad } from './ui/letterPad'
-export { renderPrompt, problemHTML, escapeHTML, spokenText, isWideSvg, emojiRem } from './ui/prompt'
+export { renderPrompt, problemHTML, escapeHTML, spokenText, isWideSvg, emojiRem, emojiHTML } from './ui/prompt'
 export { speak, canSpeak } from './ui/speak'
 export { learningLines } from './voiceLines'
 export { sentences, clipName } from './ui/clips'

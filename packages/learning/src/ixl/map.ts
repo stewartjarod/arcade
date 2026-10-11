@@ -2,18 +2,34 @@
  * Which IXL topic each of our levels is practicing. This is how a level in our games lines up with
  * what the kids see in school: "Addition up to 20" is IXL grade 1.
  *
- * It's only a label on our levels (saved ratings don't change), and it's how we work out which
- * IXL grade a player is working at. The names match IXL's category names; ixl.test.ts checks every
+ * It's a label on our levels (saved ratings don't change), and it's how we put levels on IXL's grade scale
+ * (placement.ts) to start a player at their grade and work out which IXL grade they're working at. The names match IXL's category names; ixl.test.ts checks every
  * one exists in the full list (skills.json), so a typo can't sneak in.
  *
  * Grade 0 = Kindergarten.
  */
+import { LANGUAGE_EARLY_IXL } from '../subjects/languageEarly'
+import { LANGUAGE_E2_IXL } from '../subjects/languageEarly2'
+import { LANGUAGE_FE_IXL } from '../subjects/languageFinalEarly'
+import { LANGUAGE_PH_IXL } from '../subjects/languagePhonemes'
+import { LANGUAGE_FU_IXL } from '../subjects/languageFinalUpper'
+import { LANGUAGE_G5_IXL } from '../subjects/languageGrade5'
+import { LANGUAGE_U2_IXL } from '../subjects/languageUpper2'
 import { LANGUAGE_MORE_IXL } from '../subjects/languageMore'
 import { LANGUAGE_UPPER_IXL } from '../subjects/languageUpper'
 import { GRADE5_MATH_IXL } from '../subjects/mathGrade5'
+import { MATH_345_IXL } from '../subjects/mathGrades345'
+import { MATH_EARLY_IXL } from '../subjects/mathEarly'
+import { MATH_FINAL_IXL } from '../subjects/mathFinal'
+import { MATH_LAST_IXL } from '../subjects/mathLast'
 import { MORE_MATH_IXL } from '../subjects/mathMore'
 import { SCIENCE_SOCIAL_IXL } from '../subjects/scienceSocial'
 import { SCIENCE_SOCIAL_MORE_IXL } from '../subjects/scienceSocialMore'
+import { SCIENCE_FINAL_IXL } from '../subjects/scienceFinal'
+import { SCIENCE_SOCIAL_R3_IXL } from '../subjects/scienceSocialRound3'
+import { SCIENCE_SOCIAL_R4_IXL } from '../subjects/scienceSocialRound4'
+import { SCIENCE_SOCIAL_R5_IXL } from '../subjects/scienceSocialRound5'
+import { SCIENCE_SOCIAL_UPPER_IXL } from '../subjects/scienceSocialUpper'
 
 export type IxlSubject = 'math' | 'ela' | 'science' | 'social-studies'
 
@@ -37,10 +53,26 @@ const rep = (n: number, ref: IxlRef): IxlRef[] => Array.from({ length: n }, () =
 export const IXL_LEVELS: Record<string, IxlRef[]> = {
   ...LANGUAGE_UPPER_IXL,
   ...LANGUAGE_MORE_IXL,
+  ...LANGUAGE_G5_IXL,
+  ...LANGUAGE_EARLY_IXL,
+  ...LANGUAGE_E2_IXL,
+  ...LANGUAGE_FU_IXL,
+  ...LANGUAGE_FE_IXL,
+  ...LANGUAGE_PH_IXL,
+  ...LANGUAGE_U2_IXL,
   ...GRADE5_MATH_IXL,
   ...MORE_MATH_IXL,
+  ...MATH_345_IXL,
+  ...MATH_EARLY_IXL,
+  ...MATH_LAST_IXL,
+  ...MATH_FINAL_IXL,
   ...SCIENCE_SOCIAL_IXL,
   ...SCIENCE_SOCIAL_MORE_IXL,
+  ...SCIENCE_SOCIAL_UPPER_IXL,
+  ...SCIENCE_SOCIAL_R3_IXL,
+  ...SCIENCE_FINAL_IXL,
+  ...SCIENCE_SOCIAL_R4_IXL,
+  ...SCIENCE_SOCIAL_R5_IXL,
   'math.add': [
     m(0, 'Addition up to 10'),
     m(1, 'Addition up to 20'),
@@ -79,7 +111,7 @@ export const IXL_LEVELS: Record<string, IxlRef[]> = {
   'math.multiply': [m(3, 'Two-digit multiplication'), m(4, 'Multiply by one-digit numbers'), m(4, 'Multiply by one-digit numbers'), m(4, 'Multiply by two-digit numbers')],
   'math.divide': [m(4, 'Divide by one-digit numbers'), m(4, 'Divide by one-digit numbers'), m(4, 'Divide by one-digit numbers')],
   'math.elapsed': [m(3, 'Elapsed time'), m(3, 'Elapsed time'), m(3, 'Elapsed time')],
-  'math.place': [m(1, 'Place value'), m(1, 'Place value'), m(2, 'Place value'), m(2, 'Place value'), m(2, 'Place value'), m(3, 'Place value')],
+  'math.place': [m(1, 'Place value'), m(2, 'Place value'), m(2, 'Place value'), m(2, 'Place value'), m(2, 'Place value'), m(3, 'Place value')],
   'math.skip': [
     ...rep(3, m(1, 'Skip-counting')),
     m(1, 'Counting to 120'),
@@ -94,7 +126,8 @@ export const IXL_LEVELS: Record<string, IxlRef[]> = {
   'writing.pick': [e(0, 'Short vowels: mixed'), e(1, 'Consonant digraphs and blends'), e(1, 'Long vowel patterns'), e(1, 'High-frequency and irregular words'), e(2, 'High-frequency and irregular words')],
   'writing.caps': [e(0, 'Capitalization'), e(0, 'Capitalization'), e(2, 'Punctuation'), e(2, 'Capitalization')],
   'geography.world': [ss(2, 'Physical geography'), ss(2, 'Physical geography'), ss(3, 'Physical geography')],
-  'geography.capitals': rep(5, ss(3, 'State capitals')),
+  // The same state-capital skills repeat in IXL grades 3, 4 and 5; the later regions are the later grades.
+  'geography.capitals': [ss(3, 'State capitals'), ss(3, 'State capitals'), ss(4, 'State capitals'), ss(4, 'State capitals'), ss(5, 'State capitals')],
   'space.planets': [sci(3, 'Astronomy'), sci(3, 'Astronomy'), sci(4, 'Astronomy'), sci(5, 'Astronomy')],
   'space.order': [sci(3, 'Astronomy'), sci(3, 'Astronomy'), sci(4, 'Astronomy'), sci(4, 'Astronomy')],
   'reading.rhyme': [e(0, 'Rhyming'), e(1, 'Rhyming'), e(2, 'Rhyming')],
@@ -103,7 +136,7 @@ export const IXL_LEVELS: Record<string, IxlRef[]> = {
   'writing.sentences': [e(0, 'Sentences'), e(1, 'Sentences'), e(2, 'Sentences, fragments, and run-ons')],
   'writing.grammar': [e(0, 'Nouns'), e(0, 'Verbs'), e(1, 'Adjectives')],
   'clocks.time': [m(0, 'Time'), m(1, 'Time'), m(2, 'Time'), m(2, 'Time'), m(3, 'Read and write times')],
-  'clocks.coins': [m(0, 'Money'), m(1, 'Money'), m(1, 'Money'), m(2, 'Money up to $1'), m(2, 'Add and subtract money up to $1')],
+  'clocks.coins': [m(0, 'Money'), m(1, 'Money'), m(1, 'Money'), m(2, 'Money up to $1'), m(2, 'Money up to $1')],
 }
 
 /** The IXL topic for a skill at a level (undefined if we haven't mapped that skill). */

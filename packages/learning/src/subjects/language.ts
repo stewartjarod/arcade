@@ -73,7 +73,7 @@ function syllableItem(L: number, word?: string): ItemSpec {
     key: `syl:${w.word}`,
     prompt: { text, say: `${text} Clap it out!`, emoji: w.emoji },
     answer: String(w.n),
-    wrong: (k) => wrongFrom(String(w.n), k, ['1', '2', '3', '4', '5'], [String(w.n + 1), String(w.n - 1)]),
+    wrong: (k) => wrongFrom(String(w.n), k, ['1', '2', '3', '4', '5'], [String(w.n + 1), String(w.n - 1)].filter((v) => Number(v) >= 1)),
     seconds: 6,
   }
 }
@@ -166,7 +166,7 @@ export const sentences: Skill = {
 
 // --- Parts of speech: nouns, then verbs, then adjectives ---------------------------------------
 
-const NOUNS = ['dog', 'cat', 'tree', 'house', 'ball', 'cake', 'teacher', 'school', 'boy', 'girl', 'hat', 'book', 'car', 'bird', 'moon', 'park']
+const NOUNS = ['dog', 'cat', 'tree', 'house', 'ball', 'cake', 'teacher', 'school', 'boy', 'girl', 'hat', 'book', 'car', 'bird', 'moon', 'rock']
 const VERBS = ['run', 'jump', 'eat', 'sing', 'swim', 'read', 'climb', 'sleep', 'throw', 'laugh', 'hop', 'draw']
 const ADJECTIVES = ['red', 'big', 'soft', 'happy', 'tall', 'loud', 'cold', 'small', 'funny', 'sweet']
 const POS = [

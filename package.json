@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "portless arcade node scripts/dev.mjs",
     "setup:dev": "bash scripts/setup-dev.sh",
+    "dev:tailnet": "portless arcade --tailscale node scripts/dev.mjs",
     "dev:plain": "node scripts/dev.mjs",
     "new": "node scripts/new-game.mjs",
     "build": "vite build",

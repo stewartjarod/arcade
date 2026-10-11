@@ -1,6 +1,7 @@
-import { findSkill } from '../subjects'
+import { findSkill, SUBJECTS } from '../subjects'
 import { learner as currentLearner, type Learner } from './learner'
 import { pickItem, pickSimilar, type PickOptions } from './scheduler'
+import { notePracticeGrades } from './summary'
 import type { Item } from './types'
 
 /**
@@ -91,6 +92,8 @@ export class Practice {
     this.learner = learner
     this.options = options
     this.start = learner.snapshot()
+    // Games read the play grade before starting a round; this commits it, so the next round can rise one more grade.
+    notePracticeGrades(learner, options.subjects ?? SUBJECTS.map((s) => s.id))
   }
 
   /** Start one challenge (a door choice, a boss fight...). Its questions share a safety net. */

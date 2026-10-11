@@ -23,8 +23,9 @@ const ek = (ax: number, az: number, bx: number, bz: number) => {
 }
 
 // Every junction has three exits (left, straight, right). One corridor leads on,
-// the others wind off and end in a dead end or a trap. Corridors are 1-2 straight
-// runs of 2-3 cells, and never touch each other, so walls stay between them.
+// the others wind off and end in a dead end or a trap. Corridors are straight runs
+// of cells (how many runs and how long each is comes in `o`), and never touch each
+// other, so walls stay between them.
 export type MazeOpts = { runs: [number, number]; len: [number, number] }
 const attempt = (n: number, trapChance: number, o: MazeOpts): Layout | null => {
   const used = new Set<string>()
@@ -132,7 +133,9 @@ const attempt = (n: number, trapChance: number, o: MazeOpts): Layout | null => {
 
 export const generateMaze = (n: number, trapChance = 0.4, o: MazeOpts = { runs: [1, 2], len: [2, 3] }): Layout => {
   for (let i = 0; i < 2000; i++) {
-    if (i === 300) o = { runs: [1, Math.min(2, o.runs[1])], len: [2, 3] }
+    // Many tries have failed, so the corridor rules are too tight. Relax them a little, but only
+    // down to the default lengths: a short setting (cozy) must stay short, never get longer.
+    if (i === 300) o = { runs: [1, Math.min(2, o.runs[1])], len: [Math.min(o.len[0], 2), Math.min(o.len[1], 3)] }
     const layout = attempt(n, trapChance, o)
     if (!layout) continue
     const picks = layout.junctions.map((j) => j.exits.findIndex((e) => e.kind === 'path'))

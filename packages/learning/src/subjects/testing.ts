@@ -22,6 +22,12 @@ export function expectSkillFair(subjectId: string, skill: Skill, samples = 60) {
     for (let i = 0; i < samples; i++) {
       const item = itemAt(subjectId, skill, level)
       const where = `${subjectId}.${skill.id} L${level}: "${item.prompt.text}" → ${item.answer}`
+      // Never use the kids' own names as characters in questions.
+      const NO_NAMES = /\b(Ima|Millie)\b/
+      for (const text of [item.prompt.text, item.prompt.say ?? '', item.answer, ...item.wrong(3)]) expect(NO_NAMES.test(text), `${where}: do not use Ima or Millie in questions`).toBe(false)
+      // Wrong answers must be believable, not jokes a kid can skip reading to rule out.
+      const JOKE = /\b(turns? into an? (bird|dog|rock|cube|fish|car|boat|cake)|will (sing|bark|fly (to school|away))|sings? a song|find gold)\b/i
+      for (const text of item.wrong(3)) expect(JOKE.test(text), `${where}: joke wrong answer "${text}"`).toBe(false)
       expect(item.key, where).toBeTruthy()
       expect(item.prompt.text, where).toBeTruthy()
       expect(item.answer, where).toBeTruthy()

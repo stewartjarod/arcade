@@ -25,7 +25,7 @@ const FACTS: Fact[] = [
   { level: 1, q: 'Which planet has big, bright rings?', a: 'Saturn', emoji: '💍' },
   { level: 1, q: 'Which is the biggest planet?', a: 'Jupiter', emoji: '🐘' },
   { level: 1, q: 'What is the Sun?', a: 'a star', wrong: ['a planet', 'a moon', 'a cloud'], emoji: '☀️' },
-  { level: 1, q: 'What goes around the Earth?', a: 'the Moon', wrong: ['the Sun', 'Mars', 'Jupiter'], emoji: '🌍' },
+  { level: 1, q: 'What natural satellite travels around Earth?', a: 'the Moon', wrong: ['the Sun', 'Mars', 'Jupiter'], emoji: '🌍' },
   { level: 1, q: 'How many planets are in our solar system?', a: '8', wrong: ['7', '9', '10'], emoji: '🪐' },
   // 2 — what makes each one special
   { level: 2, q: 'Which planet is the smallest?', a: 'Mercury', emoji: '🐜' },
@@ -34,7 +34,7 @@ const FACTS: Fact[] = [
   { level: 2, q: 'Which is the only planet we know has living things?', a: 'Earth', emoji: '🌳' },
   { level: 2, q: 'Which planet spins tipped over on its side?', a: 'Uranus', emoji: '🎳' },
   { level: 2, q: 'Which planet has the fastest winds?', a: 'Neptune', emoji: '💨' },
-  { level: 2, q: 'Which planet is covered with oceans of water?', a: 'Earth', emoji: '🌊' },
+  { level: 2, q: 'Which planet has oceans of liquid water on its surface?', a: 'Earth', emoji: '🌊' },
   // 3 — amazing details
   { level: 3, q: 'Which planet has two tiny moons named Phobos and Deimos?', a: 'Mars', emoji: '🌑' },
   { level: 3, q: 'Which planet has the tallest volcano, Olympus Mons?', a: 'Mars', emoji: '🌋' },

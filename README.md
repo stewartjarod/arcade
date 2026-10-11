@@ -31,6 +31,7 @@ pnpm dev space-cats     # jumps straight into one game; saves reload instantly
 
 `pnpm dev` serves the game at **https://arcade.localhost** (via [portless](https://github.com/vercel-labs/portless), so no port numbers to remember). Run `pnpm setup:dev` once on a new machine: it starts portless at boot and trusts its certificate.
 It also prints a **Network** link — open that one on a phone or tablet on the same Wi-Fi (`arcade.localhost` only works on this computer).
+`pnpm dev:tailnet` also shares it on your Tailscale network, so your phone can play from anywhere (needs Tailscale installed, with HTTPS certificates turned on).
 `pnpm dev:plain` skips portless and uses a normal `localhost:5173`.
 
 Then open `games/space-cats/src/main.ts` and start changing things.
@@ -49,10 +50,12 @@ To check the real site locally first: `pnpm build && pnpm preview`.
 Pick or make a player on the homepage ("Who's playing?"), and optionally a subject to **practice more of**.
 Everything is saved in the browser, per player:
 
-- **Where they start: zero.** Every skill starts at the very beginning — no guessing from age or grade.
-  A new skill calibrates fast: each right answer jumps a whole level, and the first miss settles them just
-  below it. Then it's gentle i+1. That baseline belongs to the player, so a skill found in one game is
-  already known in every other game.
+- **Where they start: their grade.** The grade on a profile is a first guess on IXL's scale (0–100 is
+  Kindergarten, 100–200 is 1st grade, and so on). Every answer then moves the player's spot in that subject —
+  up if it's easy for them, down if it's hard — so skills they haven't tried yet start at the right level and
+  one maze or so finds where they really are. After that it's gentle i+1. That all belongs to the player,
+  so it carries across games. Kids never see the scores; grown-ups see them at `/parent/` ("For grown-ups"
+  link in the homepage footer).
 - **What they know** — every subject's levels, plus facts they missed (which come back until they stick),
   live on the *player*, not in a game. Practice in one game and they're levelled up in all of them.
   The homepage shows it: "What Millie is learning", with every skill.
@@ -99,7 +102,7 @@ const q = moment.ask()                    // q.prompt = { text, emoji?, svg?, sa
 const options = q.options(3)              // ["11", "12", "14"] — believable wrong answers
 // ...player picks one...
 moment.check(q, picked, { choices: 3 })   // → true/false; their levels move
-practice.grew()                           // ["Adding up to 100"] — for the level-complete screen
+practice.grew()                           // ["Addition up to 100"] — for the level-complete screen
 ```
 
 It handles the fairness rules for you: only the first answer counts, fast answers count a bit extra,

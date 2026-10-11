@@ -40,7 +40,7 @@ export function renderPrompt(p: Prompt, { listen = false, sumSuffix = '' } = {})
     if (p.svg) {
       v.innerHTML = `<div class="lp-svg${p.svg.includes('Coins') || isWideSvg(p.svg) ? ' wide' : ''}">${p.svg}</div>`
     } else {
-      v.innerHTML = `<span class="lp-emoji" style="font-size:${emojiRem(p.emoji!)}rem">${escapeHTML(p.emoji!)}</span>`
+      v.innerHTML = `<span class="lp-emoji" style="font-size:${emojiRem(p.emoji!)}rem">${emojiHTML(p.emoji!)}</span>`
     }
     box.append(v)
   }
@@ -77,6 +77,16 @@ export const isWideSvg = (svg: string) => {
   const m = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)
   return !!m && Number(m[1]) / Number(m[2]) > 1.4
 }
+
+/**
+ * A row of emoji as safe HTML. In a picture sum ("⭐ ⭐ + ⭐") each side stays together, so when the row
+ * is too wide it wraps at the + or − (the sign leads the next line) instead of leaving a sign or one lone emoji behind.
+ */
+export const emojiHTML = (emoji: string) =>
+  emoji
+    .split(/\s+(?=[+−]\s)/)
+    .map((side) => `<span style="display:inline-block;white-space:nowrap">${escapeHTML(side)}</span>`)
+    .join(' ')
 
 /** Font size (rem) for a row of emoji: a few get big, a long row shrinks so it still fits and wraps nicely. */
 export const emojiRem = (emoji: string) => {

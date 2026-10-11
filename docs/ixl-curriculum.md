@@ -2,6 +2,12 @@
 
 Scraped 2026-10-08 from the public IXL grade pages (ixl.com/<subject>/<grade>). Full skill lists are in `packages/learning/src/ixl/skills.json` (subject-grade → categories → [code, name]). Below is the category outline with skill counts. Use it to decide what to build next; IXL's skill names are theirs, so keep this as private reference, not shipped content.
 
+## How we use IXL's scale
+
+Placement, per subject, is a number on IXL's grade scale: 0–100 Kindergarten, 100–200 1st grade, 200–300 2nd, and so on up to 600. Each level of each skill is tagged with an IXL grade (`ixl/map.ts`), levels in the same grade share its 100 points, and `ixl/placement.ts` turns a rating into a score. It's our own estimate, not IXL's Diagnostic score. Only the grown-up page (`parent/`) shows it.
+
+Coverage: every one of IXL's 833 K–5 topics (math, English, science, social studies) has at least one level. That counts topics, not each of IXL's ~4,900 individual skills; ours are coarser. The phoneme topics (blending, segmenting, manipulation) use whole words and position words ("without the first sound") instead of isolated sounds, because the browser voice reads a letter by its name, not its sound. `languagePhonemes.test.ts` guards that. The older `phonemeChange` and `phonemeBlend` banks in `languageFinalEarly.ts` quote letters, so they stay unexported.
+
 ## How IXL scores (SmartScore, from IXL's own parent guide)
 
 - 0–100 per skill, adaptive; it's *not* percent correct. Goes up and down with correctness, question difficulty, recent answers and consistency.

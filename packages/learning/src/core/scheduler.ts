@@ -1,4 +1,5 @@
 import { findSkill, SUBJECTS } from '../subjects'
+import { itemGrade, startLevel } from '../ixl/placement'
 import { canSpeak } from '../ui/speak'
 import type { Learner } from './learner'
 import type { Format, Item, Skill } from './types'
@@ -8,7 +9,9 @@ import type { Format, Item, Skill } from './types'
  *
  * 1. Subject: the grown-up's focus subject half the time; otherwise rotate, favoring
  *    whatever hasn't been practiced for longest.
- * 2. Skill: weaker skills in that subject come up more, so nothing gets left behind.
+ * 2. Skill: weaker skills in that subject come up more, so nothing gets left behind. While we're still
+ *    finding their spot on the grade scale, skills whose level is near that spot come up most, so every
+ *    answer teaches us the most.
  * 3. Question: sometimes a fact they missed earlier that's due for another go;
  *    otherwise a fresh one — mostly at their level, sometimes one harder (the i+1
  *    zone), sometimes one easier as review. That mix lands around 85% right.
@@ -16,6 +19,8 @@ import type { Format, Item, Skill } from './types'
 export interface PickOptions {
   /** Only these subjects (ids). Default: all. */
   subjects?: string[]
+  /** Only these skills (full ids like "math.add"). Default: all. */
+  skills?: string[]
   /** Only questions answerable this way. Default: any. */
   formats?: Format[]
   /** Can we play sound? Default: yes if we have voice clips or the browser can speak. */
@@ -35,6 +40,7 @@ function candidates(l: Learner, o: PickOptions): Candidate[] {
       .filter((k) => !o.formats || k.formats.some((f) => o.formats!.includes(f)))
       .filter((k) => audio || !k.listen)
       .map((k) => ({ id: `${s.id}.${k.id}`, subject: s.id, skill: k }))
+      .filter((c) => !o.skills || o.skills.includes(c.id))
       .filter((c) => l.isUnlocked(c.id)),
   )
 }
@@ -52,9 +58,11 @@ export function canPick(l: Learner, o: PickOptions = {}) {
 
 export function pickItem(l: Learner, o: PickOptions = {}, avoid?: string | readonly string[]): Item {
   const avoidKeys = typeof avoid === 'string' ? [avoid] : avoid ?? []
+  const audio = o.audio ?? canSpeak()
+  // Try another skill or level when this one repeats a question, or a level is all listen-only and we have no sound.
+  const tryAgain = (it: Item) => avoidKeys.includes(it.key) || (!audio && !!it.listen)
   let it = pickOnce(l, o, avoidKeys)
-  // A skill with a short list of questions can run out of fresh ones; then try another skill before settling for a repeat.
-  for (let i = 0; i < 8 && avoidKeys.includes(it.key); i++) it = pickOnce(l, o, avoidKeys)
+  for (let i = 0; i < 12 && tryAgain(it); i++) it = pickOnce(l, o, avoidKeys)
   return it
 }
 
@@ -74,11 +82,20 @@ function pickOnce(l: Learner, o: PickOptions, avoidKeys: readonly string[]): Ite
   // 2. Skill: weaker ones more often
   const skills = all.filter((c) => c.subject === subject)
   const top = Math.max(...skills.map((c) => l.rating(c.id)))
-  const c = weighted(skills, (k) => 1 + (top - l.rating(k.id)) * 0.4)
+  // While placing, aim a little above their spot on the grade scale: each skill's level there is the question.
+  const placing = l.isPlacing(subject)
+  const target = l.placingTarget(subject)
+  const nearTarget = (id: string) => {
+    const g = itemGrade(id, startLevel(id, target))
+    return g === undefined ? 0.3 : Math.exp(-1.2 * Math.abs(g - target))
+  }
+  const c = weighted(skills, (k) => (placing ? 0.05 + nearTarget(k.id) : 1 + (top - l.rating(k.id)) * 0.4))
 
   // 3. A missed fact that's due, some of the time
   const formats = o.formats
-  const usable = (it: Item) => (!formats || it.formats.some((f) => formats.includes(f))) && !avoidKeys.includes(it.key)
+  const audio = o.audio ?? canSpeak()
+  // A skill that isn't listen-only can still have a listen-only question at some level, so check each question too.
+  const usable = (it: Item) => (!formats || it.formats.some((f) => formats.includes(f))) && (audio || !it.listen) && !avoidKeys.includes(it.key)
   const due = l.dueFacts(c.id)
   if (due.length && c.skill.fromKey && Math.random() < 0.35) {
     const f = due[0]!
@@ -92,7 +109,11 @@ function pickOnce(l: Learner, o: PickOptions, avoidKeys: readonly string[]): Ite
   // ...or a fresh one around their level
   const base = Math.max(1, Math.round(l.rating(c.id)))
   const r = Math.random()
-  const level = clampLevel(c.skill, r < 0.7 ? base : r < 0.9 ? base + 1 : base - 1)
+  // Placing: the level at the target above. A new skill finding its level: lean toward harder, never easier.
+  const level = clampLevel(
+    c.skill,
+    placing ? startLevel(c.id, target) : l.isCalibrating(c.id) ? (r < 0.55 ? base : base + 1) : r < 0.7 ? base : r < 0.9 ? base + 1 : base - 1,
+  )
   return generate(c.id, level, usable)
 }
 

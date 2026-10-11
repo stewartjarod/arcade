@@ -63,7 +63,7 @@ const livingThings = factSkill(
     { id: 'sunflower', level: 1, q: 'Which one is alive?', a: 'a sunflower', wrong: NONLIVING },
     { id: 'needWater', level: 2, q: 'Which one do ALL living things need to live?', a: 'water', wrong: ['a toy', 'a bicycle', 'a rock', 'a crayon'] },
     { id: 'plantSun', level: 2, q: 'What do plants need to make their own food?', a: 'sunlight', wrong: ['candy', 'a rock', 'a toy', 'milk'] },
-    { id: 'animalAir', level: 2, q: 'What do animals breathe in to stay alive?', a: 'air', wrong: ['sand', 'a rock', 'candy', 'a toy'] },
+    { id: 'animalAir', level: 2, q: 'Which gas in the air do animals need to stay alive?', a: 'oxygen', wrong: ['helium', 'smoke', 'steam'] },
   ],
 )
 
@@ -77,7 +77,7 @@ const plants = factSkill(
     { id: 'petals', level: 1, q: 'Which part of a flower is bright and colorful?', a: 'petals', wrong: ['roots', 'stem', 'leaves'] },
     { id: 'seed', level: 1, q: 'Which part of a plant is a baby plant, waiting to sprout?', a: 'seed', wrong: ['roots', 'leaves', 'petals'] },
     { id: 'sunlight', level: 2, q: 'What do plants need to make their own food?', a: 'sunlight', wrong: ['candy', 'a rock', 'a toy', 'milk'] },
-    { id: 'seedWater', level: 2, q: 'What does a seed need to sprout?', a: 'water', wrong: ['candy', 'a rock', 'a toy', 'a crayon'] },
+    { id: 'seedWater', level: 2, q: 'Which of these does a seed need to sprout?', a: 'water', wrong: ['candy', 'a rock', 'a toy', 'a crayon'] },
     { id: 'seedPlant', level: 3, q: 'What does a seed grow into?', a: 'a plant', wrong: ['an insect', 'a rock', 'a cloud'] },
     { id: 'fruit', level: 3, q: 'What does a flower turn into after it is pollinated?', a: 'fruit', wrong: ['roots', 'leaves', 'thorns'] },
     { id: 'bee', level: 3, q: 'Which animal helps flowers make seeds by carrying pollen?', a: 'a bee', wrong: ['a fish', 'a snake', 'a turtle'] },
@@ -128,7 +128,7 @@ const weather = factSkill(
     { id: 'rainGauge', level: 2, q: 'Which tool measures how much rain fell?', a: 'a rain gauge', wrong: ['a thermometer', 'a ruler', 'a clock', 'a scale'] },
     { id: 'hottest', level: 3, q: 'Which season is the hottest in most of the US?', a: 'summer', wrong: ['winter', 'spring', 'fall'] },
     { id: 'coldest', level: 3, q: 'Which season is the coldest in most of the US?', a: 'winter', wrong: ['spring', 'summer', 'fall'] },
-    { id: 'babies', level: 3, q: 'Which season do flowers bloom and many baby animals are born?', a: 'spring', wrong: ['winter', 'fall', 'summer'] },
+    { id: 'babies', level: 3, q: 'In which season do flowers bloom and many baby animals get born?', a: 'spring', wrong: ['winter', 'fall', 'summer'] },
   ],
 )
 
@@ -161,7 +161,7 @@ const forces = factSkill(
     { id: 'pullRope', level: 1, q: 'Which one is a pull?', a: 'pulling a rope', wrong: ['kicking a ball', 'pushing a swing', 'shoving a box', 'pushing a door shut'] },
     { id: 'pullSled', level: 1, q: 'Which one is a pull?', a: 'pulling a sled', wrong: ['kicking a ball', 'pushing a swing', 'shoving a box', 'pushing a door shut'] },
     { id: 'forceName', level: 2, q: 'What do we call a push or a pull?', a: 'a force', wrong: ['a sound', 'a color', 'a shadow'] },
-    { id: 'carMoves', level: 2, q: 'What does a push or a pull do to a toy car that is standing still?', a: 'it makes it move', wrong: ['it makes it sing', 'it makes it change color', 'it makes it disappear'] },
+    { id: 'carMoves', level: 2, q: 'What can a push or a pull do to a toy car that is standing still?', a: 'it makes it move', wrong: ['it makes it sing', 'it makes it change color', 'it makes it disappear'] },
   ],
   undefined,
 )
@@ -249,7 +249,7 @@ const community = factSkill(
     { id: 'teach', level: 1, q: 'Who teaches kids at school?', a: 'a teacher', wrong: ['a firefighter', 'a doctor', 'a farmer', 'a pilot'] },
     { id: 'mail', level: 1, q: 'Who delivers letters and packages?', a: 'a mail carrier', wrong: ['a firefighter', 'a doctor', 'a teacher', 'a baker'], emoji: '📬' },
     { id: 'food', level: 1, q: 'Who grows food on a farm?', a: 'a farmer', wrong: ['a firefighter', 'a doctor', 'a teacher', 'a mail carrier'] },
-    { id: 'safe', level: 1, q: 'Who keeps our town safe and catches bad guys?', a: 'a police officer', wrong: ['a firefighter', 'a dentist', 'a baker'], emoji: '👮' },
+    { id: 'safe', level: 1, q: 'Who keeps our town safe and catches bad guys?', a: 'a police officer', wrong: ['a firefighter', 'a dentist', 'a baker'] },
     { id: 'pilot', level: 2, q: 'Who flies airplanes?', a: 'a pilot', wrong: ['a farmer', 'a baker', 'a dentist'], emoji: '✈️' },
     { id: 'bus', level: 2, q: 'Who drives a bus to take kids to school?', a: 'a bus driver', wrong: ['a pilot', 'a baker', 'a firefighter'] },
     { id: 'library', level: 2, q: 'Who helps you find books at the library?', a: 'a librarian', wrong: ['a pilot', 'a farmer', 'a baker'] },
@@ -361,14 +361,14 @@ const timeline = factSkill(
   'timeline',
   ['What comes first', 'Then and now', 'Timelines'],
   [
-    { id: 'wakeUp', level: 1, q: 'What do you do first in the morning?', a: 'wake up', wrong: ['go to bed', 'eat dinner', 'turn out the lights'] },
+    { id: 'wakeUp', level: 1, q: 'Which comes first in a morning: waking up or going to bed?', a: 'waking up', wrong: ['going to bed', 'eating dinner', 'turning out the lights'] },
     { id: 'sandwichLast', level: 1, q: 'What comes last when you make a sandwich?', a: 'eat it', wrong: ['spread the jelly', 'get out the bread', 'put the bread on the plate'] },
     { id: 'seedFirst', level: 1, q: 'When a plant grows, which comes first: a seed or a flower?', a: 'a seed', wrong: ['a flower', 'a fruit', 'a tall tree'] },
     { id: 'horse', level: 2, q: 'Long ago, what did people often ride to travel far?', a: 'a horse', wrong: ['an airplane', 'a helicopter', 'a spaceship'] },
-    { id: 'telephone', level: 2, q: 'Which was invented first: the telephone or the airplane?', a: 'the telephone', wrong: ['the airplane', 'the computer', 'the television'] },
+    { id: 'telephone', level: 2, q: 'Which of these was invented first?', a: 'the telephone', wrong: ['the airplane', 'the smartphone', 'the television'] },
     { id: 'woodenTop', level: 2, q: 'Which is an older toy?', a: 'a wooden top', wrong: ['a video game', 'a tablet', 'a smartphone'] },
     { id: 'timelineDef', level: 3, q: 'What is a timeline?', a: 'a list of events in the order they happened', wrong: ['a list of animals', 'a map of the stars', 'a kind of cake'] },
-    { id: 'finally', level: 3, q: 'Which word tells you what happened at the end?', a: 'finally', wrong: ['first', 'before', 'earlier'] },
+    { id: 'finally', level: 3, q: 'Which word tells you the last thing that happened in a story?', a: 'finally', wrong: ['first', 'before', 'earlier'] },
   ],
 )
 
@@ -378,7 +378,7 @@ const physicalGeography = factSkill(
   [
     { id: 'desert', level: 1, q: 'Which place gets very little rain?', a: 'a desert', wrong: ['a rainforest', 'an ocean', 'a lake'] },
     { id: 'river', level: 1, q: 'Which one is a body of water that flows?', a: 'a river', wrong: ['a lake', 'a desert', 'a mountain'] },
-    { id: 'mountain', level: 1, q: 'Which landform is very tall with a pointy top?', a: 'a mountain', wrong: ['a valley', 'a desert', 'a river'] },
+    { id: 'mountain', level: 1, q: 'Which landform is very tall and rises high above the land?', a: 'a mountain', wrong: ['a valley', 'a desert', 'a river'] },
     { id: 'island', level: 2, q: 'Which landform has water all around it?', a: 'an island', wrong: ['a mountain', 'a desert', 'a valley'] },
     { id: 'plains', level: 2, q: 'Which landform is a large, flat area of grassland?', a: 'the plains', wrong: ['a canyon', 'a glacier', 'a volcano'] },
     { id: 'canyon', level: 2, q: 'Which landform is a deep valley with steep sides, carved by a river?', a: 'a canyon', wrong: ['an island', 'the plains', 'a mountain'] },
@@ -391,13 +391,13 @@ const earlyAmerica = factSkill(
   [
     { id: 'tipi', level: 1, q: 'What kind of home did many Plains peoples live in?', a: 'a tipi', wrong: ['an igloo', 'an adobe house', 'a longhouse'] },
     { id: 'igloo', level: 1, q: 'Which kind of home is made of snow blocks?', a: 'an igloo', wrong: ['a tipi', 'a longhouse', 'an adobe house'] },
-    { id: 'thirteen', level: 2, q: 'How many colonies became the first 13 states?', a: '13', wrong: ['10', '12', '15'] },
+    { id: 'thirteen', level: 2, q: 'How many original colonies became the first states?', a: '13', wrong: ['10', '12', '15'] },
     { id: 'penn', level: 2, q: 'Which colony did William Penn start?', a: 'Pennsylvania', wrong: ['Virginia', 'Georgia', 'New York'] },
     { id: 'britain', level: 3, q: 'Which country did the colonies fight for independence from?', a: 'Great Britain', wrong: ['Spain', 'France', 'Mexico'] },
     { id: 'declaration', level: 3, q: 'Which document declared independence in 1776?', a: 'the Declaration of Independence', wrong: ['the Constitution', 'the Bill of Rights', 'the Mayflower Compact'] },
     { id: 'washingtonArmy', level: 3, q: 'Who was the commander of the Continental Army?', a: 'George Washington', wrong: ['Thomas Edison', 'Abraham Lincoln', 'Benjamin Franklin'] },
     { id: 'pilgrims', level: 4, q: 'Which group sailed on the Mayflower to Plymouth in 1620?', a: 'the Pilgrims', wrong: ['the Vikings', 'the Spanish explorers', 'the French trappers'] },
-    { id: 'jamestown', level: 4, q: 'What was Jamestown?', a: 'the first permanent English colony in America', wrong: ['a Spanish mission', 'a French fort', 'a Dutch trading post'] },
+    { id: 'jamestown', level: 4, q: 'What was Jamestown?', a: 'the first permanent English colony', wrong: ['a Spanish mission', 'a French fort', 'a Dutch trading post'] },
   ],
   [{ skill: 'famousPeople', level: 2 }],
 )

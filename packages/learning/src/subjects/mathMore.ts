@@ -1,6 +1,7 @@
 import type { Format, ItemSpec, Skill } from '../core/types'
 import type { IxlRef } from '../ixl/map'
-import { numberWrongs, rand, shuffle, wrongFrom } from './util'
+import { coinsSVG } from './clocksCoins'
+import { numberWrongs, pick, rand, shuffle, wrongFrom } from './util'
 
 /**
  * More math for kindergarten through grade 2, plus a few grade 3–4 word-problem skills.
@@ -45,9 +46,9 @@ function keyedSkill(o: {
 const NUMBER_CHOICE: Format[] = ['number', 'choice']
 const CHOICE: Format[] = ['choice']
 
-// --- Stories: "Ima has 3 apples. She gets 2 more..." -----------------------------------------
+// --- Stories: "Zoe has 3 apples. She gets 2 more..." -----------------------------------------
 
-const NAMES = ['Ima', 'Millie', 'Sam', 'Leo', 'Ava', 'Max']
+const NAMES = ['Zoe', 'Mia', 'Sam', 'Leo', 'Ava', 'Max']
 const THINGS: [string, string][] = [['🍎', 'apples'], ['🐟', 'fish'], ['⭐', 'stars'], ['🍪', 'cookies'], ['🎈', 'balloons'], ['🐸', 'frogs']]
 const STORY_TOP = [5, 10, 20]
 
@@ -406,7 +407,7 @@ function measureBuild(key: string): ItemSpec | null {
   // Levels 3 and 4: a bar measured against a ruler that starts at 0.
   const n = x!
   const unit = L === 3 ? 'inches' : 'centimeters'
-  const text = `How many ${unit} long is this pencil?`
+  const text = `How many ${unit} long is this bar?`
   return {
     key,
     prompt: { text, say: text, svg: ruler(n, unit) },
@@ -433,32 +434,41 @@ const measure = keyedSkill({
 
 // --- Three-dimensional shapes (names only) --------------------------------------------------
 
+// Keys name the object ("1:ball"), so an old key made with a different list gives null.
 const OBJECTS = [
-  { emoji: '⚽', phrase: 'a ball', shape: 'sphere' },
-  { emoji: '🎲', phrase: 'a die', shape: 'cube' },
-  { emoji: '🥫', phrase: 'a soup can', shape: 'cylinder' },
-  { emoji: '📦', phrase: 'a box', shape: 'rectangular prism' },
-  { emoji: '🍦', phrase: 'an ice cream cone', shape: 'cone' },
+  { word: 'ball', emoji: '⚽', phrase: 'a ball', shape: 'sphere' },
+  { word: 'die', emoji: '🎲', phrase: 'a die', shape: 'cube' },
+  { word: 'can', emoji: '🥫', phrase: 'a soup can', shape: 'cylinder' },
+  { word: 'cone', emoji: '🍦', phrase: 'an ice cream cone', shape: 'cone' },
+  { word: 'box', emoji: '📦', phrase: 'a box', shape: 'rectangular prism' },
 ]
+// A cube is also a rectangular prism, so the two are never offered as wrong answers to each other. Level 1 has no box.
+const SOLID_ALSO_TRUE: Record<string, string[]> = { cube: ['rectangular prism'], 'rectangular prism': ['cube'] }
+const SOLID_CLUES: Record<string, [string, string]> = {
+  nofaces: ['Which 3D shape has no flat faces?', 'sphere'],
+  point: ['Which 3D shape has just one point?', 'cone'],
+}
 
 function solidBuild(key: string): ItemSpec | null {
-  const [L, i] = nums(key)
-  if (L === 3) {
+  const [L = '', word = ''] = key.split(':')
+  if (L === '3') {
+    const clue = SOLID_CLUES[word]
+    if (!clue) return null
     // Only one 3D shape fits each clue, so the answer is always clear.
-    const names = OBJECTS.map((o) => o.shape)
-    const [text, ans] = i === 0 ? ['Which 3D shape has no flat faces?', 'sphere'] : ['Which 3D shape has just one point?', 'cone']
-    return { key, prompt: { text, say: text }, answer: ans, formats: CHOICE, wrong: (n) => wrongFrom(ans, n, names) }
+    const [text, ans] = clue
+    return { key, prompt: { text, say: text }, answer: ans, formats: CHOICE, wrong: (n) => wrongFrom(ans, n, OBJECTS.map((o) => o.shape)) }
   }
-  const obj = OBJECTS[i!]
+  const level = Number(L)
+  const usable = level === 1 ? OBJECTS.slice(0, 4) : level === 2 ? OBJECTS : []
+  const obj = usable.find((o) => o.word === word)
   if (!obj) return null
-  const pool = OBJECTS.slice(0, L === 1 ? 4 : 5).map((o) => o.shape)
   const text = `What 3D shape is ${obj.phrase}?`
   return {
     key,
     prompt: { text, say: text, emoji: obj.emoji },
     answer: obj.shape,
     formats: CHOICE,
-    wrong: (n) => wrongFrom(obj.shape, n, pool),
+    wrong: (n) => wrongFrom(obj.shape, n, usable.map((o) => o.shape).filter((s) => !(SOLID_ALSO_TRUE[obj.shape] ?? []).includes(s))),
   }
 }
 
@@ -467,7 +477,7 @@ const solids = keyedSkill({
   label: (L) => ['Name the 3D shape', 'Name more 3D shapes', 'Describe a 3D shape'][L - 1]!,
   maxLevel: 3,
   formats: CHOICE,
-  key: (L) => (L === 1 ? `1:${rand(0, 3)}` : L === 2 ? `2:${rand(0, 4)}` : `3:${rand(0, 1)}`),
+  key: (L) => (L === 1 ? `1:${pick(['ball', 'die', 'can', 'cone'])}` : L === 2 ? `2:${pick(OBJECTS.map((o) => o.word))}` : `3:${pick(['nofaces', 'point'])}`),
   build: solidBuild,
 })
 
@@ -536,6 +546,19 @@ const equalParts = keyedSkill({
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
+/** Two weeks of days from today (shaded), so "in 4 days" can be counted along the picture. */
+function twoWeeksPic(today: number) {
+  const cells = Array.from({ length: 14 }, (_, i) => {
+    const x = 4 + (i % 7) * 40
+    const y = 4 + Math.floor(i / 7) * 38
+    return (
+      `<rect x="${x}" y="${y}" width="36" height="34" rx="5" fill="${i === 0 ? '#ffe066' : '#f8f9fa'}" stroke="#868e96"/>` +
+      `<text x="${x + 18}" y="${y + 22}" font-size="12" font-weight="700" text-anchor="middle" fill="#212529" font-family="sans-serif">${DAYS[(today + i) % 7]!.slice(0, 3)}</text>`
+    )
+  }).join('')
+  return `<svg viewBox="0 0 288 80" role="img" aria-label="Two weeks of days, starting with today">${cells}</svg>`
+}
+
 function calendarBuild(key: string): ItemSpec | null {
   const [L, x, y] = nums(key)
   if (L === 3) {
@@ -546,7 +569,7 @@ function calendarBuild(key: string): ItemSpec | null {
     const text = `Today is ${today}. What day will it be in ${y} days?`
     return {
       key,
-      prompt: { text, say: text },
+      prompt: { text, say: text, svg: twoWeeksPic(x!) },
       answer: ans,
       formats: CHOICE,
       wrong: (n) => wrongFrom(ans, n, DAYS, [today, DAYS[(x! + y! + 1) % 7]!, DAYS[(x! + y! + 6) % 7]!]),
@@ -668,7 +691,7 @@ function moneyBuild(key: string): ItemSpec | null {
     const text = `${name} has ${n1} ${coinNoun(x1!, n1)} and ${n2} ${coinNoun(x3!, n2)}. How many cents does ${name} have in all?`
     return {
       key,
-      prompt: { text, say: text, emoji: '💰' },
+      prompt: { text, say: text, svg: coinsSVG([...Array<string>(n1).fill(c1.one), ...Array<string>(n2).fill(c2.one)]) },
       answer: String(ans),
       wrong: (k) => numberWrongs(ans, k, [n1 + n2, n1 * c1.cents, n2 * c2.cents, ans + 5, ans - 5, ans + 10, ans - 10]),
     }

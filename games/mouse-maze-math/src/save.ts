@@ -1,5 +1,6 @@
 import { learner, type LegacyMath } from '@arcade/learning'
 import { playerKey } from '@arcade/players'
+import { migrateRealmIndex } from './realms'
 
 // Math levels aren't saved here: they live on the player's profile (@arcade/learning),
 // shared with every game. This save is just Mouse Maze Math's own stuff.
@@ -17,6 +18,8 @@ export type Save = {
   muted: boolean
   /** What the maze asks about: 'math', 'reading', 'science'... */
   subject: string
+  /** 2 = realm numbers use the list with Candy Kitchen and Frozen Pantry. */
+  realmsV?: number
 }
 
 // Game-only things (cheese, stickers, closet) live in this game's slot for the current player.
@@ -37,6 +40,7 @@ const fresh = (): Save => ({
   hat: 'none',
   muted: false,
   subject: 'math',
+  realmsV: 2,
 })
 
 const read = (key: string): (Partial<Save> & LegacyMath) | null => {
@@ -67,7 +71,14 @@ const load = (): Save => {
     profile.adoptLegacyMath({ skills, stats })
     profile.save()
   }
-  return { ...fresh(), ...game }
+  const loaded = { ...fresh(), ...game }
+  if (stored && (game as Partial<Save>).realmsV === undefined) {
+    // An older save: translate its realm numbers to the new list.
+    loaded.realmMax = migrateRealmIndex(loaded.realmMax)
+    loaded.realmPick = migrateRealmIndex(loaded.realmPick)
+    loaded.realmsV = 2
+  }
+  return loaded
 }
 
 export const save = load()

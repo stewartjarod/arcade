@@ -99,7 +99,7 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   const sun = new THREE.DirectionalLight(0xfff1d6, 1.4)
   sun.position.set(6, 14, 4)
   scene.add(sun)
-  const cam = new THREE.PerspectiveCamera(68, 1, 0.1, 200)
+  const cam = new THREE.PerspectiveCamera(68, 1, 0.1, 400)
 
   const level = new THREE.Group()
   const fx = new THREE.Group()
@@ -144,6 +144,17 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   let hover = -1
   let focus = 0
   let focusTarget = 0
+  // The camera has three moods: 'chase' (behind the mouse), 'fly' (the aerial tour at the start of a maze) and
+  // 'reveal' (a high, wide view of the treasure chest at the end, so nothing hides it).
+  let camMode: 'chase' | 'fly' | 'reveal' | 'overview' = 'chase'
+  let bounds = { x: 0, z: 0, size: 40 } // the middle of the maze and how big it is, for the aerial tour
+  let goalDir: Dir = 1
+  let overviewK = 0 // 0..1: how far the camera has risen into the victory view
+  let overviewA = 0 // where it is on its slow circle
+  const overviewFrom = new THREE.Vector3()
+  const overviewLook = new THREE.Vector3()
+  let beacon: THREE.Mesh | null = null
+  let glow: THREE.PointLight | null = null
 
   const onResize = () => {
     renderer.setSize(innerWidth, innerHeight, false)
@@ -181,6 +192,8 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     dust = null
     current = -1
     chest = null
+    beacon = null
+    glow = null
     cage = null
   }
 
@@ -224,6 +237,11 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
   const load = (layout: Layout, r: Realm = REALMS[0]!) => {
     clearLevel()
     applyRealm(r)
+    camMode = 'chase'
+    let [x0, x1, z0, z1] = [Infinity, -Infinity, Infinity, -Infinity]
+    for (const [x, z] of layout.cells) [x0, x1, z0, z1] = [Math.min(x0, x), Math.max(x1, x), Math.min(z0, z), Math.max(z1, z)]
+    bounds = { x: ((x0 + x1) / 2) * CELL, z: ((z0 + z1) / 2) * CELL, size: Math.max(x1 - x0, z1 - z0 + 1, 8) * CELL }
+    goalDir = layout.goal.heading
     const rnd = Math.random
     const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)]!
     for (const [x, z] of layout.cells) {
@@ -403,6 +421,18 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     wedge.position.set(gx - DX[goal.heading]! * 0.4 + DZ[goal.heading]! * 1.3, 0.25, gz - DZ[goal.heading]! * 0.4 - DX[goal.heading]! * 1.3)
     level.add(wedge)
 
+    // A tall beam of light over the chest. It stays hidden until the last door is opened (reveal), so it never
+    // gives away which way to go, and then it shows exactly where the treasure is.
+    beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 1.2, 18, 20, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }),
+    )
+    beacon.position.set(g.position.x, 9, g.position.z)
+    beacon.visible = false
+    glow = new THREE.PointLight(0xffd447, 0, 16)
+    glow.position.set(g.position.x, 2.2, g.position.z)
+    level.add(beacon, glow)
+
     const start = layout.junctions[0]!
     mouse.position.set(start.x * CELL, 0, start.z * CELL)
     mouse.rotation.y = angleOf(start.heading)
@@ -515,6 +545,65 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     cage = null
   }
 
+  // The treasure reveal: the camera rises over the mouse and looks down at the chest (the mouse would
+  // otherwise stand right in front of it), and a beam of light shows up over it.
+  const reveal = () => {
+    if (!chest) return Promise.resolve()
+    camMode = 'reveal'
+    sfx.chest()
+    return tween(1.4, (k) => {
+      const e = ease(k)
+      if (beacon) {
+        beacon.visible = true
+        ;(beacon.material as THREE.MeshBasicMaterial).opacity = 0.32 * e
+      }
+      if (glow) glow.intensity = 30 * e
+    })
+  }
+
+  // The opening shot: the camera drops from the sky down behind the mouse. It must NOT show the maze from
+  // above: that would give away which way every turn goes. The fog hides everything but the first corridors.
+  // Tap to skip (skipFlyover).
+  let flySkipped = false
+  const skipFlyover = () => {
+    flySkipped = true
+  }
+  const flyover = async () => {
+    camMode = 'fly'
+    flySkipped = false
+    const end = cam.position.clone() // where the chase camera starts (set by load)
+    const endLook = new THREE.Vector3(mouse.position.x + Math.sin(camAngle) * 4, 1, mouse.position.z + Math.cos(camAngle) * 4)
+    const start = new THREE.Vector3(end.x - Math.sin(camAngle) * 6, end.y + 30, end.z - Math.cos(camAngle) * 6)
+    const startLook = new THREE.Vector3(mouse.position.x, 0, mouse.position.z)
+    const look = new THREE.Vector3()
+    const drop = tween(2.4, (k) => {
+      if (camMode !== 'fly') return // skipped, or the player left
+      const e = ease(k)
+      cam.position.lerpVectors(start, end, e)
+      look.lerpVectors(startLook, endLook, e)
+      cam.lookAt(look)
+    })
+    let poll = 0
+    const skipped = new Promise<void>((done) => {
+      poll = window.setInterval(() => flySkipped && done(), 50)
+    })
+    await Promise.race([drop, skipped])
+    clearInterval(poll)
+    if (camMode === 'fly') camMode = 'chase'
+  }
+
+  // The victory view: after the treasure, the camera rises to show the whole maze from above (now it is safe:
+  // the maze is done) and keeps slowly circling while the finish card is up. It lasts until the next load.
+  const overview = () => {
+    camMode = 'overview'
+    overviewK = 0
+    overviewFrom.copy(cam.position)
+    const dir = new THREE.Vector3()
+    cam.getWorldDirection(dir)
+    overviewLook.copy(cam.position).addScaledVector(dir, 8)
+    return sleep(0.1)
+  }
+
   const openChest = () => {
     const c = chest
     if (c) sfx.chest()
@@ -530,15 +619,16 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     return tween(open ? 0.5 : 0.4, (t) => (hinge.rotation.y = from + (to - from) * (open ? easeOutBack(t) : ease(t))))
   }
 
-  const showSigns = (k: number, labels: string[] | null) => {
+  // `blocked` doors (already tried) get no sign, so only the doors still in play can be pointed at.
+  const showSigns = (k: number, labels: string[] | null, blocked: number[] = []) => {
     current = labels ? k : -1
     hover = -1
     views.forEach((row, i) =>
       row.forEach((d, e) => {
         const on = labels !== null && i === k
-        d.sign.visible = on
+        d.sign.visible = on && !blocked.includes(e)
         d.sign.userData.label = labels?.[e]
-        if (on) {
+        if (d.sign.visible) {
           d.draw(labels![e]!)
           d.sign.userData.pop = 0
           void sleep(e * 0.08).then(() =>
@@ -631,6 +721,34 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
       cam.lookAt(mp.x, 0.9, mp.z)
       return
     }
+    if (camMode === 'fly') return // the opening shot moves the camera itself
+    if (camMode === 'overview') {
+      overviewK = Math.min(1, overviewK + dt / 3)
+      overviewA += dt * 0.25
+      const e = ease(overviewK)
+      const height = Math.min(Math.max(bounds.size * (cam.aspect >= 1 ? 0.85 : 1.15), 35), 260)
+      const radius = height * 0.2
+      const top = new THREE.Vector3(bounds.x + Math.cos(overviewA) * radius, height, bounds.z + Math.sin(overviewA) * radius)
+      const centre = new THREE.Vector3(bounds.x, 0, bounds.z)
+      cam.position.lerpVectors(overviewFrom, top, e)
+      cam.lookAt(overviewLook.clone().lerp(centre, e))
+      // the maze is far away from up here: widen the fog so it can be seen
+      const fog = scene.fog as THREE.Fog
+      fog.near = THREE.MathUtils.lerp(realm.fog[1], height * 2, e)
+      fog.far = THREE.MathUtils.lerp(realm.fog[2], height * 6, e)
+      return
+    }
+    if (camMode === 'reveal' && chest) {
+      // high and behind the mouse, a little to one side, looking down at the chest
+      const c = chest.g.position
+      const back = 8 * Math.max(1, zoom * 0.85)
+      const up = 6.8 * Math.max(1, zoom * 0.85)
+      const want = new THREE.Vector3(c.x - DX[goalDir]! * back + DZ[goalDir]! * 2.5, up, c.z - DZ[goalDir]! * back - DX[goalDir]! * 2.5)
+      cam.position.lerp(want, 1 - Math.exp(-dt * 2.5))
+      cam.lookAt(c.x - DX[goalDir]! * 1, 0.7, c.z - DZ[goalDir]! * 1)
+      if (beacon) beacon.rotation.y += dt * 0.6
+      return
+    }
     camAngle += wrapPi(camTarget - camAngle) * (1 - Math.exp(-dt * 5))
     focus += (focusTarget - focus) * (1 - Math.exp(-dt * 4))
     const want = new THREE.Vector3(0, 3.6 + focus * 1.6, 0)
@@ -684,6 +802,10 @@ export const createWorld = (canvas: HTMLCanvasElement) => {
     dropCage,
     liftCage,
     openChest,
+    reveal,
+    overview,
+    flyover,
+    skipFlyover,
   }
 }
 

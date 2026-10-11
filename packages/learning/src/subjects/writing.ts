@@ -1,5 +1,11 @@
 import type { ItemSpec, Subject } from '../core/types'
 import { grammar, sentences } from './language'
+import { WRITING_EARLY } from './languageEarly'
+import { WRITING_E2 } from './languageEarly2'
+import { WRITING_FE } from './languageFinalEarly'
+import { WRITING_FU } from './languageFinalUpper'
+import { WRITING_G5 } from './languageGrade5'
+import { WRITING_U2 } from './languageUpper2'
 import { WRITING_MORE } from './languageMore'
 import { WRITING_UPPER } from './languageUpper'
 import { editDistance, pick, upToLevel, wrongFrom } from './util'
@@ -20,14 +26,10 @@ const IN_A_SENTENCE: Record<string, string> = {
 
 const say = (word: string) => (IN_A_SENTENCE[word] ? `${word}. ${IN_A_SENTENCE[word]} ${word}.` : word)
 
-// Level 1–3 spell picture words (cat → frog → cake); 4–5 spell sight words; 5 adds star/house words.
+// Levels 1–3 spell picture words (cat → frog → cake); 4–5 spell sight words from that grade's list.
 function spellWord(level: number): { word: string; emoji?: string } {
   if (level <= 3) {
     const w = upToLevel(PICTURE_WORDS.filter((x) => x.level <= 3), level)
-    return { word: w.word, emoji: w.emoji }
-  }
-  if (level === 5 && Math.random() < 0.4) {
-    const w = pick(PICTURE_WORDS.filter((x) => x.level === 4))
     return { word: w.word, emoji: w.emoji }
   }
   return { word: pick(SIGHT_WORDS[level - 2]!.filter((w) => w !== 'I')) }
@@ -181,5 +183,11 @@ export const writing: Subject = {
     },
     ...WRITING_UPPER,
     ...WRITING_MORE,
+    ...WRITING_G5,
+    ...WRITING_EARLY,
+    ...WRITING_U2,
+    ...WRITING_E2,
+    ...WRITING_FU,
+    ...WRITING_FE,
   ],
 }

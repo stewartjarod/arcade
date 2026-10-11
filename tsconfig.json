@@ -10,5 +10,5 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["site","packages/*/src", "games/*/src"]
+  "include": ["site","parent","packages/*/src", "games/*/src"]
 }

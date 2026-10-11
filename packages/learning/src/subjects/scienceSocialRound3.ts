@@ -1,0 +1,623 @@
+import type { ItemSpec, Skill } from '../core/types'
+import type { IxlRef } from '../ixl/map'
+import { upToLevel, wrongFrom } from './util'
+
+/**
+ * Round 3 of Science and Social Studies: IXL categories the earlier files never touched
+ * (Location words, Comparing, Pollinators and seed dispersers, Phase change, Modeling matter,
+ * American national holidays, Cities, and more). Every question is a multiple-choice fact from a
+ * hand-checked list; wrong answers are listed per fact and never count as right.
+ * Skill ids here must not collide with scienceSocial.ts, scienceSocialMore.ts, or scienceSocialUpper.ts.
+ */
+
+interface Fact {
+  /** Unique inside its skill. It becomes part of the item key, so never rename it. */
+  id: string
+  /** The first level this fact shows up at (1 = the first level). */
+  level: number
+  q: string
+  a: string
+  /** Believable wrong answers from the same kind of thing. At least 3, none of them correct. */
+  wrong: string[]
+  emoji?: string
+}
+
+function factItem(skillId: string, f: Fact): ItemSpec {
+  return {
+    key: `${skillId}:${f.id}`,
+    prompt: { text: f.q, say: f.q, emoji: f.emoji },
+    answer: f.a,
+    wrong: (n) => wrongFrom(f.a, n, f.wrong),
+  }
+}
+
+/** A skill made of facts. Each level asks its own facts and the ones from the levels below it. */
+function factSkill(id: string, labels: string[], facts: Fact[], unlocksAfter: { skill: string; level: number }[] = []): Skill {
+  return {
+    id,
+    label: (L) => labels[L - 1]!,
+    maxLevel: labels.length,
+    formats: ['choice'],
+    ...(unlocksAfter.length ? { unlocksAfter } : {}),
+    generate: (L) => factItem(id, upToLevel(facts, L)),
+    fromKey: (key) => {
+      const f = facts.find((x) => `${id}:${x.id}` === key)
+      return f ? factItem(id, f) : null
+    },
+  }
+}
+
+// ============================================================================================
+// SCIENCE
+// ============================================================================================
+
+const skyObjects = factSkill(
+  'skyObjects',
+  ['The Sun, Moon, and stars', 'Moon shapes and star facts', 'Moving in space'],
+  [
+    { id: 'sunDay', level: 1, q: 'What gives us light and heat during the day?', a: 'the Sun', wrong: ['a puddle', 'a rock', 'a tree'] },
+    { id: 'starsNight', level: 1, q: 'What twinkly lights shine in the sky at night?', a: 'stars', wrong: ['clouds', 'rainbows', 'birds'], emoji: '✨' },
+    { id: 'moonNight', level: 1, q: 'Which round glowing thing do we see in the sky at night?', a: 'the Moon', wrong: ['the Sun', 'a rainbow', 'a cloud'] },
+    { id: 'sunHot', level: 1, q: 'Is the Sun hot or cold?', a: 'hot', wrong: ['cold', 'icy', 'freezing'], emoji: '☀️' },
+    { id: 'moonLight', level: 1, q: 'Does the Moon make its own light?', a: 'no', wrong: ['yes, always', 'yes, at night', 'only when it rains'], emoji: '🌙' },
+    { id: 'starsDay', level: 1, q: 'Why can we not see stars in the daytime?', a: 'the Sun is too bright', wrong: ['stars go to sleep', 'stars hide underground', 'stars fall to Earth'], emoji: '⭐' },
+    { id: 'telescope', level: 1, q: 'What tool makes faraway things look closer and bigger?', a: 'a telescope', wrong: ['a spoon', 'a sponge', 'a sock'] },
+    { id: 'sunBig', level: 1, q: 'Compared to Earth, is the Sun bigger or smaller?', a: 'bigger', wrong: ['smaller', 'the same size', 'not there at all'], emoji: '☀️' },
+    { id: 'moonSmall', level: 1, q: 'Compared to Earth, is the Moon bigger or smaller?', a: 'smaller', wrong: ['bigger', 'the same size', 'not there at all'], emoji: '🌕' },
+    { id: 'moonPhases', level: 2, q: 'The Moon seems to change shape over about a month. What is this called?', a: 'the phases of the Moon', wrong: ['the seasons', 'the tides', 'a rainbow'], emoji: '🌓' },
+    { id: 'moonReflect', level: 2, q: 'The Moon shines because it reflects what?', a: 'sunlight', wrong: ['lightning', 'a campfire', 'starlight'], emoji: '🌙' },
+    { id: 'moonMonth', level: 2, q: 'About how long does the Moon take to go all the way around Earth?', a: 'about one month', wrong: ['about one day', 'about one year', 'about one hour'] },
+    { id: 'yearSun', level: 2, q: 'About how long does Earth take to go all the way around the Sun?', a: 'one year', wrong: ['one day', 'one week', 'one month'] },
+    { id: 'starHot', level: 2, q: 'A star is a huge ball of what?', a: 'hot, glowing gas', wrong: ['cold ice', 'wet sand', 'soft wood'], emoji: '⭐' },
+    { id: 'galaxy', level: 2, q: 'A huge group of stars, gas, and dust is called what?', a: 'a galaxy', wrong: ['a constellation', 'a planet', 'an eclipse'], emoji: '🌌' },
+    { id: 'constellation', level: 2, q: 'A pattern of stars that people have named is called what?', a: 'a constellation', wrong: ['a galaxy', 'a comet', 'a meteor'], emoji: '⭐' },
+    { id: 'crescent', level: 2, q: 'What do we call a Moon that looks like a thin, curved sliver?', a: 'a crescent moon', wrong: ['a full moon', 'a shooting star', 'a dark cloud'], emoji: '🌙' },
+    { id: 'milkyWay', level: 2, q: 'What is the name of the galaxy we live in?', a: 'the Milky Way', wrong: ['the Big Dipper', 'the North Star', 'the Ring of Fire'], emoji: '🌌' },
+    { id: 'rotation', level: 3, q: 'Earth spins around once every day. What is this spinning called?', a: 'rotation', wrong: ['erosion', 'evaporation', 'condensation'] },
+    { id: 'revolution', level: 3, q: 'Earth moves around the Sun in a path. What is this called?', a: 'revolution', wrong: ['erosion', 'evaporation', 'condensation'] },
+    { id: 'twinkle', level: 3, q: 'Why do stars seem to twinkle?', a: 'air moving in the sky bends their light', wrong: ['stars blink on and off', 'stars spin very fast', 'stars are made of ice'] },
+    { id: 'faraway', level: 3, q: 'Why do stars look so tiny in the sky?', a: 'they are very far away', wrong: ['they are very small', 'they are very cold', 'they are made of sand'] },
+    { id: 'nearest', level: 3, q: 'Which star is closest to Earth?', a: 'the Sun', wrong: ['Sirius', 'Polaris', 'Betelgeuse'] },
+    { id: 'polaris', level: 3, q: 'Which star sits almost straight above Earth\'s North Pole?', a: 'Polaris', wrong: ['Sirius', 'Betelgeuse', 'Vega'] },
+    { id: 'bigDipper', level: 3, q: 'The Big Dipper is part of which constellation?', a: 'Ursa Major', wrong: ['Orion', 'Cassiopeia', 'Leo'] },
+    { id: 'orion', level: 3, q: 'Which constellation has three stars in a row that look like a belt?', a: 'Orion', wrong: ['Pegasus', 'Cassiopeia', 'Leo'] },
+    { id: 'oneDay', level: 3, q: 'What is one full day on Earth?', a: 'one full spin of Earth', wrong: ['one trip around the Sun', 'one trip around the Moon', 'one blink'] },
+  ],
+)
+
+const comparingObjects = factSkill(
+  'comparingObjects',
+  ['Heavy and light', 'Hard and soft', 'Rough and smooth'],
+  [
+    { id: 'heavyRock', level: 1, q: 'Which is heavier?', a: 'a rock', wrong: ['a leaf', 'a bubble', 'a feather'] },
+    { id: 'lightBalloon', level: 1, q: 'Which is lighter?', a: 'a balloon', wrong: ['a brick', 'a rock', 'a bowling ball'] },
+    { id: 'heavyBrick', level: 1, q: 'Which is heavier?', a: 'a brick', wrong: ['a sponge', 'a cotton ball', 'a paper cup'] },
+    { id: 'lightFeather', level: 1, q: 'Which is lighter?', a: 'a feather', wrong: ['a bowling ball', 'a rock', 'a log'] },
+    { id: 'heavyLog', level: 1, q: 'Which is heavier?', a: 'a log', wrong: ['a pencil', 'a paper clip', 'a grape'] },
+    { id: 'lightPaper', level: 1, q: 'Which is lighter?', a: 'a sheet of paper', wrong: ['a book', 'a brick', 'a bag of rocks'] },
+    { id: 'heavyBowling', level: 1, q: 'Which is heavier?', a: 'a bowling ball', wrong: ['a ping-pong ball', 'a bubble', 'a marble'] },
+    { id: 'lightCotton', level: 1, q: 'Which is lighter?', a: 'a cotton ball', wrong: ['a pebble', 'a coin', 'a key'] },
+    { id: 'lightBubble', level: 1, q: 'Which is lighter?', a: 'a soap bubble', wrong: ['a rock', 'a book', 'a tin can'] },
+    { id: 'hardRock', level: 2, q: 'Which is harder?', a: 'a rock', wrong: ['a pillow', 'a sponge', 'a cloud'] },
+    { id: 'softPillow', level: 2, q: 'Which is softer?', a: 'a pillow', wrong: ['a brick', 'a rock', 'a spoon'] },
+    { id: 'hardSpoon', level: 2, q: 'Which is harder?', a: 'a metal spoon', wrong: ['a sponge', 'a marshmallow', 'a sock'] },
+    { id: 'softMarshmallow', level: 2, q: 'Which is softer?', a: 'a marshmallow', wrong: ['a steel nail', 'a glass bottle', 'a wooden block'] },
+    { id: 'hardWood', level: 2, q: 'Which is harder?', a: 'a wooden block', wrong: ['a sponge', 'a wool sweater', 'a cotton ball'] },
+    { id: 'softSponge', level: 2, q: 'Which is softer?', a: 'a sponge', wrong: ['a glass', 'a steel bolt', 'a stone'] },
+    { id: 'hardGlass', level: 2, q: 'Which is harder?', a: 'a glass window', wrong: ['a towel', 'a cotton ball', 'a marshmallow'] },
+    { id: 'softTowel', level: 2, q: 'Which is softer?', a: 'a towel', wrong: ['a rock', 'a steel can', 'a brick'] },
+    { id: 'hardBrick', level: 2, q: 'Which is harder?', a: 'a brick', wrong: ['a cotton ball', 'a pillow', 'a sponge'] },
+    { id: 'smoothGlass', level: 3, q: 'Which feels smoother?', a: 'a glass bottle', wrong: ['sandpaper', 'a pine cone', 'a rough brick'] },
+    { id: 'roughSand', level: 3, q: 'Which feels rougher?', a: 'sandpaper', wrong: ['a silk scarf', 'a glass bottle', 'a balloon'] },
+    { id: 'smoothSilk', level: 3, q: 'Which feels smoothest?', a: 'silk', wrong: ['a pine cone', 'tree bark', 'a rock'] },
+    { id: 'roughBark', level: 3, q: 'Which feels rougher?', a: 'tree bark', wrong: ['a silk scarf', 'a glass bottle', 'a balloon'] },
+    { id: 'smoothBalloon', level: 3, q: 'Which feels smoother?', a: 'a balloon', wrong: ['a pine cone', 'gravel', 'a brick'] },
+    { id: 'roughPineCone', level: 3, q: 'Which feels rougher?', a: 'a pine cone', wrong: ['a marble', 'a glass', 'a bar of soap'] },
+    { id: 'roughGravel', level: 3, q: 'Which feels rougher?', a: 'gravel', wrong: ['a marble', 'a spoon', 'a balloon'] },
+    { id: 'smoothMarble', level: 3, q: 'Which feels smoother?', a: 'a marble', wrong: ['gravel', 'tree bark', 'a pine cone'] },
+    { id: 'smoothSoap', level: 3, q: 'Which feels smoother?', a: 'a bar of soap', wrong: ['sandpaper', 'a rough brick', 'gravel'] },
+  ],
+)
+
+const pollinators = factSkill(
+  'pollinators',
+  ['Animals that help flowers', 'Ways seeds travel', 'Pollinators and flower parts'],
+  [
+    { id: 'bee', level: 1, q: 'Which busy insect makes honey and carries pollen from flower to flower?', a: 'a bee', wrong: ['a snail', 'a worm', 'a crab'] },
+    { id: 'butterfly', level: 1, q: 'Which insect has a long, coiled tongue for sipping nectar?', a: 'a butterfly', wrong: ['a spider', 'an earthworm', 'a crab'] },
+    { id: 'pollen', level: 1, q: 'What yellow powder do flowers make?', a: 'pollen', wrong: ['sand', 'salt', 'sugar'], emoji: '🌼' },
+    { id: 'nectar', level: 1, q: 'What sweet liquid do many flowers make?', a: 'nectar', wrong: ['vinegar', 'soda', 'milk'], emoji: '🌸' },
+    { id: 'stamen', level: 1, q: 'Which part of a flower makes pollen?', a: 'the stamen', wrong: ['the root', 'the stem', 'the leaf'] },
+    { id: 'petals', level: 1, q: 'What are the colorful parts of a flower called?', a: 'petals', wrong: ['roots', 'seeds', 'leaves'], emoji: '🌷' },
+    { id: 'pollination', level: 1, q: 'What do we call moving pollen from one flower to another?', a: 'pollination', wrong: ['germination', 'dispersal', 'erosion'] },
+    { id: 'hummingbird', level: 1, q: 'Which small bird hovers at flowers to drink nectar?', a: 'a hummingbird', wrong: ['a penguin', 'an ostrich', 'a chicken'], emoji: '🐦' },
+    { id: 'beetle', level: 1, q: 'Which insect also visits flowers to eat pollen?', a: 'a beetle', wrong: ['a spider', 'a crab', 'a fish'] },
+    { id: 'windSeeds', level: 2, q: 'What carries dandelion seeds away on fluffy parachutes?', a: 'the wind', wrong: ['an earthquake', 'a volcano', 'a glacier'], emoji: '🌼' },
+    { id: 'waterSeeds', level: 2, q: 'Coconuts can float across the ocean. What moves their seeds?', a: 'water', wrong: ['bees', 'a volcano', 'a glacier'], emoji: '🥥' },
+    { id: 'burrs', level: 2, q: 'Sticky burrs hook onto animal fur. What is this kind of seed travel?', a: 'carried by animals', wrong: ['carried by wind', 'carried by water', 'carried by fire'] },
+    { id: 'sweetFruit', level: 2, q: 'Why do many fruits taste sweet?', a: 'to attract animals that spread seeds', wrong: ['to keep bugs away', 'to make them float', 'to change color at night'], emoji: '🍎' },
+    { id: 'squirrel', level: 2, q: 'A squirrel buries nuts and forgets some. What good can this do?', a: 'it can grow new trees', wrong: ['it stops trees growing', 'it cuts the roots', 'it makes trees sleepy'], emoji: '🐿️' },
+    { id: 'mapleWing', level: 2, q: 'A maple seed has a wing. What does the wing help it do?', a: 'spin and glide in the wind', wrong: ['sink in water', 'stay in one spot', 'grow faster'], emoji: '🍁' },
+    { id: 'birdBerries', level: 2, q: 'Birds eat berries and drop the seeds. What does this help plants do?', a: 'spread to new places', wrong: ['grow taller at night', 'lose their leaves', 'make more sugar'], emoji: '🐦' },
+    { id: 'dispersalName', level: 2, q: 'What do we call the ways seeds travel away from the parent plant?', a: 'seed dispersal', wrong: ['pollination', 'germination', 'photosynthesis'] },
+    { id: 'hooks', level: 2, q: 'Why do some seeds have hooks?', a: 'to stick to passing animals', wrong: ['to catch rain', 'to make a sound', 'to attract bugs'] },
+    { id: 'bat', level: 3, q: 'Which night-flying mammal pollinates some desert plants?', a: 'a bat', wrong: ['a rabbit', 'a skunk', 'a hedgehog'] },
+    { id: 'flowerScent', level: 3, q: 'Why do many flowers have bright colors and sweet smells?', a: 'to attract pollinators', wrong: ['to scare away bees', 'to warm the air', 'to make seeds fly'], emoji: '🌺' },
+    { id: 'plantNeedsPoll', level: 3, q: 'Why do most flowering plants need pollinators?', a: 'to make seeds and fruit', wrong: ['to grow their roots', 'to make rain', 'to make rocks'] },
+    { id: 'grasses', level: 3, q: 'Which plants are pollinated by the wind instead of animals?', a: 'grasses', wrong: ['roses', 'tulips', 'sunflowers'] },
+    { id: 'germination', level: 3, q: 'What do we call a seed starting to sprout and grow?', a: 'germination', wrong: ['pollination', 'dispersal', 'decomposition'], emoji: '🌱' },
+    { id: 'stigma', level: 3, q: 'Which part of a flower catches pollen?', a: 'the stigma', wrong: ['the root', 'the stem', 'the petal'] },
+    { id: 'nectarGuides', level: 3, q: 'Some flowers have lines that guide bees to nectar. What are these lines called?', a: 'nectar guides', wrong: ['petal veins', 'stripes of mud', 'shadows'] },
+    { id: 'selfPollination', level: 3, q: 'Can one flower pollinate itself?', a: 'yes, some can', wrong: ['no, never', 'only in winter', 'only at night'] },
+  ],
+  [{ skill: 'plants', level: 1 }],
+)
+
+const groupBehavior = factSkill(
+  'groupBehavior',
+  ['Names for animal groups', 'Why animals live in groups', 'Working together'],
+  [
+    { id: 'school', level: 1, q: 'What is a group of fish called?', a: 'a school', wrong: ['a swarm', 'a bundle', 'a crowd'] },
+    { id: 'pack', level: 1, q: 'What is a group of wolves called?', a: 'a pack', wrong: ['a herd', 'a school', 'a gaggle'] },
+    { id: 'flock', level: 1, q: 'What is a group of birds that fly together called?', a: 'a flock', wrong: ['a pack', 'a pride', 'a herd'] },
+    { id: 'herd', level: 1, q: 'What is a group of cows or horses called?', a: 'a herd', wrong: ['a pack', 'a school', 'a colony'] },
+    { id: 'colony', level: 1, q: 'What is a large group of ants living together called?', a: 'a colony', wrong: ['a herd', 'a school', 'a flock'] },
+    { id: 'pride', level: 1, q: 'What is a group of lions called?', a: 'a pride', wrong: ['a pack', 'a herd', 'a school'] },
+    { id: 'gaggle', level: 1, q: 'What is a group of geese on the ground called?', a: 'a gaggle', wrong: ['a pride', 'a school', 'a herd'] },
+    { id: 'swarm', level: 1, q: 'What is a large group of bees flying together called?', a: 'a swarm', wrong: ['a flock', 'a pack', 'a school'] },
+    { id: 'protection', level: 2, q: 'Why do many fish swim in a school?', a: 'to stay safe from predators', wrong: ['to find shade', 'to grow taller', 'to make music'] },
+    { id: 'huntWolves', level: 2, q: 'Why do wolves hunt in a pack?', a: 'to catch big prey together', wrong: ['to stay warm in the rain', 'to hide from the Sun', 'to find new trees'] },
+    { id: 'antWorker', level: 2, q: 'Ants in a colony share jobs. What does a worker ant do?', a: 'gathers food for the colony', wrong: ['builds a new planet', 'sleeps all day', 'lays rocks'], emoji: '🐜' },
+    { id: 'zebraHerd', level: 2, q: 'Why do zebras stay in herds?', a: 'to watch out for lions', wrong: ['to dig holes', 'to hide underground', 'to build nests'], emoji: '🦓' },
+    { id: 'meerkats', level: 2, q: 'Meerkats in a group take turns doing what?', a: 'standing guard', wrong: ['sleeping in trees', 'swimming', 'building dams'] },
+    { id: 'honeybeeHive', level: 2, q: 'Bees in a hive work together to make what?', a: 'honey', wrong: ['sand', 'bricks', 'paper'] },
+    { id: 'groupSafety', level: 2, q: 'Why is it safer to be in a group?', a: 'more eyes can spot danger', wrong: ['groups are always faster', 'groups never need food', 'groups are always invisible'] },
+    { id: 'penguins', level: 2, q: 'Emperor penguins huddle together to do what?', a: 'stay warm in cold weather', wrong: ['swim faster', 'hide in trees', 'grow feathers'], emoji: '🐧' },
+    { id: 'ants', level: 3, q: 'Ants talk to each other with what?', a: 'smells and touch', wrong: ['songs', 'colors', 'flashes of light'], emoji: '🐜' },
+    { id: 'beeDance', level: 3, q: 'Honeybees tell their hive where flowers are by doing what?', a: 'a waggle dance', wrong: ['a loud song', 'a flashing light', 'a painted drawing'], emoji: '🐝' },
+    { id: 'mutualism', level: 3, q: 'When two living things help each other, what is it called?', a: 'mutualism', wrong: ['parasitism', 'competition', 'camouflage'] },
+    { id: 'parasitism', level: 3, q: 'What do we call a relationship where one partner is harmed and one benefits?', a: 'parasitism', wrong: ['mutualism', 'migration', 'hibernation'] },
+    { id: 'beaver', level: 3, q: 'Beavers work together to build what?', a: 'dams', wrong: ['tunnels under the sea', 'kites', 'bridges of ice'], emoji: '🦫' },
+    { id: 'population', level: 3, q: 'What do we call all the animals of one kind living in one area?', a: 'a population', wrong: ['an ecosystem', 'a habitat', 'a food web'] },
+    { id: 'ecosystem', level: 3, q: 'What do we call the living things and nonliving parts of an area working together?', a: 'an ecosystem', wrong: ['a population', 'a colony', 'a school'] },
+    { id: 'elephantLead', level: 3, q: 'Elephant herds are often led by an older female. Why is she helpful?', a: 'she knows where to find water', wrong: ['she is the strongest', 'she can fly', 'she is the youngest'], emoji: '🐘' },
+  ],
+  [{ skill: 'animals', level: 1 }],
+)
+
+const phaseChange = factSkill(
+  'phaseChange',
+  ['Melting and freezing', 'Evaporating and condensing', 'Skipping the liquid'],
+  [
+    { id: 'melting', level: 1, q: 'When a solid turns into a liquid, what is this change called?', a: 'melting', wrong: ['boiling', 'condensing', 'sublimating'] },
+    { id: 'freezing', level: 1, q: 'When a liquid turns into a solid, what is this change called?', a: 'freezing', wrong: ['melting', 'evaporating', 'sublimating'] },
+    { id: 'meltPoint', level: 1, q: 'What do we call the temperature at which a solid melts?', a: 'the melting point', wrong: ['the boiling point', 'the dew point', 'the flash point'] },
+    { id: 'freezePoint', level: 1, q: 'What do we call the temperature at which a liquid turns into a solid?', a: 'the freezing point', wrong: ['the boiling point', 'the dew point', 'the flash point'] },
+    { id: 'iceCube', level: 1, q: 'An ice cube left in the sun turns into what?', a: 'water', wrong: ['a rock', 'sand', 'a feather'], emoji: '🧊' },
+    { id: 'waterFreezes', level: 1, q: 'What happens to water when it gets cold enough?', a: 'it freezes into ice', wrong: ['it boils away', 'it turns into rock', 'it turns to sand'], emoji: '❄️' },
+    { id: 'loseHeat', level: 1, q: 'Does a liquid need to lose or gain heat to freeze?', a: 'lose heat', wrong: ['gain heat', 'gain sound', 'lose light'] },
+    { id: 'gainHeat', level: 1, q: 'Does a solid need to gain or lose heat to melt?', a: 'gain heat', wrong: ['lose heat', 'gain sound', 'lose light'] },
+    { id: 'evaporation', level: 2, q: 'When a liquid turns into a gas at its surface, what is this called?', a: 'evaporation', wrong: ['condensation', 'melting', 'sublimation'] },
+    { id: 'condensation', level: 2, q: 'When a gas turns into a liquid, what is this called?', a: 'condensation', wrong: ['evaporation', 'freezing', 'deposition'] },
+    { id: 'boilPoint', level: 2, q: 'What do we call the temperature at which a liquid boils?', a: 'the boiling point', wrong: ['the melting point', 'the dew point', 'the flash point'] },
+    { id: 'glassDrops', level: 2, q: 'Why do drops form on the outside of a cold glass of juice?', a: 'water vapor in the air condenses on it', wrong: ['the glass is leaking', 'the glass is melting', 'the glass is growing'], emoji: '🥤' },
+    { id: 'steam', level: 2, q: 'What is the gas form of water called?', a: 'water vapor', wrong: ['ice', 'sand', 'dust'] },
+    { id: 'laundry', level: 2, q: 'Why does wet laundry dry on a line?', a: 'the water evaporates into the air', wrong: ['the water freezes', 'the water sinks', 'the water turns to sand'], emoji: '👕' },
+    { id: 'fog', level: 2, q: 'What is fog made of?', a: 'tiny water droplets in the air', wrong: ['tiny rocks in the air', 'tiny bits of sand', 'tiny ice balls'], emoji: '🌫️' },
+    { id: 'evapAnyTemp', level: 2, q: 'Does evaporation happen only when water is boiling?', a: 'no, it can happen at any temperature', wrong: ['yes, only when boiling', 'yes, only in winter', 'yes, only at night'] },
+    { id: 'sublimation', level: 3, q: 'When a solid turns straight into a gas, what is this called?', a: 'sublimation', wrong: ['evaporation', 'melting', 'condensation'] },
+    { id: 'dryIce', level: 3, q: 'What is the solid form of carbon dioxide called?', a: 'dry ice', wrong: ['wet ice', 'hard water', 'snow sand'], emoji: '🧊' },
+    { id: 'deposition', level: 3, q: 'When water vapor turns straight into a solid, what is this called?', a: 'deposition', wrong: ['sublimation', 'condensation', 'melting'] },
+    { id: 'frost', level: 3, q: 'Frozen moisture that forms on cold grass in winter is called what?', a: 'frost', wrong: ['dew', 'hail', 'sleet'], emoji: '❄️' },
+    { id: 'snowSublime', level: 3, q: 'Can snow disappear on a cold, sunny day without melting?', a: 'yes, by sublimation', wrong: ['no, it always melts first', 'only in summer', 'only at night'] },
+    { id: 'phaseName', level: 3, q: 'What do we call a change from one state of matter to another?', a: 'a phase change', wrong: ['a chemical change', 'a reflection', 'an echo'] },
+    { id: 'evapCools', level: 3, q: 'When a liquid evaporates, what does it do to its surroundings?', a: 'it takes heat away and feels cool', wrong: ['it adds heat and feels hot', 'it makes loud sounds', 'it makes them heavier'] },
+    { id: 'sweat', level: 3, q: 'Why does sweat cool your body?', a: 'it evaporates from your skin', wrong: ['it freezes on your skin', 'it sinks into your bones', 'it makes you grow taller'], emoji: '💦' },
+  ],
+  [{ skill: 'statesOfMatter', level: 2 }],
+)
+
+const heredity = factSkill(
+  'heredity',
+  ['Parents and offspring', 'Dominant and recessive', 'Genes and chromosomes'],
+  [
+    { id: 'offspring', level: 1, q: 'What do we call the young that come from parents?', a: 'offspring', wrong: ['fossils', 'ecosystems', 'minerals'] },
+    { id: 'allLiving', level: 1, q: 'Which living things can pass traits to their young?', a: 'all living things', wrong: ['only people', 'only plants', 'only rocks'] },
+    { id: 'inheritedColor', level: 1, q: 'Which trait is inherited?', a: 'the color of a flower', wrong: ['knowing how to ride a bike', 'speaking a language', 'playing soccer'], emoji: '🌸' },
+    { id: 'learnedSpeak', level: 1, q: 'Which trait is learned, not inherited?', a: 'speaking English', wrong: ['eye shape', 'hair texture', 'ear shape'] },
+    { id: 'mixTraits', level: 1, q: 'Do children always look exactly like one parent?', a: 'no, they can mix traits', wrong: ['yes, always', 'only if they are twins', 'only if they are cats'] },
+    { id: 'bothParents', level: 1, q: 'Which parents pass traits to a child?', a: 'both parents', wrong: ['only the mother', 'only the teacher', 'only the neighbor'] },
+    { id: 'familyResem', level: 1, q: 'What is a family resemblance?', a: 'shared traits that relatives have', wrong: ['a shared favorite food', 'a shared house', 'a shared birthday'], emoji: '👪' },
+    { id: 'genetics', level: 1, q: 'What do we call the study of how traits are passed on?', a: 'genetics', wrong: ['geology', 'astronomy', 'meteorology'] },
+    { id: 'dominant', level: 2, q: 'Which kind of trait shows up when only one copy is present?', a: 'a dominant trait', wrong: ['a recessive trait', 'a learned trait', 'a rare trait'] },
+    { id: 'recessive', level: 2, q: 'Which trait is hidden unless a child gets two copies of it?', a: 'a recessive trait', wrong: ['a dominant trait', 'a learned trait', 'a rare trait'] },
+    { id: 'punnett', level: 2, q: 'What is a Punnett square used for?', a: 'predicting possible traits of offspring', wrong: ['measuring rainfall', 'drawing maps', 'cooking eggs'] },
+    { id: 'allele', level: 2, q: 'What is an allele?', a: 'a version of a gene', wrong: ['a type of rock', 'a kind of cell', 'a part of a flower'] },
+    { id: 'capitalLetter', level: 2, q: 'In a Punnett square, what usually stands for a dominant allele?', a: 'a capital letter', wrong: ['a number', 'a symbol', 'a color'] },
+    { id: 'tallPlant', level: 2, q: 'If tall is dominant, which trait shows in a plant with one tall and one short allele?', a: 'tall', wrong: ['short', 'medium', 'both at once'] },
+    { id: 'skipGen', level: 2, q: 'Can a recessive trait skip a generation?', a: 'yes, it can', wrong: ['no, never', 'only in the rain', 'only in plants'] },
+    { id: 'manyGenes', level: 2, q: 'Why is it hard to predict some human traits?', a: 'many genes affect each trait', wrong: ['people have no genes', 'people never inherit traits', 'people only learn traits'] },
+    { id: 'mendelPurple', level: 2, q: 'In Mendel\'s pea plants, which flower color was dominant?', a: 'purple flowers', wrong: ['white flowers', 'wrinkled peas', 'short stems'] },
+    { id: 'genes', level: 3, q: 'What tiny parts carry traits from parents to children?', a: 'genes', wrong: ['shadows', 'muscles', 'magnets'] },
+    { id: 'chromosome', level: 3, q: 'What thread-like structures in cells carry genes?', a: 'chromosomes', wrong: ['minerals', 'magnets', 'raindrops'] },
+    { id: 'dnaShape', level: 3, q: 'DNA is shaped like what?', a: 'a twisted ladder', wrong: ['a flat square', 'a circle of ice', 'a straight line'] },
+    { id: 'twoCopies', level: 3, q: 'How many copies of most genes does a body cell have?', a: 'two', wrong: ['one', 'five', 'ten'] },
+    { id: 'nucleus', level: 3, q: 'Where in a cell are the chromosomes found?', a: 'in the nucleus', wrong: ['in the cell wall', 'in the leaves', 'in the roots'] },
+    { id: 'genotype', level: 3, q: 'What do we call the genes a living thing has, like the letters in its allele pair?', a: 'genotype', wrong: ['phenotype', 'biome', 'fossil'] },
+    { id: 'phenotype', level: 3, q: 'What do we call the way a trait looks, like brown fur?', a: 'phenotype', wrong: ['genotype', 'biome', 'fossil'] },
+    { id: 'humanCells', level: 3, q: 'How many chromosomes do most human body cells have?', a: '46', wrong: ['23', '12', '92'] },
+  ],
+  [{ skill: 'traits', level: 2 }],
+)
+
+const particles = factSkill(
+  'particles',
+  ['Matter is made of particles', 'Solids, liquids, and gases', 'Models of tiny particles'],
+  [
+    { id: 'atom', level: 1, q: 'What is the smallest particle of an element called?', a: 'an atom', wrong: ['a molecule', 'a cell', 'a grain of sand'] },
+    { id: 'molecule', level: 1, q: 'What is a group of two or more atoms joined together called?', a: 'a molecule', wrong: ['a cell', 'a crystal', 'a grain'] },
+    { id: 'matter', level: 1, q: 'What is anything that has mass and takes up space called?', a: 'matter', wrong: ['energy', 'light', 'sound'] },
+    { id: 'nucleusCenter', level: 1, q: 'What is the center of an atom called?', a: 'the nucleus', wrong: ['the cell wall', 'the electron cloud', 'the root'] },
+    { id: 'protonsNeutrons', level: 1, q: 'What two kinds of particles make up an atom\'s nucleus?', a: 'protons and neutrons', wrong: ['electrons and photons', 'molecules and cells', 'sand and rocks'] },
+    { id: 'electrons', level: 1, q: 'What tiny particles move around the nucleus of an atom?', a: 'electrons', wrong: ['protons', 'neutrons', 'molecules'] },
+    { id: 'waterMolecule', level: 1, q: 'How many hydrogen atoms are in one water molecule, H2O?', a: 'two', wrong: ['one', 'three', 'ten'] },
+    { id: 'element', level: 1, q: 'What is a substance made of only one kind of atom called?', a: 'an element', wrong: ['a mixture', 'a solution', 'a compound'] },
+    { id: 'compound', level: 1, q: 'What is a substance made of two or more kinds of atoms bonded together called?', a: 'a compound', wrong: ['an element', 'a mixture', 'an electron'] },
+    { id: 'solidPacked', level: 2, q: 'In a solid, how are the particles arranged?', a: 'close together in a fixed pattern', wrong: ['far apart and moving freely', 'spread out like a cloud', 'in a random mess'] },
+    { id: 'liquidSlide', level: 2, q: 'In a liquid, particles are close together but can do what?', a: 'slide past one another', wrong: ['not move at all', 'stay in a fixed pattern', 'spread out forever'] },
+    { id: 'gasFar', level: 2, q: 'In a gas, how far apart are the particles?', a: 'very far apart', wrong: ['touching each other', 'locked in place', 'closer than in a solid'] },
+    { id: 'gasMoveFree', level: 2, q: 'How do gas particles move?', a: 'quickly and freely in all directions', wrong: ['not at all', 'only up and down', 'slowly in one line'] },
+    { id: 'solidShape', level: 2, q: 'Why does a solid keep its shape?', a: 'its particles stay in fixed positions', wrong: ['its particles are empty', 'its particles melt', 'its particles are all gone'] },
+    { id: 'liquidShape', level: 2, q: 'Why does a liquid take the shape of its container?', a: 'its particles can flow past each other', wrong: ['its particles stay locked', 'its particles are very large', 'its particles float up'] },
+    { id: 'gasFills', level: 2, q: 'Why does a gas fill its whole container?', a: 'its particles spread out to fill the space', wrong: ['its particles stick together', 'its particles are very heavy', 'its particles stop moving'] },
+    { id: 'heatSpeed', level: 2, q: 'What happens to particles when you heat a substance?', a: 'they move faster', wrong: ['they stop moving', 'they get smaller', 'they turn into light'] },
+    { id: 'airBalloon', level: 2, q: 'Is the air inside a balloon made of particles?', a: 'yes', wrong: ['no', 'only in summer', 'only if it is hot'], emoji: '🎈' },
+    { id: 'modelWhy', level: 3, q: 'Why do scientists use models?', a: 'to show things too small or big to see', wrong: ['to make things look pretty', 'to make things heavier', 'to hide the truth'] },
+    { id: 'particleModel', level: 3, q: 'What is the particle model of matter?', a: 'all matter is made of tiny moving particles', wrong: ['all matter is made of colored lights', 'all matter is made of solid rock', 'all matter is made of sound'] },
+    { id: 'gasModel', level: 3, q: 'In a model of a gas, what might the particles look like?', a: 'balls moving fast with space between', wrong: ['one solid block', 'a stack of paper', 'a row of bricks'] },
+    { id: 'modelLimit', level: 3, q: 'What is one limit of a model?', a: 'it is not exactly like the real thing', wrong: ['it is always perfect', 'it can never be changed', 'it is always bigger than the real thing'] },
+    { id: 'ballStick', level: 3, q: 'In a ball-and-stick model of a molecule, what do the sticks show?', a: 'chemical bonds between atoms', wrong: ['the sound of the atoms', 'the color of the atoms', 'the weight of the nucleus'] },
+    { id: 'ballAtom', level: 3, q: 'In many molecule models, what does a ball usually stand for?', a: 'an atom', wrong: ['a whole cloud', 'a beaker', 'a nucleus only'] },
+    { id: 'testModel', level: 3, q: 'What can a scientist do with a model to test a guess?', a: 'change it and see what happens', wrong: ['throw it away', 'paint it blue', 'hide it in a box'] },
+    { id: 'meltModel', level: 3, q: 'How does the particle model explain melting?', a: 'particles gain energy and slide apart', wrong: ['particles disappear', 'particles get bigger', 'particles stop moving'] },
+    { id: 'particleWord', level: 3, q: 'What does the word "particle" mean in science?', a: 'a very tiny piece of matter', wrong: ['a large planet', 'a kind of cloud', 'a loud sound'] },
+  ],
+  [{ skill: 'statesOfMatter', level: 3 }],
+)
+
+const lifeCycles = factSkill(
+  'lifeCycles',
+  ['Animal life cycles', 'Complete and incomplete metamorphosis', 'Baby animals and growing up'],
+  [
+    { id: 'butterflyEgg', level: 1, q: 'What is the first stage in a butterfly life cycle?', a: 'an egg', wrong: ['a pupa', 'an adult', 'a larva'], emoji: '🦋' },
+    { id: 'caterpillar', level: 1, q: 'What is the caterpillar stage of a butterfly called?', a: 'a larva', wrong: ['a pupa', 'a nymph', 'an egg'], emoji: '🐛' },
+    { id: 'chrysalis', level: 1, q: 'What is the pupa stage of a butterfly often called?', a: 'a chrysalis', wrong: ['a nest', 'a burrow', 'a shell'] },
+    { id: 'frogEgg', level: 1, q: 'What does a frog life cycle start with?', a: 'an egg', wrong: ['a tadpole', 'a froglet', 'an adult frog'], emoji: '🐸' },
+    { id: 'tadpole', level: 1, q: 'What is a young frog that lives in water and has a tail called?', a: 'a tadpole', wrong: ['a kitten', 'a fawn', 'a duckling'], emoji: '🐸' },
+    { id: 'froglet', level: 1, q: 'What do we call a young frog that grows legs and loses its tail?', a: 'a froglet', wrong: ['a chick', 'a cub', 'a calf'] },
+    { id: 'frogAdult', level: 1, q: 'Which frog stage lays eggs?', a: 'an adult frog', wrong: ['a tadpole', 'a pupa', 'a nymph'] },
+    { id: 'mammalLive', level: 1, q: 'What do most mammals give birth to?', a: 'live young', wrong: ['eggs in shells', 'pupae', 'seeds'] },
+    { id: 'birdEggs', level: 1, q: 'What do birds come from?', a: 'eggs', wrong: ['pupae', 'seeds', 'spores'] },
+    { id: 'complete', level: 2, q: 'Which type of metamorphosis has four stages: egg, larva, pupa, adult?', a: 'complete metamorphosis', wrong: ['incomplete metamorphosis', 'no metamorphosis', 'simple growth'] },
+    { id: 'incomplete', level: 2, q: 'Which type of metamorphosis skips the pupa stage?', a: 'incomplete metamorphosis', wrong: ['complete metamorphosis', 'no metamorphosis', 'simple growth'] },
+    { id: 'grasshopperNymph', level: 2, q: 'Which insect has a nymph stage that looks like a small adult?', a: 'a grasshopper', wrong: ['a butterfly', 'a moth', 'a beetle'], emoji: '🦗' },
+    { id: 'beetleComplete', level: 2, q: 'Which insect goes through complete metamorphosis?', a: 'a beetle', wrong: ['a grasshopper', 'a cricket', 'a dragonfly'], emoji: '🪲' },
+    { id: 'nymph', level: 2, q: 'What do we call the young of an insect with incomplete metamorphosis?', a: 'a nymph', wrong: ['a larva', 'a pupa', 'an egg'] },
+    { id: 'larva', level: 2, q: 'What do we call the young of an insect with complete metamorphosis, like a caterpillar?', a: 'a larva', wrong: ['a nymph', 'a pupa', 'a chick'] },
+    { id: 'frogsChange', level: 2, q: 'Do frogs go through metamorphosis?', a: 'yes', wrong: ['no', 'only in winter', 'only when it rains'] },
+    { id: 'dragonflyWater', level: 2, q: 'Young dragonflies live in what?', a: 'water', wrong: ['trees', 'snow', 'sand'] },
+    { id: 'mammalNoChange', level: 2, q: 'Does a baby mammal go through metamorphosis like a butterfly?', a: 'no', wrong: ['yes, always', 'only in the ocean', 'only when it is cold'] },
+    { id: 'lifeCycleName', level: 3, q: 'What do we call the stages an animal goes through from birth to adult?', a: 'a life cycle', wrong: ['a food chain', 'a habitat', 'a migration'] },
+    { id: 'juvenile', level: 3, q: 'What do we call a young animal before it becomes an adult?', a: 'a juvenile', wrong: ['an adult', 'an ancestor', 'a predator'] },
+    { id: 'seaTurtle', level: 3, q: 'Do sea turtles lay their eggs on land?', a: 'yes', wrong: ['no', 'only in ponds', 'only in trees'], emoji: '🐢' },
+    { id: 'kangarooMilk', level: 3, q: 'What do baby kangaroos drink to grow?', a: 'milk', wrong: ['sap', 'nectar', 'juice'], emoji: '🦘' },
+    { id: 'joey', level: 3, q: 'What is a baby kangaroo called?', a: 'a joey', wrong: ['a kit', 'a cub', 'a calf'], emoji: '🦘' },
+    { id: 'cygnet', level: 3, q: 'What is a baby swan called?', a: 'a cygnet', wrong: ['a gosling', 'a fawn', 'a foal'], emoji: '🦢' },
+    { id: 'foal', level: 3, q: 'What is a baby horse called?', a: 'a foal', wrong: ['a fawn', 'a calf', 'a kit'], emoji: '🐴' },
+    { id: 'fawn', level: 3, q: 'What is a baby deer called?', a: 'a fawn', wrong: ['a foal', 'a kit', 'a pup'], emoji: '🦌' },
+    { id: 'puppy', level: 3, q: 'What is a baby dog called?', a: 'a puppy', wrong: ['a kitten', 'a chick', 'a cub'], emoji: '🐶' },
+  ],
+  [{ skill: 'animals', level: 2 }],
+)
+
+const starsSeasons = factSkill(
+  'starsSeasons',
+  ['Seasons and Earth\'s tilt', 'Eclipses', 'Stars and galaxies'],
+  [
+    { id: 'tilt', level: 1, q: 'Why do we have seasons on Earth?', a: 'Earth is tilted on its axis', wrong: ['Earth gets closer to the Sun', 'the Moon blocks the Sun', 'the wind changes direction'] },
+    { id: 'axisLine', level: 1, q: 'What is the imaginary line that Earth spins around called?', a: 'its axis', wrong: ['its equator', 'its orbit', 'its crust'] },
+    { id: 'equator', level: 1, q: 'Which imaginary line circles the middle of Earth?', a: 'the equator', wrong: ['the axis', 'the Arctic Circle', 'the prime meridian'] },
+    { id: 'summerOpposite', level: 1, q: 'When it is summer in the Northern Hemisphere, what season is it in the Southern Hemisphere?', a: 'winter', wrong: ['summer too', 'spring', 'fall'] },
+    { id: 'longestDay', level: 1, q: 'In the Northern Hemisphere, what is the longest day of the year called?', a: 'the summer solstice', wrong: ['the equinox', 'the winter solstice', 'an eclipse'] },
+    { id: 'shortestDay', level: 1, q: 'What is the shortest day of the year in the Northern Hemisphere called?', a: 'the winter solstice', wrong: ['the summer solstice', 'the equinox', 'an eclipse'] },
+    { id: 'equinox', level: 1, q: 'When are day and night almost equal in length?', a: 'during an equinox', wrong: ['during a solstice', 'during an eclipse', 'during a full moon'] },
+    { id: 'sunAngle', level: 1, q: 'In summer, sunlight hits the Northern Hemisphere at what angle?', a: 'more directly', wrong: ['less directly', 'from below the ground', 'only at night'] },
+    { id: 'winterCold', level: 1, q: 'Why is winter colder in the Northern Hemisphere?', a: 'sunlight is more spread out and less direct', wrong: ['Earth is farther from the Moon', 'the Sun turns off', 'Earth stops spinning'] },
+    { id: 'solar', level: 2, q: 'When the Moon passes between the Sun and Earth, what happens?', a: 'a solar eclipse', wrong: ['a meteor shower', 'a rainbow', 'a full moon'] },
+    { id: 'lunar', level: 2, q: 'When Earth passes between the Sun and the Moon, what happens?', a: 'a lunar eclipse', wrong: ['a solar eclipse', 'a new moon', 'a meteor shower'] },
+    { id: 'eclipseDark', level: 2, q: 'During a total solar eclipse, what happens to the daytime sky?', a: 'it gets dark for a short time', wrong: ['it starts to snow', 'it gets much brighter', 'it turns green'] },
+    { id: 'eclipseGlasses', level: 2, q: 'What should you wear to look at a solar eclipse safely?', a: 'special eclipse glasses', wrong: ['regular sunglasses', 'a pair of mittens', 'a swim mask'] },
+    { id: 'solarNew', level: 2, q: 'Solar eclipses happen only during which Moon phase?', a: 'new moon', wrong: ['quarter moon', 'crescent moon', 'gibbous moon'] },
+    { id: 'lunarFull', level: 2, q: 'Lunar eclipses happen only during which Moon phase?', a: 'full moon', wrong: ['new moon', 'quarter moon', 'crescent moon'] },
+    { id: 'redMoon', level: 2, q: 'Why can the Moon look reddish during a lunar eclipse?', a: "red light bends through Earth's air", wrong: ['the Moon is on fire', 'the Moon is covered in rust', 'the Moon is wet'] },
+    { id: 'earthShadow', level: 2, q: 'During a lunar eclipse, what passes over the Moon?', a: "Earth's shadow", wrong: ['a cloud', 'a rainbow', 'a comet'] },
+    { id: 'noMonthly', level: 2, q: 'Why don\'t we have a solar eclipse every month?', a: 'the Moon\'s orbit is tilted', wrong: ['the Sun is too big', 'the Moon is too small', 'Earth is too close to the Sun'] },
+    { id: 'galaxyShape', level: 3, q: 'Our galaxy, the Milky Way, is shaped like what?', a: 'a spiral', wrong: ['a perfect cube', 'a flat square', 'a ring of ice'] },
+    { id: 'lightTime', level: 3, q: 'About how long does sunlight take to reach Earth?', a: 'about 8 minutes', wrong: ['about 8 seconds', 'about 8 hours', 'about 8 days'] },
+    { id: 'lightYear', level: 3, q: 'What is a light-year?', a: 'the distance light travels in a year', wrong: ['a unit of time', 'a kind of star', 'the speed of sound'] },
+    { id: 'starColor', level: 3, q: 'Which color of star is the hottest?', a: 'blue', wrong: ['red', 'yellow', 'orange'] },
+    { id: 'redGiant', level: 3, q: 'What do we call a large, cool, red star near the end of its life?', a: 'a red giant', wrong: ['a white dwarf', 'a comet', 'a meteor'] },
+    { id: 'blackHole', level: 3, q: 'What is an object so heavy that not even light can escape it?', a: 'a black hole', wrong: ['a comet', 'a meteor', 'an asteroid'] },
+    { id: 'supernova', level: 3, q: 'What is the huge explosion of a very big star called?', a: 'a supernova', wrong: ['a meteor shower', 'a rainbow', 'a tornado'] },
+    { id: 'nebula', level: 3, q: 'What is a cloud of gas and dust where new stars form called?', a: 'a nebula', wrong: ['a crater', 'a glacier', 'a volcano'] },
+    { id: 'sunAge', level: 3, q: 'About how old is the Sun?', a: 'about 4.6 billion years', wrong: ['about 46 years', 'about 460 years', 'about 4.6 thousand years'] },
+  ],
+  [{ skill: 'skyObjects', level: 2 }],
+)
+
+// ============================================================================================
+// SOCIAL STUDIES
+// ============================================================================================
+
+const locationWords = factSkill(
+  'locationWords',
+  ['Above, below, inside, outside', 'Left, right, behind, in front of', 'Near, far, between, next to'],
+  [
+    { id: 'above', level: 1, q: 'Which word means higher than something?', a: 'above', wrong: ['below', 'inside', 'outside'] },
+    { id: 'below', level: 1, q: 'Which word means lower than something?', a: 'below', wrong: ['above', 'inside', 'outside'] },
+    { id: 'inside', level: 1, q: 'The cat is in the box. Is it inside or outside?', a: 'inside', wrong: ['outside', 'above', 'below'], emoji: '📦' },
+    { id: 'outside', level: 1, q: 'The dog is out in the yard. Is it inside or outside?', a: 'outside', wrong: ['inside', 'above', 'below'], emoji: '🐶' },
+    { id: 'onTop', level: 1, q: 'The hat is on the table. Is it on top of or under the table?', a: 'on top of', wrong: ['under', 'behind', 'far from'], emoji: '🎩' },
+    { id: 'under', level: 1, q: 'The shoe is under the bed. Is it under or over the bed?', a: 'under', wrong: ['over', 'beside', 'inside'], emoji: '👟' },
+    { id: 'up', level: 1, q: 'The bird is up in the tree. Is it up or down?', a: 'up', wrong: ['down', 'left', 'right'], emoji: '🐦' },
+    { id: 'down', level: 1, q: 'The apple fell down. Did it go up or down?', a: 'down', wrong: ['up', 'left', 'right'], emoji: '🍎' },
+    { id: 'left', level: 2, q: 'You raise your left hand. Which side of your body is it on?', a: 'left', wrong: ['right', 'back', 'front'], emoji: '✋' },
+    { id: 'right', level: 2, q: 'You raise your right hand. Which side is it on?', a: 'right', wrong: ['left', 'front', 'top'], emoji: '🤚' },
+    { id: 'behind', level: 2, q: 'The dog is behind the fence. Is it in front of or behind the fence?', a: 'behind', wrong: ['in front of', 'above', 'inside'], emoji: '🐕' },
+    { id: 'frontOf', level: 2, q: 'Your friend stands in front of you. Where is your friend?', a: 'in front of you', wrong: ['behind you', 'under you', 'above you'] },
+    { id: 'leftLamp', level: 2, q: 'The lamp is on the left of the couch. Which side is the lamp on?', a: 'left', wrong: ['right', 'above', 'below'], emoji: '🛋️' },
+    { id: 'rightPencil', level: 2, q: 'The pencil is on the right of the book. Which side is the pencil on?', a: 'right', wrong: ['left', 'above', 'below'], emoji: '✏️' },
+    { id: 'leftTree', level: 2, q: 'The tree is to the left of the house. Which way is the tree from the house?', a: 'left', wrong: ['right', 'behind', 'inside'], emoji: '🌳' },
+    { id: 'southDown', level: 2, q: 'On a map, north is up. Which direction is down?', a: 'south', wrong: ['east', 'west', 'north'], emoji: '🧭' },
+    { id: 'near', level: 3, q: 'Which word means close by?', a: 'near', wrong: ['far', 'above', 'between'], emoji: '🏠' },
+    { id: 'far', level: 3, q: 'Which word means a long way away?', a: 'far', wrong: ['near', 'next to', 'inside'], emoji: '🏔️' },
+    { id: 'between', level: 3, q: 'The cat sits between two chairs. Where is the cat?', a: 'between', wrong: ['behind', 'next to', 'outside'], emoji: '🐱' },
+    { id: 'nextTo', level: 3, q: 'The apple is next to the banana. Where is the apple?', a: 'next to', wrong: ['between', 'far from', 'above'], emoji: '🍎' },
+    { id: 'schoolFar', level: 3, q: 'Your school is across town. Is it near or far?', a: 'far', wrong: ['near', 'next to', 'inside'] },
+    { id: 'parkNear', level: 3, q: 'The park is right next to your house. Is it near or far?', a: 'near', wrong: ['far', 'between', 'above'], emoji: '🌳' },
+    { id: 'toyBoxes', level: 3, q: 'A toy sits in the middle of two boxes. Which word tells where?', a: 'between', wrong: ['under', 'outside', 'above'], emoji: '🧸' },
+    { id: 'sideBySide', level: 3, q: 'Which word means side by side?', a: 'next to', wrong: ['far from', 'below', 'inside'] },
+  ],
+)
+
+const statesNicknames = factSkill(
+  'statesNicknames',
+  ['State nicknames', 'More state nicknames', 'Nicknames and what they mean'],
+  [
+    { id: 'loneStar', level: 1, q: 'Which state is nicknamed the Lone Star State?', a: 'Texas', wrong: ['Ohio', 'Maine', 'Idaho'] },
+    { id: 'goldenState', level: 1, q: 'Which state is nicknamed the Golden State?', a: 'California', wrong: ['Nevada', 'Oregon', 'Florida'] },
+    { id: 'empireState', level: 1, q: 'Which state is nicknamed the Empire State?', a: 'New York', wrong: ['New Jersey', 'Pennsylvania', 'Connecticut'] },
+    { id: 'keystone', level: 1, q: 'Which state is nicknamed the Keystone State?', a: 'Pennsylvania', wrong: ['Delaware', 'Indiana', 'Virginia'] },
+    { id: 'bluegrass', level: 1, q: 'Which state is nicknamed the Bluegrass State?', a: 'Kentucky', wrong: ['Tennessee', 'Alabama', 'Georgia'] },
+    { id: 'gardenState', level: 1, q: 'Which state is nicknamed the Garden State?', a: 'New Jersey', wrong: ['Vermont', 'Maryland', 'Rhode Island'] },
+    { id: 'peachState', level: 1, q: 'Which state is nicknamed the Peach State?', a: 'Georgia', wrong: ['Florida', 'Arkansas', 'South Carolina'] },
+    { id: 'gemState', level: 1, q: 'Which state is nicknamed the Gem State?', a: 'Idaho', wrong: ['Montana', 'Wyoming', 'Utah'] },
+    { id: 'beaverState', level: 1, q: 'Which state is nicknamed the Beaver State?', a: 'Oregon', wrong: ['Washington', 'Alaska', 'Colorado'] },
+    { id: 'buckeye', level: 1, q: 'Which state is nicknamed the Buckeye State?', a: 'Ohio', wrong: ['Indiana', 'Illinois', 'Michigan'] },
+    { id: 'showMe', level: 2, q: 'Which state is nicknamed the Show-Me State?', a: 'Missouri', wrong: ['Minnesota', 'Michigan', 'Maryland'] },
+    { id: 'hoosier', level: 2, q: 'Which state is nicknamed the Hoosier State?', a: 'Indiana', wrong: ['Iowa', 'Illinois', 'Idaho'] },
+    { id: 'tarHeel', level: 2, q: 'Which state is nicknamed the Tar Heel State?', a: 'North Carolina', wrong: ['South Carolina', 'Virginia', 'Tennessee'] },
+    { id: 'pelican', level: 2, q: 'Which state is nicknamed the Pelican State?', a: 'Louisiana', wrong: ['Mississippi', 'Alabama', 'Texas'] },
+    { id: 'sunflower', level: 2, q: 'Which state is nicknamed the Sunflower State?', a: 'Kansas', wrong: ['Nebraska', 'Colorado', 'Oklahoma'] },
+    { id: 'cornhusker', level: 2, q: 'Which state is nicknamed the Cornhusker State?', a: 'Nebraska', wrong: ['Iowa', 'Kansas', 'South Dakota'] },
+    { id: 'greenMountain', level: 2, q: 'Which state is nicknamed the Green Mountain State?', a: 'Vermont', wrong: ['New Hampshire', 'Maine', 'Massachusetts'] },
+    { id: 'granite', level: 2, q: 'Which state is nicknamed the Granite State?', a: 'New Hampshire', wrong: ['Vermont', 'Maine', 'Rhode Island'] },
+    { id: 'volunteer', level: 2, q: 'Which state is nicknamed the Volunteer State?', a: 'Tennessee', wrong: ['Kentucky', 'Arkansas', 'Georgia'] },
+    { id: 'enchantment', level: 3, q: 'Which state is nicknamed the Land of Enchantment?', a: 'New Mexico', wrong: ['Arizona', 'Utah', 'Colorado'] },
+    { id: 'grandCanyon', level: 3, q: 'Which state is nicknamed the Grand Canyon State?', a: 'Arizona', wrong: ['Nevada', 'New Mexico', 'Utah'] },
+    { id: 'silver', level: 3, q: 'Which state is nicknamed the Silver State?', a: 'Nevada', wrong: ['Idaho', 'Oregon', 'Utah'] },
+    { id: 'mountainState', level: 3, q: 'Which state is nicknamed the Mountain State?', a: 'West Virginia', wrong: ['Virginia', 'Kentucky', 'Pennsylvania'] },
+    { id: 'lastFrontier', level: 3, q: 'Which state is nicknamed the Last Frontier?', a: 'Alaska', wrong: ['Hawaii', 'Montana', 'Wyoming'] },
+    { id: 'aloha', level: 3, q: 'Which state is nicknamed the Aloha State?', a: 'Hawaii', wrong: ['Alaska', 'Florida', 'California'] },
+    { id: 'lincoln', level: 3, q: 'Which state is nicknamed the Land of Lincoln?', a: 'Illinois', wrong: ['Indiana', 'Ohio', 'Wisconsin'] },
+    { id: 'oldDominion', level: 3, q: 'Which state is nicknamed the Old Dominion?', a: 'Virginia', wrong: ['Maryland', 'North Carolina', 'Kentucky'] },
+    { id: 'constitutionState', level: 3, q: 'Which state is nicknamed the Constitution State?', a: 'Connecticut', wrong: ['Rhode Island', 'Massachusetts', 'Delaware'] },
+    { id: 'firstState', level: 3, q: 'Which state is nicknamed the First State?', a: 'Delaware', wrong: ['New Jersey', 'Georgia', 'Pennsylvania'] },
+    { id: 'heartOfDixie', level: 3, q: 'Which state is nicknamed the Heart of Dixie?', a: 'Alabama', wrong: ['Mississippi', 'Georgia', 'Tennessee'] },
+  ],
+  [{ skill: 'usRegions', level: 2 }],
+)
+
+const cityNicknames = factSkill(
+  'cityNicknames',
+  ['City nicknames', 'Famous places in cities', 'Cities and what they are known for'],
+  [
+    { id: 'bigApple', level: 1, q: 'Which city is nicknamed the Big Apple?', a: 'New York City', wrong: ['Chicago', 'Boston', 'Miami'] },
+    { id: 'windyCity', level: 1, q: 'Which city is nicknamed the Windy City?', a: 'Chicago', wrong: ['Denver', 'Seattle', 'Atlanta'] },
+    { id: 'brotherly', level: 1, q: 'Which city is nicknamed the City of Brotherly Love?', a: 'Philadelphia', wrong: ['Baltimore', 'Cleveland', 'Pittsburgh'] },
+    { id: 'mileHigh', level: 1, q: 'Which city is nicknamed the Mile High City?', a: 'Denver', wrong: ['Salt Lake City', 'Phoenix', 'Kansas City'] },
+    { id: 'crescent', level: 1, q: 'Which city is nicknamed the Crescent City?', a: 'New Orleans', wrong: ['Memphis', 'Mobile', 'Houston'] },
+    { id: 'motorCity', level: 1, q: 'Which city is nicknamed the Motor City?', a: 'Detroit', wrong: ['Cleveland', 'Milwaukee', 'Indianapolis'] },
+    { id: 'cityOfAngels', level: 1, q: 'Which city is nicknamed the City of Angels?', a: 'Los Angeles', wrong: ['San Diego', 'San Francisco', 'Sacramento'] },
+    { id: 'musicCity', level: 1, q: 'Which city is nicknamed Music City?', a: 'Nashville', wrong: ['Memphis', 'Austin', 'Louisville'] },
+    { id: 'emeraldCity', level: 1, q: 'Which city is nicknamed the Emerald City?', a: 'Seattle', wrong: ['Portland', 'Boise', 'Tacoma'] },
+    { id: 'capital', level: 2, q: 'Which city is the capital of the United States?', a: 'Washington, D.C.', wrong: ['New York City', 'Philadelphia', 'Boston'] },
+    { id: 'gatewayArch', level: 2, q: 'The Gateway Arch is in which city?', a: 'St. Louis', wrong: ['Kansas City', 'Chicago', 'Cincinnati'] },
+    { id: 'statueLiberty', level: 2, q: 'The Statue of Liberty stands in which harbor?', a: 'New York Harbor', wrong: ['Boston Harbor', 'San Francisco Bay', 'Miami Harbor'] },
+    { id: 'alamo', level: 2, q: 'The Alamo is in which Texas city?', a: 'San Antonio', wrong: ['Austin', 'Houston', 'Dallas'] },
+    { id: 'goldenGate', level: 2, q: 'The Golden Gate Bridge is in which city?', a: 'San Francisco', wrong: ['Oakland', 'Sacramento', 'San Diego'] },
+    { id: 'frenchQuarter', level: 2, q: 'The French Quarter is in which city?', a: 'New Orleans', wrong: ['Mobile', 'Memphis', 'Baton Rouge'] },
+    { id: 'honolulu', level: 2, q: 'The city of Honolulu is on which island?', a: 'Oahu', wrong: ['Maui', 'Kauai', 'Molokai'] },
+    { id: 'pentagon', level: 2, q: 'The Pentagon is in which place near Washington, D.C.?', a: 'Arlington, Virginia', wrong: ['Baltimore, Maryland', 'Richmond, Virginia', 'Annapolis, Maryland'] },
+    { id: 'empireStateBldg', level: 2, q: 'The Empire State Building is in which city?', a: 'New York City', wrong: ['Chicago', 'Boston', 'Philadelphia'] },
+    { id: 'brooklynBridge', level: 3, q: 'Which two places does the Brooklyn Bridge connect?', a: 'Brooklyn and Manhattan', wrong: ['Boston and Cambridge', 'Chicago and Evanston', 'Oakland and Berkeley'] },
+    { id: 'pittsburgh', level: 3, q: 'Pittsburgh sits where two rivers meet to form the Ohio River. Which rivers are they?', a: 'Allegheny and Monongahela', wrong: ['Mississippi and Missouri', 'Hudson and Mohawk', 'Colorado and Gila'] },
+    { id: 'houston', level: 3, q: 'Which city is home to NASA\'s Johnson Space Center?', a: 'Houston', wrong: ['Cape Canaveral', 'Huntsville', 'Pasadena'] },
+    { id: 'pasadena', level: 3, q: 'Which city is famous for its Rose Bowl parade?', a: 'Pasadena', wrong: ['Anaheim', 'Long Beach', 'Burbank'] },
+    { id: 'louisville', level: 3, q: 'Which city hosts the Kentucky Derby?', a: 'Louisville', wrong: ['Lexington', 'Frankfort', 'Cincinnati'] },
+    { id: 'hollywood', level: 3, q: 'The famous Hollywood sign is in which city?', a: 'Los Angeles', wrong: ['San Diego', 'Phoenix', 'Las Vegas'] },
+    { id: 'harvard', level: 3, q: 'Harvard University is in which city?', a: 'Cambridge, Massachusetts', wrong: ['New Haven, Connecticut', 'Providence, Rhode Island', 'Hartford, Connecticut'] },
+    { id: 'yale', level: 3, q: 'Yale University is in which city?', a: 'New Haven, Connecticut', wrong: ['Hartford', 'Stamford', 'Providence'] },
+    { id: 'willisTower', level: 3, q: 'Which city is home to the Willis Tower?', a: 'Chicago', wrong: ['Houston', 'Atlanta', 'Detroit'] },
+  ],
+  [{ skill: 'usRegions', level: 2 }],
+)
+
+const nationalHolidays = factSkill(
+  'nationalHolidays',
+  ['National holiday dates', 'Holiday dates and names', 'What holidays honor'],
+  [
+    { id: 'independence', level: 1, q: 'On what date do Americans celebrate Independence Day?', a: 'July 4', wrong: ['July 14', 'June 4', 'August 4'] },
+    { id: 'thanksgivingDay', level: 1, q: 'Thanksgiving is always on which day of the week?', a: 'Thursday', wrong: ['Sunday', 'Friday', 'Monday'] },
+    { id: 'veteransDate', level: 1, q: 'On what date is Veterans Day?', a: 'November 11', wrong: ['November 1', 'November 25', 'December 11'] },
+    { id: 'labor', level: 1, q: 'When is Labor Day?', a: 'the first Monday in September', wrong: ['the last Monday in May', 'the second Tuesday in October', 'the third Friday in June'] },
+    { id: 'memorial', level: 1, q: 'When is Memorial Day?', a: 'the last Monday in May', wrong: ['the first Monday in September', 'the second Tuesday in October', 'the third Friday in June'] },
+    { id: 'mlk', level: 1, q: 'When is Martin Luther King Jr. Day?', a: 'the third Monday in January', wrong: ['the third Monday in February', 'the first Monday in January', 'the last Monday in January'] },
+    { id: 'presidentsMonth', level: 1, q: 'In which month is Presidents\' Day?', a: 'February', wrong: ['January', 'March', 'April'] },
+    { id: 'juneteenth', level: 1, q: 'On what date is Juneteenth celebrated?', a: 'June 19', wrong: ['June 14', 'July 4', 'June 4'] },
+    { id: 'flagDay', level: 1, q: 'On what date is Flag Day?', a: 'June 14', wrong: ['June 19', 'July 4', 'June 4'] },
+    { id: 'newYearsDay', level: 2, q: 'What date is New Year\'s Day?', a: 'January 1', wrong: ['December 31', 'January 15', 'February 1'] },
+    { id: 'christmasDate', level: 2, q: 'On what date is Christmas celebrated?', a: 'December 25', wrong: ['December 21', 'December 31', 'November 25'] },
+    { id: 'constitutionDay', level: 2, q: 'Constitution Day, on September 17, honors what?', a: 'the signing of the U.S. Constitution', wrong: ['the Declaration of Independence', 'the first Thanksgiving', 'the end of World War II'] },
+    { id: 'washingtonBirthday', level: 2, q: 'On what date is George Washington\'s birthday?', a: 'February 22', wrong: ['February 12', 'March 22', 'February 2'] },
+    { id: 'declarationSign', level: 2, q: 'Independence Day celebrates the Declaration of what?', a: 'Independence', wrong: ['Rights', 'War', 'Peace'] },
+    { id: 'independenceName', level: 2, q: 'Another name for the Fourth of July is what?', a: 'Independence Day', wrong: ['Labor Day', 'Flag Day', 'Veterans Day'] },
+    { id: 'thanksgivingDate', level: 2, q: 'When is Thanksgiving in the United States?', a: 'the fourth Thursday in November', wrong: ['the first Monday in May', 'the second Friday in June', 'the last Sunday in December'] },
+    { id: 'federalHoliday', level: 3, q: 'Which federal holiday became official in 2021?', a: 'Juneteenth', wrong: ['Veterans Day', 'Flag Day', 'Labor Day'] },
+    { id: 'federalDef', level: 3, q: 'What is a federal holiday?', a: 'a holiday recognized by federal law', wrong: ['a day only for schools', 'a holiday chosen by one city', 'a sports holiday'] },
+    { id: 'memorialWho', level: 3, q: 'Memorial Day honors whom?', a: 'those who died while serving', wrong: ['farmers', 'teachers', 'astronauts'] },
+    { id: 'laborWho', level: 3, q: 'Labor Day honors whom?', a: 'American workers', wrong: ['astronauts', 'pilots', 'musicians'] },
+    { id: 'veteransWho', level: 3, q: 'Veterans Day honors whom?', a: 'military veterans', wrong: ['new citizens', 'school teachers', 'pilots'] },
+    { id: 'presidentsName', level: 3, q: 'Presidents\' Day is also called what?', a: 'Washington\'s Birthday', wrong: ['Lincoln\'s Day', 'Flag Day', 'Labor Day'] },
+    { id: 'armisticeName', level: 3, q: 'Veterans Day began as a day to remember the end of which war?', a: 'World War I', wrong: ['the Civil War', 'World War II', 'the Korean War'] },
+    { id: 'thanksgivingMeaning', level: 3, q: 'What is Thanksgiving mainly a day to do?', a: 'give thanks for the harvest', wrong: ['watch a sports game', 'start a new year', 'celebrate a king\'s birthday'] },
+  ],
+  [{ skill: 'holidays', level: 2 }],
+)
+
+const monuments = factSkill(
+  'monuments',
+  ['Memorials in Washington, D.C.', 'Famous monuments and landmarks', 'Statues and monuments up close'],
+  [
+    { id: 'lincolnMemorial', level: 1, q: 'Which memorial in Washington, D.C. honors Abraham Lincoln?', a: 'the Lincoln Memorial', wrong: ['the Jefferson Memorial', 'the Gateway Arch', 'the Liberty Bell'] },
+    { id: 'jeffersonMemorial', level: 1, q: 'Which memorial in Washington, D.C. honors Thomas Jefferson?', a: 'the Jefferson Memorial', wrong: ['the Lincoln Memorial', 'Mount Rushmore', 'the Statue of Liberty'] },
+    { id: 'arch', level: 1, q: 'Which arch in St. Louis, Missouri, honors westward expansion?', a: 'the Gateway Arch', wrong: ['the Arc de Triomphe', 'the Golden Arch', 'the Brooklyn Arch'] },
+    { id: 'statueFrance', level: 1, q: 'Which country gave the Statue of Liberty to the United States?', a: 'France', wrong: ['Spain', 'England', 'Canada'] },
+    { id: 'libertyBell', level: 1, q: 'The Liberty Bell is in which city?', a: 'Philadelphia', wrong: ['Boston', 'Richmond', 'Baltimore'] },
+    { id: 'ellis', level: 1, q: 'Ellis Island was a gateway for what?', a: 'immigrants arriving in the United States', wrong: ['explorers sailing to Asia', 'soldiers going to war', 'miners looking for gold'] },
+    { id: 'whiteHouse', level: 1, q: 'Where does the President of the United States live and work?', a: 'the White House', wrong: ['the Capitol', 'the Pentagon', 'the Supreme Court'] },
+    { id: 'capitol', level: 1, q: 'Which building is home to Congress?', a: 'the Capitol', wrong: ['the White House', 'the Supreme Court building', 'the Pentagon'] },
+    { id: 'rushmore', level: 2, q: 'Mount Rushmore shows the faces of which four presidents?', a: 'Washington, Jefferson, Roosevelt, Lincoln', wrong: ['Lincoln, Grant, Adams, Monroe', 'Kennedy, Nixon, Ford, Carter', 'Franklin, Truman, Hayes, Grant'] },
+    { id: 'lincolnChair', level: 2, q: 'The Lincoln Memorial has a statue of Lincoln sitting in what?', a: 'a chair', wrong: ['a boat', 'a tree', 'a train'] },
+    { id: 'libertyCrack', level: 2, q: 'The Liberty Bell is famous for what?', a: 'a large crack', wrong: ['a hole in the top', 'a big dent', 'a painted stripe'] },
+    { id: 'vietnamWall', level: 2, q: 'Which memorial honors the soldiers who fought in the Vietnam War?', a: 'the Vietnam Veterans Memorial', wrong: ['the Korean War Memorial', 'the Iwo Jima Memorial', 'the Liberty Bell'] },
+    { id: 'hooverRiver', level: 2, q: 'The Hoover Dam sits on which river?', a: 'the Colorado River', wrong: ['the Mississippi River', 'the Hudson River', 'the Ohio River'] },
+    { id: 'spaceNeedleFair', level: 2, q: 'The Space Needle in Seattle was built for what event?', a: 'a World\'s Fair', wrong: ['a football game', 'a space launch', 'a royal visit'] },
+    { id: 'brooklyn1800s', level: 2, q: 'The Brooklyn Bridge opened in which century?', a: 'the 1800s', wrong: ['the 1600s', 'the 1700s', 'the 1900s'] },
+    { id: 'goldenGate1930s', level: 2, q: 'The Golden Gate Bridge opened in which decade?', a: 'the 1930s', wrong: ['the 1900s', 'the 1950s', 'the 1960s'] },
+    { id: 'bartholdi', level: 3, q: 'Which sculptor designed the Statue of Liberty?', a: 'Frédéric Auguste Bartholdi', wrong: ['Auguste Rodin', 'Michelangelo', 'Gutzon Borglum'] },
+    { id: 'torchHand', level: 3, q: 'The Statue of Liberty holds her torch in which hand?', a: 'her right hand', wrong: ['her left hand', 'both hands', 'neither hand'] },
+    { id: 'sevenRays', level: 3, q: 'How many rays are in the Statue of Liberty\'s crown?', a: 'seven', wrong: ['five', 'twelve', 'nine'] },
+    { id: 'copperSkin', level: 3, q: 'The outside skin of the Statue of Liberty is made of what metal?', a: 'copper', wrong: ['iron', 'stone', 'steel'] },
+    { id: 'washingtonMarble', level: 3, q: 'The Washington Monument is made mostly of what stone?', a: 'marble', wrong: ['steel', 'wood', 'glass'] },
+    { id: 'rushmoreGranite', level: 3, q: 'Mount Rushmore is carved from which kind of rock?', a: 'granite', wrong: ['sandstone', 'limestone', 'basalt'] },
+    { id: 'gatewaySteel', level: 3, q: 'The Gateway Arch is covered in which metal?', a: 'stainless steel', wrong: ['iron', 'copper', 'tin'] },
+    { id: 'libertyBellEngland', level: 3, q: 'The Liberty Bell was first cast in which country?', a: 'England', wrong: ['France', 'Spain', 'Germany'] },
+  ],
+  [{ skill: 'symbols', level: 2 }],
+)
+
+const usPhysical = factSkill(
+  'usPhysical',
+  ['Plains, deserts, and mountains', 'Rivers, lakes, and mountains', 'Landforms across the country'],
+  [
+    { id: 'greatPlains', level: 1, q: 'What large, flat grassland covers the middle of the United States?', a: 'the Great Plains', wrong: ['the Appalachians', 'the Rocky Mountains', 'the Great Lakes'] },
+    { id: 'mojave', level: 1, q: 'Which desert is in southeastern California and southern Nevada?', a: 'the Mojave Desert', wrong: ['the Sonoran Desert', 'the Chihuahuan Desert', 'the Great Basin Desert'] },
+    { id: 'appalachians', level: 1, q: 'Which mountain range runs along the eastern United States?', a: 'the Appalachian Mountains', wrong: ['the Sierra Nevada', 'the Rocky Mountains', 'the Cascades'] },
+    { id: 'sierra', level: 1, q: 'Which mountain range in eastern California has Mount Whitney?', a: 'the Sierra Nevada', wrong: ['the Cascades', 'the Appalachians', 'the Ozarks'] },
+    { id: 'mississippi', level: 1, q: 'Which river flows south through the middle of the country into the Gulf of Mexico?', a: 'the Mississippi River', wrong: ['the Colorado River', 'the Hudson River', 'the Columbia River'] },
+    { id: 'coloradoCanyon', level: 1, q: 'Which river carved the Grand Canyon?', a: 'the Colorado River', wrong: ['the Mississippi River', 'the Ohio River', 'the Snake River'] },
+    { id: 'rioGrande', level: 1, q: 'Which river forms part of the border between Texas and Mexico?', a: 'the Rio Grande', wrong: ['the Mississippi River', 'the Missouri River', 'the Columbia River'] },
+    { id: 'deathValley', level: 1, q: 'Which low valley in California is one of the hottest places on Earth?', a: 'Death Valley', wrong: ['Yosemite Valley', 'Napa Valley', 'Monument Valley'] },
+    { id: 'mtStHelens', level: 1, q: 'Which volcano in Washington State erupted in 1980?', a: 'Mount St. Helens', wrong: ['Mount Rainier', 'Mount Hood', 'Mount Shasta'] },
+    { id: 'greatSaltLake', level: 2, q: 'Which large salt lake is in Utah?', a: 'the Great Salt Lake', wrong: ['Lake Tahoe', 'Lake Erie', 'Lake Powell'] },
+    { id: 'denali', level: 2, q: 'What is the highest mountain in the United States?', a: 'Denali', wrong: ['Mount Whitney', 'Mount Rainier', 'Mount Elbert'] },
+    { id: 'kilauea', level: 2, q: 'Which of these volcanoes is in Hawaii?', a: 'Kilauea', wrong: ['Mount St. Helens', 'Mount Rainier', 'Mount Hood'] },
+    { id: 'ohioRiver', level: 2, q: 'Which river forms much of the border between Ohio and Kentucky?', a: 'the Ohio River', wrong: ['the Mississippi River', 'the Missouri River', 'the Tennessee River'] },
+    { id: 'cascades', level: 2, q: 'Which volcanic mountain range runs through Oregon and Washington?', a: 'the Cascade Range', wrong: ['the Ozarks', 'the Adirondacks', 'the Black Hills'] },
+    { id: 'craterLake', level: 2, q: 'Which lake in Oregon is the deepest lake in the United States?', a: 'Crater Lake', wrong: ['Lake Tahoe', 'Lake Erie', 'Lake Powell'] },
+    { id: 'floridaKeys', level: 2, q: 'The Florida Keys are a chain of what?', a: 'islands', wrong: ['mountains', 'deserts', 'glaciers'] },
+    { id: 'continentalDivide', level: 3, q: 'What is the Continental Divide?', a: 'high ground that splits east and west rivers', wrong: ['a line of ocean trenches', 'a dry lake bed', 'a flat plain'] },
+    { id: 'greatLakesBorder', level: 3, q: 'The Great Lakes sit mostly along which border?', a: 'the U.S.-Canada border', wrong: ['the U.S.-Mexico border', 'the Atlantic coast', 'the Gulf coast'] },
+    { id: 'sandDunes', level: 3, q: 'Which national park in Colorado has very tall sand dunes?', a: 'Great Sand Dunes', wrong: ['Death Valley', 'Mojave Preserve', 'Badlands'] },
+    { id: 'badlandsState', level: 3, q: 'Badlands National Park is in which state?', a: 'South Dakota', wrong: ['Colorado', 'Utah', 'Texas'] },
+    { id: 'uShaped', level: 3, q: 'What is a valley carved by a glacier called?', a: 'a U-shaped valley', wrong: ['a V-shaped canyon', 'a flat plateau', 'a sand dune'] },
+    { id: 'kauai', level: 3, q: 'Which Hawaiian island is called the Garden Isle?', a: 'Kauai', wrong: ['Maui', 'Lanai', 'Molokai'] },
+    { id: 'alaskaCoast', level: 3, q: 'Which state has the longest coastline?', a: 'Alaska', wrong: ['Florida', 'California', 'Hawaii'] },
+    { id: 'columbiaPacific', level: 3, q: 'The Columbia River flows into which ocean?', a: 'the Pacific Ocean', wrong: ['the Atlantic Ocean', 'the Arctic Ocean', 'the Indian Ocean'] },
+  ],
+  [{ skill: 'physicalGeography', level: 2 }],
+)
+
+const chronology = factSkill(
+  'chronology',
+  ['Which came first?', 'Events in order', 'Causes and turning points'],
+  [
+    { id: 'revolutionStart', level: 1, q: 'Which happened first?', a: 'the Revolutionary War begins', wrong: ['the Civil War begins', 'World War I begins', 'the Louisiana Purchase'] },
+    { id: 'declaration', level: 1, q: 'Which happened first?', a: 'the Declaration of Independence', wrong: ['the Constitution is signed', 'the Civil War begins', 'the Louisiana Purchase'] },
+    { id: 'constitution', level: 1, q: 'Which happened first?', a: 'the Constitution is signed', wrong: ['the Louisiana Purchase', 'the Civil War begins', 'the Moon landing'] },
+    { id: 'wrightFlight', level: 1, q: 'Which happened first?', a: 'the Wright brothers\' first flight', wrong: ['the first Moon landing', 'the first smartphone', 'the first trip to Mars'] },
+    { id: 'louisiana', level: 1, q: 'Which happened first?', a: 'the Louisiana Purchase', wrong: ['the Civil War begins', 'the end of World War II', 'the Moon landing'] },
+    { id: 'civilWarStart', level: 1, q: 'Which happened first?', a: 'the Civil War begins', wrong: ['the Emancipation Proclamation', 'the end of the Civil War', 'World War I begins'] },
+    { id: 'emancipation', level: 1, q: 'Which happened first?', a: 'the Emancipation Proclamation', wrong: ['the end of the Civil War', 'World War I begins', 'the Moon landing'] },
+    { id: 'pearlHarbor', level: 1, q: 'Which happened first?', a: 'the attack on Pearl Harbor', wrong: ['the end of World War II', 'the Moon landing', 'the Berlin Wall falls'] },
+    { id: 'lewisClark', level: 2, q: 'Which happened first?', a: 'the Lewis and Clark expedition begins', wrong: ['the Civil War ends', 'the Great Depression begins', 'the Gold Rush begins'] },
+    { id: 'erieCanal', level: 2, q: 'Which happened first?', a: 'the Erie Canal opens', wrong: ['the Civil War begins', 'the Gold Rush begins', 'the Great Depression begins'] },
+    { id: 'mexicanWar', level: 2, q: 'Which happened first?', a: 'the Mexican-American War begins', wrong: ['the Gold Rush begins', 'the Civil War begins', 'the Great Depression begins'] },
+    { id: 'railroad', level: 2, q: 'Which happened first?', a: 'the transcontinental railroad is finished', wrong: ['the Moon landing', 'the Great Depression begins', 'women win the right to vote'] },
+    { id: 'statueDedicated', level: 2, q: 'Which happened first?', a: 'the Statue of Liberty is dedicated', wrong: ['the Titanic sinks', 'the Moon landing', 'World War I begins'] },
+    { id: 'wwiStart', level: 2, q: 'Which happened first?', a: 'World War I begins', wrong: ['World War II begins', 'the Great Depression begins', 'the Korean War begins'] },
+    { id: 'depressionStart', level: 2, q: 'Which happened first?', a: 'the Great Depression begins', wrong: ['World War II begins', 'the Berlin Wall falls', 'the Vietnam War ends'] },
+    { id: 'koreanWar', level: 2, q: 'Which happened first?', a: 'the Korean War begins', wrong: ['the Berlin Wall falls', 'the Moon landing', 'the Vietnam War ends'] },
+    { id: 'teaParty', level: 3, q: 'Which event was a protest against British taxes on tea in 1773?', a: 'the Boston Tea Party', wrong: ['the Gold Rush', 'the Civil Rights Act', 'the Monroe Doctrine'] },
+    { id: 'submarines', level: 3, q: 'Which event helped pull the United States into World War I in 1917?', a: 'German attacks on ships at sea', wrong: ['the attack on Pearl Harbor', 'the Louisiana Purchase', 'the Berlin Wall falls'] },
+    { id: 'fortSumter', level: 3, q: 'Which event started the Civil War in April 1861?', a: 'the attack on Fort Sumter', wrong: ['the attack on Pearl Harbor', 'the Boston Tea Party', 'the Battle of Gettysburg'] },
+    { id: 'versailles', level: 3, q: 'The Treaty of Versailles in 1919 set peace terms after which war?', a: 'World War I', wrong: ['the Civil War', 'World War II', 'the Korean War'] },
+    { id: 'pearlEntry', level: 3, q: 'Which event brought the United States into World War II?', a: 'the attack on Pearl Harbor', wrong: ['the sinking of the Titanic', 'the Boston Tea Party', 'the Zimmermann Telegram'] },
+    { id: 'germanySurrenders', level: 3, q: 'Which event ended the fighting in Europe in May 1945?', a: 'Germany surrenders', wrong: ['Japan surrenders', 'the D-Day landings', 'the Battle of Gettysburg'] },
+    { id: 'japanSurrenders', level: 3, q: 'Which event ended World War II in the Pacific in 1945?', a: 'Japan surrenders', wrong: ['Germany surrenders', 'the attack on Pearl Harbor', 'the Berlin Wall falls'] },
+    { id: 'apollo11', level: 3, q: 'Which event first put people on the Moon?', a: 'Apollo 11', wrong: ['Sputnik launch', 'the Berlin Wall falls', 'the first Space Shuttle flight'] },
+  ],
+  [{ skill: 'timeline', level: 2 }],
+)
+
+export const SCIENCE_R3: Skill[] = [skyObjects, comparingObjects, pollinators, groupBehavior, phaseChange, heredity, particles, lifeCycles, starsSeasons]
+
+export const SOCIAL_R3: Skill[] = [locationWords, statesNicknames, cityNicknames, nationalHolidays, monuments, usPhysical, chronology]
+
+// ============================================================================================
+// IXL: which IXL topic each level practices (index 0 = level 1).
+// ============================================================================================
+
+const sci = (grade: number, category: string): IxlRef => ({ subject: 'science', grade, category })
+const ss = (grade: number, category: string): IxlRef => ({ subject: 'social-studies', grade, category })
+
+export const SCIENCE_SOCIAL_R3_IXL: Record<string, IxlRef[]> = {
+  'science.skyObjects': [sci(0, 'Astronomy'), sci(1, 'Astronomy'), sci(1, 'Astronomy')],
+  'science.comparingObjects': [sci(0, 'Comparing'), sci(0, 'Comparing'), sci(1, 'Comparing')],
+  'science.pollinators': [sci(2, 'Pollinators and seed dispersers'), sci(2, 'Pollinators and seed dispersers'), sci(2, 'Pollinators and seed dispersers')],
+  'science.groupBehavior': [sci(2, 'Group behavior'), sci(2, 'Group behavior'), sci(2, 'Group behavior')],
+  'science.phaseChange': [sci(3, 'Phase change'), sci(3, 'Phase change'), sci(3, 'Phase change')],
+  'science.heredity': [sci(3, 'Heredity'), sci(3, 'Heredity'), sci(3, 'Heredity')],
+  'science.particles': [sci(5, 'Particles of matter'), sci(5, 'Particles of matter'), sci(5, 'Modeling matter')],
+  'science.lifeCycles': [sci(4, 'Animals'), sci(4, 'Animals'), sci(4, 'Animals')],
+  'science.starsSeasons': [sci(4, 'Astronomy'), sci(4, 'Astronomy'), sci(5, 'Astronomy')],
+
+  'social.locationWords': [ss(0, 'Location words'), ss(1, 'Location words'), ss(1, 'Location words')],
+  'social.statesNicknames': [ss(3, 'States'), ss(4, 'States'), ss(5, 'States')],
+  'social.cityNicknames': [ss(4, 'Cities'), ss(4, 'Cities'), ss(5, 'Cities')],
+  'social.nationalHolidays': [ss(4, 'American national holidays'), ss(4, 'American national holidays'), ss(5, 'American national holidays')],
+  'social.monuments': [ss(3, 'American symbols, landmarks, and monuments'), ss(4, 'American symbols, landmarks, and monuments'), ss(5, 'American symbols, landmarks, and monuments')],
+  'social.usPhysical': [ss(4, 'Physical geography'), ss(4, 'Physical geography'), ss(5, 'Physical geography')],
+  'social.chronology': [ss(3, 'Chronology and causation'), ss(4, 'Chronology and causation'), ss(5, 'Chronology and causation')],
+}

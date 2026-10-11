@@ -142,11 +142,10 @@ describe('safety net', () => {
 })
 
 describe('starting from zero, then finding their level', () => {
-  test('everyone starts every skill at level 1, whatever their grade', () => {
+  test('with no grade on the profile, every skill starts at level 1 (see placement.test.ts for starting at a grade)', () => {
     expect(fresh().rating('math.add')).toBe(1)
-    expect(fresh({ grade: 2 }).rating('math.add')).toBe(1)
-    expect(fresh({ grade: 2 }).rating('reading.words')).toBe(1)
-    expect(fresh({ grade: 2 }).isUnlocked('math.mul')).toBe(false) // unlocks by growing, not by grade
+    expect(fresh().rating('reading.words')).toBe(1)
+    expect(fresh().isUnlocked('math.mul')).toBe(false) // unlocks by growing
   })
 
   test('a strong kid climbs a level per right answer while calibrating', () => {
@@ -250,8 +249,9 @@ describe('choosing questions', () => {
   test('mostly at their level, sometimes one harder, sometimes one easier', () => {
     const l = learnerAt(4)
     const levels: Record<number, number> = {}
-    for (let i = 0; i < 10000; i++) {
-      const it = pickItem(l, { subjects: ['math'], formats: ['number'] })
+        for (let i = 0; i < 3000; i++) {
+      // Only addition, so the share of each level is measured directly however many other math skills exist.
+      const it = pickItem(l, { subjects: ['math'], skills: ['math.add'], formats: ['number'] })
       if (it.skill === 'math.add') levels[it.level] = (levels[it.level] ?? 0) + 1
     }
     const total = Object.values(levels).reduce((a, b) => a + b, 0)
@@ -313,14 +313,14 @@ describe('summaries', () => {
   })
 
   test('growth counts from the very start', () => {
-    const l = fresh({ grade: 2 })
+    const l = fresh()
     expect(subjectGrowth(l, 'math')).toBe(0)
     ;(l as unknown as { state: { ratings: Record<string, number> } }).state.ratings['math.add'] = 5
     expect(subjectGrowth(l, 'math')).toBe(4)
   })
 
   test('skill and subject summaries describe where a player is', () => {
-    const l = fresh({ grade: 2 })
+    const l = fresh()
     const math = skillSummary(l, 'math')
     expect(math.find((s) => s.id === 'math.add')!.label).toBe('Addition up to 10')
     expect(math.find((s) => s.id === 'math.div')!.unlocked).toBe(false)
