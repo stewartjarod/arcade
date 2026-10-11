@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { IXL_LEVELS } from '../ixl/map'
 import { itemGrade, ixlScore, levelStarts, scoreLabel, startLevel } from '../ixl/placement'
 import { findSkill } from '../subjects'
-import { Learner, solves } from './learner'
+import { Learner, PLACING_ANSWERS, solves } from './learner'
 import { startPractice } from './practice'
 import { ixlGradeFor, ixlReport, practiceGrade, subjectGrowth } from './summary'
 
@@ -108,13 +108,17 @@ describe('starting at the grade on the profile', () => {
 
 // Each test simulates dozens of kids answering a dozen questions, so give a busy machine room.
 describe('finding their real level fast', { timeout: 30_000 }, () => {
-  /** A kid who really works at `truth` and was entered as `profile`, asked `answers` choice questions in math. */
+  /**
+   * A kid who really works at `truth` and was entered as `profile`, asked `answers` choice questions in math,
+   * a new round (maze) every dozen answers.
+   */
   function trial(profile: number | undefined, truth: number, answers: number, rand: () => number, guessOnly = false) {
     const l = new Learner('sim', null, { grade: profile })
     vi.spyOn(l, 'save').mockImplementation(() => {})
     vi.spyOn(Math, 'random').mockImplementation(rand)
-    const practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
+    let practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
     for (let i = 0; i < answers; i++) {
+      if (i > 0 && i % 12 === 0) practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
       const m = practice.moment()
       const q = m.ask()
       const sure = guessOnly ? 0 : solves(startLevel(q.item.skill, truth), q.item.level)
@@ -128,8 +132,11 @@ describe('finding their real level fast', { timeout: 30_000 }, () => {
     return runs.reduce((a, b) => a + b, 0) / runs.length
   }
 
-  test('a 1st grader who is really at 3rd-grade math moves most of the way up in one maze-and-a-bit', () => {
-    expect(mean(1, 3, 12)).toBeGreaterThan(2.3)
+  // Climbing is capped at about a grade a round (questions never go more than a grade above where the round
+  // started), so finding a kid who's well ahead takes a couple of mazes; coming down is still immediate.
+  test('a 1st grader who is really at 3rd-grade math moves most of the way up in two mazes', () => {
+    expect(mean(1, 3, 12)).toBeGreaterThan(1.7)
+    expect(mean(1, 3, 24)).toBeGreaterThan(2.3)
   })
 
   test('a kid entered too high comes down', () => {
@@ -143,7 +150,7 @@ describe('finding their real level fast', { timeout: 30_000 }, () => {
   })
 
   test('with no grade on the profile, a 2nd grader is found from scratch', () => {
-    expect(mean(undefined, 2, 12)).toBeGreaterThan(1.4)
+    expect(mean(undefined, 2, 24)).toBeGreaterThan(1.4)
   })
 
   test('someone who is only guessing does not climb', () => {
@@ -201,19 +208,37 @@ describe('gentler for the youngest, and no sudden jumps in play style', () => {
     expect(young.placingTarget('math') - 1).toBeLessThan(older.placingTarget('math') - 3)
   })
 
-  test('a hot streak lifts the estimate fast, but games only play one grade higher per round', () => {
+  test('a hot streak climbs about a grade a round', () => {
     const l = new Learner('t', null, { grade: 1 })
     vi.spyOn(l, 'save').mockImplementation(() => {})
-    let practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
-    expect(practiceGrade(l, 'math').grade).toBe(1)
-    for (let i = 0; i < 12; i++) {
-      const m = practice.moment()
-      m.record(m.ask(), true, { choices: 3 })
+    const round = () => {
+      const practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
+      for (let i = 0; i < 12; i++) {
+        const m = practice.moment()
+        m.record(m.ask(), true, { choices: 3 })
+      }
     }
-    expect(ixlGradeFor(l, 'math')!).toBeGreaterThan(2.5) // the grown-up page sees the full estimate
-    expect(practiceGrade(l, 'math').grade).toBe(2) // but the next maze is only one grade up
-    practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
+    expect(practiceGrade(l, 'math').grade).toBe(1)
+    round()
+    expect(ixlGradeFor(l, 'math')!).toBeGreaterThan(2) // past this round's grade
+    expect(practiceGrade(l, 'math').grade).toBe(2) // so the next maze is one grade up
+    round()
     expect(practiceGrade(l, 'math').grade).toBe(3) // and the one after that, one more
+  })
+
+  test('while placing, a brand-new profile on a hot streak is never asked more than a grade above where it started', () => {
+    for (const grade of [undefined, 0, 1, 2]) {
+      const l = new Learner('t', null, { grade })
+      vi.spyOn(l, 'save').mockImplementation(() => {})
+      const practice = startPractice({ learner: l, subjects: ['math'], formats: ['number', 'choice'], audio: true })
+      for (let i = 0; i < PLACING_ANSWERS; i++) {
+        const m = practice.moment()
+        const q = m.ask()
+        // (no five-digit sums for a kindergartner who got three easy ones right)
+        expect(itemGrade(q.item.skill, q.item.level) ?? 0, `${q.item.skill} @ ${q.item.level}, profile ${grade}`).toBeLessThanOrEqual((grade ?? 0) + 1 + 1e-9)
+        m.record(q, true, { choices: 3 })
+      }
+    }
   })
 
   test('play style comes down at once', () => {

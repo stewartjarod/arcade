@@ -80,11 +80,14 @@ function pickOnce(l: Learner, o: PickOptions, avoidKeys: readonly string[]): Ite
   }
 
   // 2. Skill: weaker ones more often
-  const skills = all.filter((c) => c.subject === subject)
-  const top = Math.max(...skills.map((c) => l.rating(c.id)))
-  // While placing, aim a little above their spot on the grade scale: each skill's level there is the question.
+  const inSubject = all.filter((c) => c.subject === subject)
   const placing = l.isPlacing(subject)
   const target = l.placingTarget(subject)
+  // While placing, skip skills whose easiest question is already above the target (three-digit sums for a kindergartner).
+  const reachable = inSubject.filter((c) => (itemGrade(c.id, 1) ?? 0) <= target + 1e-9)
+  const skills = placing && reachable.length ? reachable : inSubject
+  const top = Math.max(...skills.map((c) => l.rating(c.id)))
+  // While placing, aim a little above their spot on the grade scale: each skill's level there is the question.
   const nearTarget = (id: string) => {
     const g = itemGrade(id, startLevel(id, target))
     return g === undefined ? 0.3 : Math.exp(-1.2 * Math.abs(g - target))

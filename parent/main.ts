@@ -105,7 +105,7 @@ function render() {
   const players = listPlayers()
   const open = new Set([...app.querySelectorAll<HTMLDetailsElement>('details.subject[open]')].map((d) => `${d.closest('.kid')?.getAttribute('data-player')}|${d.dataset.subject}`))
   app.innerHTML = `<h1>📊 How everyone is doing</h1>
-    <p class="lede">An <b>IXL-style estimate</b> from the games: 0 is the start of Kindergarten and every grade adds 100 (so 134 is a third of the way through 1st grade). It's our own estimate, not IXL's Diagnostic score. Kids don't see any of these numbers. The first dozen answers in a subject move it the most; after that it follows how they're really doing.</p>
+    <p class="lede">An <b>IXL-style estimate</b> from the games: 0 is the start of Kindergarten and every grade adds 100 (so 134 is a third of the way through 1st grade). It's our own estimate, not IXL's Diagnostic score. Kids don't see any of these numbers. The first couple dozen answers in a subject move it the most (it climbs about a grade per game round); after that it follows how they're really doing.</p>
     ${players.length ? players.map(kidBlock).join('') : kidBlock(currentPlayer())}
     <p class="note"><a href="../index.html">← Back to the arcade</a></p>`
   app.querySelectorAll<HTMLDetailsElement>('details.subject').forEach((d) => {

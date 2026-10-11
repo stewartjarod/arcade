@@ -13,8 +13,9 @@ import type { Item, Skill } from './types'
  * Where they start: the grade on their profile (none = Kindergarten), on IXL's scale where each grade
  * is 100 points (see ixl/placement.ts). That's only a first guess. Every answer moves the player's
  * "placement" in that subject (big steps at first, then smaller), and any skill they haven't tried
- * yet starts at the level their placement says. So a few answers in one game find roughly where they
- * are in every skill of the subject, up or down. Then each skill calibrates on its own: each right
+ * yet starts at the level their placement says. So a couple of rounds find roughly where they are in
+ * every skill of the subject: down at once, but up only about a grade a round (questions never go more
+ * than a grade above where the round started). Then each skill calibrates on its own: each right
  * answer at their level jumps a whole level, and the first miss settles them just below it. From
  * then on it's gentle i+1. All of it is saved on the player, so it carries across games.
  *
@@ -67,8 +68,8 @@ const fresh = (): State => ({ v: 2, ratings: {}, seen: {}, fast: {}, facts: {}, 
 
 /** A new skill stops calibrating after its first miss, or after this many answers. */
 export const CALIBRATION_ANSWERS = 8
-/** A subject is still "placing" (finding the player's spot on the grade scale) for this many answers. */
-export const PLACING_ANSWERS = 12
+/** A subject is still "placing" (finding the player's spot on the grade scale) for this many answers: about two rounds. */
+export const PLACING_ANSWERS = 24
 /** While placing, ask this far (in grades) above their spot: a question they get right about 6 times in 10 teaches us the most. */
 export const PLACING_REACH = 0.35
 /** Kindergarten and 1st grade: closer to their spot, so fewer wrong answers. */
@@ -157,13 +158,18 @@ export class Learner {
   /**
    * The grade to aim questions at while placing: a bit above their spot, and further above after each answer in
    * a row they get right (they're clearly past it), snapping back after a miss.
+   *
+   * Never more than a grade above where this round started, though: a few right answers in a row can lift the
+   * estimate fast, and without this a brand-new Kindergarten profile was asked five-digit sums by its fourth question.
    */
   placingTarget(subjectId: string) {
     const streak = this.state.placement[subjectId]?.s ?? 0
     const spot = this.placement(subjectId).grade
-    // Gentler for the youngest: they get fewer questions that are likely to be wrong while we find them.
-    const young = spot < 2
-    return spot + (young ? PLACING_REACH_YOUNG : PLACING_REACH) + (young ? 0.25 : 0.5) * Math.min(streak, 3)
+    const roundStart = this.state.played?.[subjectId] ?? this.grade ?? 0
+    // Gentler for the youngest (by where they started, so a lucky streak doesn't switch it off).
+    const young = roundStart < 2
+    const target = spot + (young ? PLACING_REACH_YOUNG : PLACING_REACH) + (young ? 0.25 : 0.5) * Math.min(streak, 3)
+    return Math.min(target, roundStart + 1)
   }
 
   /**
@@ -181,7 +187,7 @@ export class Learner {
     this.state.played = { ...this.state.played, [subjectId]: grade }
   }
 
-  /** Still finding their spot in this subject? (Their first dozen answers move it the most.) */
+  /** Still finding their spot in this subject? (Their first couple dozen answers move it the most.) */
   isPlacing(subjectId: string) {
     return this.placement(subjectId).answers < PLACING_ANSWERS
   }
@@ -193,6 +199,8 @@ export class Learner {
   replace(subjectId: string, grade = this.grade ?? 0) {
     this.fromSkills.clear()
     this.state.placement[subjectId] = { g: grade, n: 0 }
+    // ...and play from that grade again, not from wherever the old placement had pushed it.
+    this.state.played = { ...this.state.played, [subjectId]: grade }
     for (const k of SUBJECTS.find((s) => s.id === subjectId)?.skills ?? []) {
       const id = `${subjectId}.${k.id}`
       delete this.state.ratings[id]
