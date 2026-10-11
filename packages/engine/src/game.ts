@@ -5,6 +5,7 @@ import { Sound } from './sound'
 import { Hud } from './hud'
 import { Tweens } from './tween'
 import { currentPlayer, type Player } from '@arcade/players'
+import { keepFullscreen } from './fullscreen'
 
 export interface GameOptions {
   /** Element to put the game in. Defaults to document.body. */
@@ -55,6 +56,7 @@ export class Game {
   constructor(opts: GameOptions = {}) {
     this.opts = { lights: true, shadows: true, camera: 'perspective', ...opts }
     const parent = opts.parent ?? document.body
+    keepFullscreen() // kid mode: back to full screen on the first tap
     this.orthoSize = opts.orthoSize ?? 20
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true })

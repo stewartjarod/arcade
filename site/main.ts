@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { readSave } from '@arcade/players'
+import { canFullscreen, isFullscreenMode, keepFullscreen, setFullscreenMode } from '@arcade/engine'
 import { mountPlayers } from './players'
 
 // ------------------------------------------------------------------
@@ -88,6 +89,21 @@ function renderCards() {
 
 renderCards()
 mountPlayers(document.getElementById('who')!, renderCards)
+mountKidMode(document.getElementById('kidmode') as HTMLButtonElement)
+
+// Grown-up switch for full screen, so kids can't tap the browser's back button or tabs.
+// It lives in the footer (not up top) so it's easy for us to find and easy for kids to ignore.
+function mountKidMode(button: HTMLButtonElement) {
+  if (!canFullscreen()) return // iPhones can't; "Add to Home Screen" does the same job there
+  const label = () => (button.textContent = isFullscreenMode() ? '⛶ Full screen: on' : '⛶ Full screen: off')
+  button.hidden = false
+  label()
+  button.addEventListener('click', () => {
+    setFullscreenMode(!isFullscreenMode())
+    label()
+  })
+  keepFullscreen()
+}
 
 function badge(text: string, className: string) {
   const b = document.createElement('span')

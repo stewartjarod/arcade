@@ -1,10 +1,11 @@
-import { setMuted } from '@arcade/engine'
+import { keepFullscreen, setMuted } from '@arcade/engine'
 import { save } from './save'
 import { createGame } from './game'
 import { initUI } from './ui'
 import { createWorld } from './world'
 
 setMuted(save.muted)
+keepFullscreen() // kid mode: back to full screen on the first tap
 const world = createWorld(document.getElementById('c') as HTMLCanvasElement)
 world.setSkin(save.color, save.hat)
 const game = createGame(world)
