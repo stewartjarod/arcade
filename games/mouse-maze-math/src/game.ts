@@ -193,12 +193,15 @@ export const createGame = (world: World) => {
         if (grade <= 1) speak(spokenText(q.prompt)) // young readers: say the question out loud
         ui.showAnswers(labels, realm.doors, (i) => pending?.(i), world.setHover, [...blocked])
         q.restartTimer() // the speed bonus counts from when the doors appear
+        let readAgain = false
         const idx = await askExit(blocked, {
           nudgeMs: nudgeSecondsFor(grade) * 1000,
           hintMs: hintSecondsFor(grade) * 1000,
-          // "Still thinking?": read the question again and wiggle the doors that still count.
+          // "Still thinking?": wiggle the doors that still count. The question is read again only the first time:
+          // hearing it over and over gets in the way of thinking (the 🔊 button is there for more).
           nudge: () => {
-            speak(spokenText(q.prompt))
+            if (!readAgain) speak(spokenText(q.prompt))
+            readAgain = true
             ui.pulseAnswers()
           },
           hint,

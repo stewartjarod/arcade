@@ -1,5 +1,6 @@
 import type { Prompt } from '../core/types'
 import { canSpeak, speak } from './speak'
+import { mathWords } from './clips'
 
 /** "7 + 5" → HTML with the operator wrapped in <span class="op">, for colorful sums. */
 export const problemHTML = (text: string) =>
@@ -60,17 +61,8 @@ export function renderPrompt(p: Prompt, { listen = false, sumSuffix = '' } = {})
   return box
 }
 
-/** What to say out loud for a question: its `say` text, or the words with math symbols spelled out ("7 plus 5"). */
-export const spokenText = (p: Prompt) =>
-  p.say ??
-  p.text
-    .replace('+', ' plus ')
-    .replace('−', ' minus ')
-    .replace('×', ' times ')
-    .replace('÷', ' divided by ')
-    .replace('__', 'what')
-    .replace(/\s+/g, ' ')
-    .trim()
+/** What to say out loud for a question: its `say` text, or the words with math signs spelled out ("7 plus 5"). */
+export const spokenText = (p: Prompt) => p.say ?? mathWords(p.text)
 
 /** A drawing that's much wider than tall (a picture graph, a ruler) needs more room than a small shape. */
 export const isWideSvg = (svg: string) => {

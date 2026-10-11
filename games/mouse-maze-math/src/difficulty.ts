@@ -55,10 +55,10 @@ export const corridorFor = (_grade: number, realm: MazeOpts): MazeOpts => ({
 })
 
 /**
- * Seconds of thinking before the question is read out again (and the doors wiggle to say "pick one!").
- * It repeats every time that much more thinking passes.
+ * Seconds of thinking before the doors wiggle to say "pick one!" (the first time, the question is read out again too).
+ * The wiggle repeats every time that much more thinking passes. Long enough to think a sum through without being hurried.
  */
-export const nudgeSecondsFor = (grade: number) => (styleFor(grade) === 'cozy' ? 8 : 12)
+export const nudgeSecondsFor = (grade: number) => (styleFor(grade) === 'cozy' ? 12 : 20)
 
 /** Seconds of thinking before one wrong door fades away, as a hint. Only cozy players get it (0 = never). */
 export const hintSecondsFor = (grade: number) => (styleFor(grade) === 'cozy' ? 16 : 0)

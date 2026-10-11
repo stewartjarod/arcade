@@ -10,6 +10,26 @@ export function sentences(text: string): string[] {
   return parts.map((p) => p.trim()).filter((p) => /[a-z0-9]/i.test(p))
 }
 
+/**
+ * Math signs spelled out as words ("7 − 3 = ?" → "7 minus 3 equals what?"). Voices skip signs they
+ * can't read, so "7 − 3" came out as "7 3". Every sign is changed, not just the first one.
+ * A dash between words ("blue-green") is left alone; only a dash with spaces around it means minus.
+ */
+export function mathWords(text: string): string {
+  return text
+    .replace(/__+/g, ' what ')
+    .replace(/−| - /g, ' minus ')
+    .replace(/\+/g, ' plus ')
+    .replace(/×/g, ' times ')
+    .replace(/÷/g, ' divided by ')
+    .replace(/=/g, ' equals ')
+    .replace(/</g, ' is less than ')
+    .replace(/>/g, ' is greater than ')
+    .replace(/(^|\s)\?/g, '$1what?') // a lone "?" stands for the missing number
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** A small, stable number made from text — keeps "Yes!" and "Yes?" from sharing a file. */
 function shortHash(text: string): string {
   let h = 5381

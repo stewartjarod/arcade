@@ -1,4 +1,4 @@
-import { clipsFor, hasAnyClips } from './clips'
+import { clipsFor, hasAnyClips, mathWords } from './clips'
 
 /**
  * Read things aloud — for kids still learning to read, and for "spell the word you hear" questions.
@@ -30,7 +30,7 @@ if (hasBrowserVoice()) {
  * Linux) can still play our clips, but can't read a sentence we have no clip for.
  */
 export function canSpeak(text?: string): boolean {
-  if (text ? clipsFor(text) : hasAnyClips()) return true
+  if (text ? clipsFor(mathWords(text)) : hasAnyClips()) return true
   return hasBrowserVoice() && voiceCount > 0
 }
 
@@ -64,7 +64,8 @@ async function playClips(urls: string[], id: number, fallback: () => void) {
 }
 
 /** Say something (stops anything already being said). A little slower than normal, for kids. */
-export function speak(text: string, { rate = 0.85 } = {}) {
+export function speak(words: string, { rate = 0.85 } = {}) {
+  const text = mathWords(words) // "7 − 3" → "7 minus 3", for the clips and the browser voice alike
   stopAll()
   const id = playId
   const say = () => {

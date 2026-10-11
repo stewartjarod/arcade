@@ -38,7 +38,7 @@ for (const game of readdirSync(join(root, 'games'))) {
   const file = join(root, 'games', game, 'src/lines.ts')
   if (existsSync(file)) {
     const mod = await vite.ssrLoadModule(file)
-    for (const line of mod.LINES) learning.sentences(line).forEach((s) => lines.add(s))
+    for (const line of mod.LINES) learning.sentences(learning.mathWords(line)).forEach((s) => lines.add(s))
   }
 }
 await vite.close()

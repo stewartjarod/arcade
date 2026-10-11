@@ -1,5 +1,5 @@
 import { SUBJECTS } from './subjects'
-import { sentences } from './ui/clips'
+import { mathWords, sentences } from './ui/clips'
 
 /**
  * Everything the questions can say out loud — the to-do list for `pnpm voices`.
@@ -15,7 +15,7 @@ export function learningLines(tries = 400): string[] {
           const { say, text } = skill.generate(level).prompt
           // Space questions have no `say`, but Rocket Tour reads their text aloud.
           const spoken = say ?? (subject.id === 'space' ? text : undefined)
-          if (spoken) sentences(spoken).forEach((s) => lines.add(s))
+          if (spoken) sentences(mathWords(spoken)).forEach((s) => lines.add(s))
         }
       }
     }

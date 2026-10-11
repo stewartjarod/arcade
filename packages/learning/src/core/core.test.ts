@@ -5,6 +5,7 @@ import { Question, startPractice } from './practice'
 import { pickItem } from './scheduler'
 import { skillSummary, smartScore, subjectGrowth, subjectSummary } from './summary'
 import type { Item } from './types'
+import { mathWords } from '../ui/clips'
 
 // A learner not tied to storage or saved players.
 const fresh = (profile: { grade?: number; focus?: string } = {}) => new Learner('test', null, profile)
@@ -359,5 +360,18 @@ describe('a practice does not repeat questions right away', () => {
         expect(window, `${subjects[0]} #${i}: "${k}" repeated within the last 3`).not.toContain(k)
       })
     }
+  })
+})
+
+describe('math read aloud', () => {
+  test('every sign is said as a word', () => {
+    expect(mathWords('7 − 5 + 2 = ?')).toBe('7 minus 5 plus 2 equals what?')
+    expect(mathWords('8 - 3 = __')).toBe('8 minus 3 equals what')
+    expect(mathWords('4 × 6 ÷ 2 = ?')).toBe('4 times 6 divided by 2 equals what?')
+  })
+
+  test('words with dashes and real questions stay as they are', () => {
+    expect(mathWords('It is an icy, blue-green ice giant.')).toBe('It is an icy, blue-green ice giant.')
+    expect(mathWords('How many apples?')).toBe('How many apples?')
   })
 })

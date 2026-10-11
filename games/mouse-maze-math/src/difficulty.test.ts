@@ -61,9 +61,9 @@ describe('trap cages', () => {
 })
 
 describe('idle help while a door question waits', () => {
-  test('the question is read again after 8 seconds for cozy players and 12 for everyone else', () => {
-    expect([0, 1].map(nudgeSecondsFor)).toEqual([8, 8])
-    expect([2, 3, 4, 5].map(nudgeSecondsFor)).toEqual([12, 12, 12, 12])
+  test('the doors wiggle (and the question is read once more) after 12 seconds for cozy players and 20 for everyone else', () => {
+    expect([0, 1].map(nudgeSecondsFor)).toEqual([12, 12])
+    expect([2, 3, 4, 5].map(nudgeSecondsFor)).toEqual([20, 20, 20, 20])
   })
 
   test('only cozy players get a hint, after 16 seconds, which comes after the first nudge', () => {
