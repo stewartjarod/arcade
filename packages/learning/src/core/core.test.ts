@@ -365,17 +365,18 @@ describe('a practice does not repeat questions right away', () => {
 
 describe('math read aloud', () => {
   test('every sign is said as a word', () => {
-    expect(mathWords('7 − 5 + 2 = ?')).toBe('7 minus 5 plus 2 equals what?')
-    expect(mathWords('8 - 3 = __')).toBe('8 minus 3 equals what?')
-    expect(mathWords('4 × 6 ÷ 2 = ?')).toBe('4 times 6 divided by 2 equals what?')
+    expect(mathWords('7 − 5 + 2 = ?')).toBe('7 minus 5 plus 2 equals what number?')
+    expect(mathWords('8 - 3 = __')).toBe('8 minus 3 equals what number?')
+    expect(mathWords('4 × 6 ÷ 2 = ?')).toBe('4 times 6 divided by 2 equals what number?')
   })
 
   test('words with dashes and real questions stay as they are', () => {
     expect(mathWords('It is an icy, blue-green ice giant.')).toBe('It is an icy, blue-green ice giant.')
     expect(mathWords('How many apples?')).toBe('How many apples?')
     expect(mathWords('What number goes in the ? box?')).toBe('What number goes in the ? box?')
-    expect(mathWords('? + 2 = 9')).toBe('what plus 2 equals 9')
-    expect(mathWords('3 + ? = 7')).toBe('3 plus what equals 7')
-    expect(mathWords('Count by tens: 10, 20, 30, ?')).toBe('Count by tens: 10, 20, 30, what?')
+    expect(mathWords('? + 2 = 9')).toBe('what number plus 2 equals 9')
+    expect(mathWords('3 + ? = 7')).toBe('3 plus what number equals 7')
+    expect(mathWords('5, 10, 15, __')).toBe('5, 10, 15, what number?')
+    expect(mathWords('Count by tens: 10, 20, 30, ?')).toBe('Count by tens: 10, 20, 30, what number?')
   })
 })

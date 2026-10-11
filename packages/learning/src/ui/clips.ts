@@ -11,17 +11,17 @@ export function sentences(text: string): string[] {
 }
 
 /**
- * Math signs spelled out as words ("7 − 3 = ?" → "7 minus 3 equals what?"). Voices skip signs they
+ * Math signs spelled out as words ("7 − 3 = ?" → "7 minus 3 equals what number?"). Voices skip signs they
  * can't read, so "7 − 3" came out as "7 3". Every sign is changed, not just the first one.
  * A dash between words ("blue-green") is left alone; only a dash with spaces around it means minus.
  */
 export function mathWords(text: string): string {
   return text
-    .replace(/__+/g, ' what ')
+    .replace(/__+/g, ' what number ') // only math uses "__" (word blanks are said as "blank")
     // A "?" stands for the missing number only when it sits in a sum ("3 + ? = 7", "8 − 3 = ?") or a list ("10, 20, ?").
     // Elsewhere ("the ? box") it is a picture of the box, so it is left for the sentence around it.
-    .replace(/([−+×÷=<>,]|\s-)\s*\?/g, '$1 what')
-    .replace(/(^|\s)\?(?=\s*[−+×÷=<>])/g, '$1what')
+    .replace(/([−+×÷=<>,]|\s-)\s*\?/g, '$1 what number')
+    .replace(/(^|\s)\?(?=\s*[−+×÷=<>])/g, '$1what number')
     .replace(/−| - /g, ' minus ')
     .replace(/\+/g, ' plus ')
     .replace(/×/g, ' times ')
@@ -31,7 +31,7 @@ export function mathWords(text: string): string {
     .replace(/>/g, ' is greater than ')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/ what$/, ' what?') // "8 − 3 = ?" still sounds like a question
+    .replace(/ what( number)?$/, ' what$1?') // still a question. ("what number?", not a bare "what?": voices stretch that into "wahhh")
 }
 
 /** A small, stable number made from text — keeps "Yes!" and "Yes?" from sharing a file. */
