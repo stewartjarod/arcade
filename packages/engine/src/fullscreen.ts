@@ -37,16 +37,56 @@ export function setFullscreenMode(on: boolean) {
   } catch {
     // Private mode etc. — it still works for this page.
   }
+  lockZoom()
   if (on) void enter()
   else if (isFull()) void document.exitFullscreen().catch(() => {})
 }
 
+/** Opened from a home screen icon ("Add to Home Screen"), so there are no browser bars at all. */
+export function isHomeScreenApp() {
+  return (
+    typeof window !== 'undefined' &&
+    (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || !!(navigator as any).standalone)
+  )
+}
+
+// While kids play full screen, a stray pinch or double tap shouldn't zoom the page — then the
+// game is half off the screen and they can't find the way back. Grown-ups browsing normally keep zoom.
+const noZoom = () => isFullscreenMode() || isHomeScreenApp()
+
+function lockZoom() {
+  const viewport = document.querySelector<HTMLMetaElement>('meta[name=viewport]')
+  if (viewport) {
+    viewport.dataset.original ??= viewport.content // some games already turn zoom off; put theirs back
+    viewport.content = noZoom() ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' : viewport.dataset.original
+  }
+  // Double tap to zoom off; pinch is handled below because iPads ignore "user-scalable=no" in a browser tab.
+  document.documentElement.style.touchAction = noZoom() ? 'manipulation' : ''
+}
+
+function blockZoomGestures() {
+  const stop = (e: Event) => {
+    if (noZoom()) e.preventDefault()
+  }
+  // Safari's pinch events.
+  document.addEventListener('gesturestart', stop)
+  document.addEventListener('gesturechange', stop)
+  // Two fingers moving = a pinch in other browsers. Taps and drags still reach the game.
+  document.addEventListener('touchmove', (e) => e.touches.length > 1 && stop(e), { passive: false })
+  // Computers: Ctrl + scroll wheel (and trackpad pinch) and Ctrl/Cmd with + - 0.
+  window.addEventListener('wheel', (e) => e.ctrlKey && stop(e), { passive: false })
+  window.addEventListener('keydown', (e) => (e.ctrlKey || e.metaKey) && ['+', '=', '-', '_', '0'].includes(e.key) && stop(e))
+}
+
 let listening = false
 
-/** Call once per page: if kid mode is on, go full screen on the next tap or key press. */
+/** Call once per page: in kid mode, go full screen on the next tap or key press and don't let the page zoom. */
 export function keepFullscreen() {
-  if (listening || !supported()) return
+  if (listening || typeof document === 'undefined') return
   listening = true
+  lockZoom()
+  blockZoomGestures()
+  if (!supported()) return
   const again = () => {
     if (isFullscreenMode()) void enter()
   }

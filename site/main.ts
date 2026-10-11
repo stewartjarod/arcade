@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { readSave } from '@arcade/players'
-import { canFullscreen, isFullscreenMode, keepFullscreen, setFullscreenMode } from '@arcade/engine'
+import { canFullscreen, isFullscreenMode, isHomeScreenApp, keepFullscreen, setFullscreenMode } from '@arcade/engine'
 import { mountPlayers } from './players'
 
 // ------------------------------------------------------------------
@@ -94,8 +94,9 @@ mountKidMode(document.getElementById('kidmode') as HTMLButtonElement)
 // Grown-up switch for full screen, so kids can't tap the browser's back button or tabs.
 // It lives in the footer (not up top) so it's easy for us to find and easy for kids to ignore.
 function mountKidMode(button: HTMLButtonElement) {
+  keepFullscreen() // also stops pinch-zoom in kid mode and in the home screen app
   // Opened from the home screen icon: there are no browser bars to hide.
-  if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || (navigator as any).standalone) return
+  if (isHomeScreenApp()) return
 
   // iPads and iPhones: browsers there can't really go full screen (Firefox and Chrome not at all),
   // but a home screen icon opens the arcade as its own app with no address bar or back button.
@@ -118,7 +119,6 @@ function mountKidMode(button: HTMLButtonElement) {
     setFullscreenMode(!isFullscreenMode())
     label()
   })
-  keepFullscreen()
 }
 
 function badge(text: string, className: string) {
