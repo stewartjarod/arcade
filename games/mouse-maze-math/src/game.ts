@@ -6,7 +6,7 @@ import { DX, DZ, generateMaze } from './maze'
 import { activeRealm, currentSubject, depth } from './progress'
 import { REALMS, realmForDepth } from './realms'
 import { currentPlayer } from '@arcade/players'
-import { learner, practiceGrade, speak, spokenText, startPractice, type Moment, type Question } from '@arcade/learning'
+import { choicePad, learner, practiceGrade, slowDown, speak, spokenText, startPractice, type Moment, type Question } from '@arcade/learning'
 import { commit, save } from './save'
 import * as ui from './ui'
 import { sleep, type World } from './world'
@@ -92,6 +92,9 @@ export const createGame = (world: World) => {
         sfx.bad()
         ui.markChoice(picked, false)
         open--
+        // Tapping answers super fast without reading? A short 🐢 wait before the next pick.
+        await slowDown(choicePad().element, moment.slowDown())
+        if (left()) return
         picked = await ui.askAgain()
         if (left()) return
       }

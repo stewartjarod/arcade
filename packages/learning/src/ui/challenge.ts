@@ -5,6 +5,8 @@ import type { Format } from '../core/types'
 import { choicePad } from './choicePad'
 import { letterPad } from './letterPad'
 import { numberPad } from './numberPad'
+import { spokenText } from './prompt'
+import { slowDown } from './slowDown'
 
 /**
  * The one-liner for putting learning in any game: pops up a question at the
@@ -95,6 +97,8 @@ async function askChoice(q: Question, moment: Moment, title: string, count: numb
     firstTry = false
     open--
     pad.feedback('Not that one — try again!')
+    // Mashing? A short wait before the next pick, so guessing is slower than reading.
+    await slowDown(pad.element, moment.slowDown(), { say: q.item.listen ? spokenText(q.prompt) : undefined })
     picked = await pad.again()
   }
   sfx.good(firstTry ? 2 : 0)

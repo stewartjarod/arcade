@@ -1,12 +1,13 @@
 import { Game, THREE, ball, box, cylinder, group, lerp, storage, confetti, burst, ease, sfx, currentPlayer } from '@arcade/engine'
-import { escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
+import { escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, slowDown, speak, spokenText, startPractice, type Question } from '@arcade/learning'
 import { gatorHunts, pondFor, styleFor, superHopSeconds } from './difficulty'
 
 // ------------------------------------------------------------------
 //  Lily Hop
 //  A question shows at the top. Three colored lily pads wait ahead, one per answer.
 //  Tap the answer (or the matching key) and the frog hops to that pad. One tap per hop!
-//  A wrong pad sinks and the gator swims closer. The pond gets longer and the gator
+//  A wrong pad sinks and the gator swims closer. Tapping pads super fast without reading
+//  gets a 🐢 slow-down wait, so guessing is slower than thinking. The pond gets longer and the gator
 //  sneakier as you move up in IXL grade levels (found by the learning package).
 // ------------------------------------------------------------------
 
@@ -29,6 +30,7 @@ const CHEERS = ['Hop! 🐸', 'Nice! ⭐', 'Yes! 🎉', 'Great jump! 🌟']
 // Space / 1 2 3 / arrow keys also pick a pad; the newest scene's picker is kept here so restarts don't stack listeners.
 let pickNow: (lane: number) => void = () => {}
 window.addEventListener('keydown', (e) => {
+  if (e.repeat) return // holding a key down isn't a pick
   const lane = { Digit1: 0, Digit2: 1, Digit3: 2, ArrowLeft: 0, ArrowUp: 1, ArrowDown: 1, ArrowRight: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code]
   if (lane !== undefined) pickNow(lane)
 })
@@ -167,7 +169,7 @@ function level(game: Game) {
       sfx.bad()
       // That pad sinks. The first wrong pick on a question brings the gator closer.
       const pad = pads[nextRow]?.[lane]
-      if (pad) void game.tweens.to(pad.position, { y: -1.2 }, 0.5)
+      const sinking = pad ? game.tweens.to(pad.position, { y: -1.2 }, 0.5) : undefined
       showTop()
       if (!missedThisQuestion) {
         missedThisQuestion = true
@@ -175,6 +177,9 @@ function level(game: Game) {
         game.hud.message(gatorHunts(style) ? 'Splash! The gator is closer!' : 'Splash! Try another pad!', { seconds: 1.1 })
         await moveGator()
       }
+      await sinking // watch it sink before picking again
+      // Tapping without reading? Wait a moment (it grows if they keep doing it).
+      if (!over) await slowDown(answers, practice.slowDown(), { say: grade <= 1 ? spokenText(q.prompt) : undefined })
     }
     busy = false
   }

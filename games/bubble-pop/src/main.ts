@@ -95,6 +95,7 @@ function round(game: Game) {
   let firstInMoment = true // only a brand-new question can earn the ⚡ bonus, not the "one like it" after a miss
   let live: { el: HTMLButtonElement; y: number; x: number; wobble: number; right: boolean; w: number; h: number; speed: number }[] = []
   let age = 0 // seconds since the bubbles appeared
+  let lockedUntil = 0 // after mashing, no pops until `age` gets here
 
   /** Ask a new question, or (after a miss) one like the last, so they get another go at the same idea. */
   function nextQuestion(like?: Question) {
@@ -140,6 +141,7 @@ function round(game: Game) {
     })
     place()
     age = 0
+    lockedUntil = 0
     q.restartTimer()
     phase = 'ask'
     // Kindergartners and first graders are still learning to read: say the question out loud for them.
@@ -169,7 +171,7 @@ function round(game: Game) {
   function pop(b: (typeof live)[number]) {
     // Ignore taps in the first half second: a fast tap left over from the party or the last pop
     // shouldn't count as an answer to a question nobody has read yet.
-    if (phase !== 'ask' || age < 0.5) return
+    if (phase !== 'ask' || age < 0.5 || age < lockedUntil) return
     const right = moment.check(q, b.el.textContent!, { choices: live.length })
     if (right) {
       sfx.pop()
@@ -197,6 +199,13 @@ function round(game: Game) {
       b.el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-12px)' }, { transform: 'translateX(12px)' }, { transform: 'translateX(0) scale(.5)', opacity: 0 }], { duration: 400, fill: 'forwards' })
       showTop()
       live = live.filter((x) => x !== b)
+      // Popping bubbles super fast without reading? A short wait, so guessing is slower than thinking.
+      const wait = practice.slowDown()
+      if (wait > 0) {
+        lockedUntil = age + wait
+        play.animate([{ opacity: 0.4 }, { opacity: 0.4, offset: 0.9 }, { opacity: 1 }], { duration: wait * 1000 })
+        note('🐢 Slow down! Read it, then pop.', '#7048e8')
+      }
     }
   }
 

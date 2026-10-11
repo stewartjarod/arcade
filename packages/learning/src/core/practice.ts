@@ -1,6 +1,7 @@
 import { findSkill, SUBJECTS } from '../subjects'
 import { learner as currentLearner, type Learner } from './learner'
 import { pickItem, pickSimilar, type PickOptions } from './scheduler'
+import { SmashGuard } from './smash'
 import { notePracticeGrades } from './summary'
 import type { Item } from './types'
 
@@ -23,6 +24,8 @@ import type { Item } from './types'
  *   choices were really open (e.g. 3 doors, minus ones already tried).
  * - One moment can cost at most a little, so one bad stretch can't undo a level.
  * - Missed facts are remembered and come back later until they stick.
+ * - Mashing answers doesn't pay: after a wrong pick, `practice.slowDown()` says how many
+ *   seconds to lock the answers (0 = none). See `slowDown()` in the UI for a ready-made 🐢 wait.
  */
 export interface PracticeOptions extends PickOptions {
   learner?: Learner
@@ -87,6 +90,8 @@ export class Practice {
   private readonly start: Record<string, number>
   /** The last few questions asked, so a short list of questions doesn't repeat right away. */
   private recent: string[] = []
+  /** Spots answer-mashing across the whole round. */
+  private readonly smash = new SmashGuard()
 
   constructor(learner: Learner, options: PickOptions = {}) {
     this.learner = learner
@@ -99,6 +104,19 @@ export class Practice {
   /** Start one challenge (a door choice, a boss fight...). Its questions share a safety net. */
   moment() {
     return new Moment(this)
+  }
+
+  /**
+   * Seconds to lock the answers after the latest pick, because it looked like mashing
+   * (a wrong tap faster than anyone could read). 0 = go ahead. Fast right answers never lock.
+   */
+  slowDown(): number {
+    return this.smash.slowDown
+  }
+
+  /** @internal Every pick goes through here, retries too (that's where mashing happens). */
+  notePick(q: Question, right: boolean) {
+    this.smash.pick(right, q.askedAt, performance.now())
   }
 
   /** Friendly names of skills that levelled up (or unlocked) since this practice started. */
@@ -138,6 +156,11 @@ export class Moment {
     this.before = practice.learner.snapshot()
   }
 
+  /** Seconds to lock the answers after the latest pick (see `Practice.slowDown`). */
+  slowDown(): number {
+    return this.practice.slowDown()
+  }
+
   /** A new question at the player's level. */
   ask(): Question {
     return new Question(this.practice.next())
@@ -151,9 +174,11 @@ export class Moment {
   /**
    * Score a response (typed or picked) and save. Returns whether it was right.
    * `choices`: how many options the player could pick from (0 = they typed it).
+   * After a wrong pick, ask `practice.slowDown()` whether to make them wait before the next one.
    */
   check(q: Question, response: string | number, { choices = 0 } = {}): boolean {
     const s = q.score(response)
+    this.practice.notePick(q, s >= 1)
     this.record(q, s, { choices })
     return s >= 1
   }

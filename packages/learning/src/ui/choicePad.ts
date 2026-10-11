@@ -48,7 +48,7 @@ function create(): ChoicePad {
 
   // Number keys 1–4 pick an option too.
   window.addEventListener('keydown', (ev) => {
-    if (el.hidden || !resolve) return
+    if (el.hidden || !resolve || ev.repeat) return // holding a key down isn't a pick
     const b = [...buttons.values()][Number(ev.key) - 1]
     if (b && !b.disabled) {
       ev.preventDefault()
