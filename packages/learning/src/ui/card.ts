@@ -18,6 +18,7 @@ export function styleCard() {
 .lp-msg { min-height: 1.3em; margin-top: 6px; font-weight: 700; color: var(--pad-bad); }
 .lp-card.shake { animation: lp-shake .35s; }
 @keyframes lp-shake { 20% { transform: translateX(calc(-50% - 10px)); } 50% { transform: translateX(calc(-50% + 10px)); } 80% { transform: translateX(calc(-50% - 6px)); } }
+.lp-card, .lp-card * { touch-action: manipulation; } /* fast typing ("ll") must never double-tap zoom, in any mode */
 .lp-key { font-family: inherit; font-weight: 700; border: 0; border-radius: 14px; background: #ece6ff; color: var(--pad-ink);
   box-shadow: 0 4px 0 #c5b8f0; cursor: pointer; transition: transform .06s, box-shadow .06s; }
 .lp-key:active { transform: translateY(3px); box-shadow: 0 1px 0 #c5b8f0; }

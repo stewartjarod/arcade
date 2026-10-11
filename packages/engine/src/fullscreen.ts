@@ -61,7 +61,15 @@ function lockZoom() {
     viewport.content = noZoom() ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' : viewport.dataset.original
   }
   // Double tap to zoom off; pinch is handled below because iPads ignore "user-scalable=no" in a browser tab.
-  document.documentElement.style.touchAction = noZoom() ? 'manipulation' : ''
+  // touch-action isn't inherited, so it goes on every element: on the page alone, a quick double tap on a
+  // button (typing "ll" on the letter pad) still zoomed. Elements that set their own (a game canvas) keep theirs.
+  let style = document.getElementById('no-double-tap-zoom')
+  if (noZoom() && !style) {
+    style = document.createElement('style')
+    style.id = 'no-double-tap-zoom'
+    style.textContent = '*, *::before, *::after { touch-action: manipulation; }'
+    document.head.append(style)
+  } else if (!noZoom()) style?.remove()
 }
 
 function blockZoomGestures() {
