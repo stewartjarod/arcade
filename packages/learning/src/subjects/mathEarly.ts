@@ -510,7 +510,7 @@ const bigCount = keyedSkill({
     const [L = 1, f = 0, n = 0] = nums(key)
     if (L === 1) {
       // A hundred chart has 10 numbers in every row, so the number directly below is 10 more. The chart is drawn so nobody has to imagine it.
-      const text = 'Look at the hundred chart. What number goes in the ? box?'
+      const text = `What number is right below ${n} on the hundred chart?`
       return numeric(key, { text, say: text, svg: hundredChartPic(n) }, n + 10, [n, n + 1, n - 1, n + 9, n + 11])
     }
     if (L === 2) return numeric(key, plain(`What number comes after ${n}?`), n + 1, [n, n + 2, n + 10, n - 10])

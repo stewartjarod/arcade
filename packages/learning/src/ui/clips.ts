@@ -18,6 +18,10 @@ export function sentences(text: string): string[] {
 export function mathWords(text: string): string {
   return text
     .replace(/__+/g, ' what ')
+    // A "?" stands for the missing number only when it sits in a sum ("3 + ? = 7", "8 − 3 = ?") or a list ("10, 20, ?").
+    // Elsewhere ("the ? box") it is a picture of the box, so it is left for the sentence around it.
+    .replace(/([−+×÷=<>,]|\s-)\s*\?/g, '$1 what')
+    .replace(/(^|\s)\?(?=\s*[−+×÷=<>])/g, '$1what')
     .replace(/−| - /g, ' minus ')
     .replace(/\+/g, ' plus ')
     .replace(/×/g, ' times ')
@@ -25,9 +29,9 @@ export function mathWords(text: string): string {
     .replace(/=/g, ' equals ')
     .replace(/</g, ' is less than ')
     .replace(/>/g, ' is greater than ')
-    .replace(/(^|\s)\?/g, '$1what?') // a lone "?" stands for the missing number
     .replace(/\s+/g, ' ')
     .trim()
+    .replace(/ what$/, ' what?') // "8 − 3 = ?" still sounds like a question
 }
 
 /** A small, stable number made from text — keeps "Yes!" and "Yes?" from sharing a file. */
