@@ -94,7 +94,23 @@ mountKidMode(document.getElementById('kidmode') as HTMLButtonElement)
 // Grown-up switch for full screen, so kids can't tap the browser's back button or tabs.
 // It lives in the footer (not up top) so it's easy for us to find and easy for kids to ignore.
 function mountKidMode(button: HTMLButtonElement) {
-  if (!canFullscreen()) return // iPhones can't; "Add to Home Screen" does the same job there
+  // Opened from the home screen icon: there are no browser bars to hide.
+  if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || (navigator as any).standalone) return
+
+  // iPads and iPhones: browsers there can't really go full screen (Firefox and Chrome not at all),
+  // but a home screen icon opens the arcade as its own app with no address bar or back button.
+  const apple = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+  if (apple) {
+    button.hidden = false
+    button.textContent = '⛶ Full screen'
+    button.addEventListener('click', () =>
+      alert('For full screen on an iPad or iPhone, add the arcade to the home screen:\n\n' +
+        'Tap the Share button (⬆️, in Firefox it is in the ☰ menu), then "Add to Home Screen". ' +
+        'Open the arcade from that new icon and there are no browser buttons to tap.'))
+    return
+  }
+
+  if (!canFullscreen()) return
   const label = () => (button.textContent = isFullscreenMode() ? '⛶ Full screen: on' : '⛶ Full screen: off')
   button.hidden = false
   label()

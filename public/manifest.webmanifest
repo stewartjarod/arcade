@@ -1,0 +1,14 @@
+{
+  "name": "Arcade",
+  "short_name": "Arcade",
+  "description": "Games we made together",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#14112b",
+  "theme_color": "#2b1b5a",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

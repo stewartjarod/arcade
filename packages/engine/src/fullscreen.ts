@@ -55,5 +55,5 @@ export function keepFullscreen() {
   window.addEventListener('keydown', again, true)
 }
 
-/** Whether this browser can do it at all (iPhones can't — use "Add to Home Screen" there instead). */
+/** Whether this browser can do it at all (not on iPhones or in iPad Firefox/Chrome — the homepage suggests "Add to Home Screen" there). */
 export const canFullscreen = supported
