@@ -31,6 +31,13 @@ describe('big mazes still make quickly, in every realm', () => {
     }
   })
 
+  test('wrong doors lead to short corridors, so a wrong answer is a quick walk back', () => {
+    for (let i = 0; i < 30; i++) {
+      for (const j of generateMaze(junctionsFor(5, 100), 0.3, corridorFor(0, { runs: REALMS[0]!.runs, len: REALMS[0]!.len })).junctions)
+        for (const e of j.exits) if (e.kind !== 'path') expect(e.path.length).toBeLessThanOrEqual(3)
+    }
+  })
+
   test('a kindergarten maze is big: plenty of corridor to run through', () => {
     const realm = REALMS[0]!
     let total = 0

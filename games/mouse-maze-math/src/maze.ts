@@ -23,9 +23,14 @@ const ek = (ax: number, az: number, bx: number, bz: number) => {
 }
 
 // Every junction has three exits (left, straight, right). One corridor leads on,
-// the others wind off and end in a dead end or a trap. Corridors are straight runs
-// of cells (how many runs and how long each is comes in `o`), and never touch each
-// other, so walls stay between them.
+// the others end in a dead end or a trap. Corridors are straight runs of cells
+// (how many runs and how long each is comes in `o`), and never touch each other,
+// so walls stay between them. The wrong ones are short, a step or two and then
+// around a corner (so the end can't be seen from the doors): a wrong answer
+// shouldn't mean a long walk there and back.
+/** A wrong corridor: one or two cells, then a turn and one more. */
+const WRONG_RUNS = () => [rint(1, 2), 1]
+
 export type MazeOpts = { runs: [number, number]; len: [number, number] }
 const attempt = (n: number, trapChance: number, o: MazeOpts): Layout | null => {
   const used = new Set<string>()
@@ -84,7 +89,7 @@ const attempt = (n: number, trapChance: number, o: MazeOpts): Layout | null => {
       const ends: { cell: Cell; dir: Dir }[] = []
       let ok = true
       for (let i = 0; i < 3 && ok; i++) {
-        const runs = Array.from({ length: rint(o.runs[0], o.runs[1]) }, () => rint(o.len[0], o.len[1]))
+        const runs = i === correct ? Array.from({ length: rint(o.runs[0], o.runs[1]) }, () => rint(o.len[0], o.len[1])) : WRONG_RUNS()
         const res = carve([x, z], dirs[i]!, runs)
         if (!res) {
           ok = false
