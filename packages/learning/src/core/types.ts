@@ -38,10 +38,27 @@ export interface Item {
   check?(response: string): number
   /** Seconds a fluent kid needs. Set it to give quick answers a small bonus; leave out for no speed bonus. */
   seconds?: number
+  /**
+   * A skill they've never tried, a step past where they are (set by the scheduler, not by subjects).
+   * Games show a teach card first; a miss on it doesn't pull their placement down.
+   */
+  frontier?: boolean
 }
 
 /** What a skill's generate() returns; formats and listen default to the skill's. */
 export type ItemSpec = Omit<Item, 'skill' | 'level' | 'formats'> & { formats?: Format[] }
+
+/** A short "here's how it works" card, shown before the first question of a new topic. */
+export interface Teach {
+  /** One or two short sentences. No grades or scores: kids never see those. */
+  text: string
+  /** Read aloud. Needed for anything a 1st grader can't read. */
+  say?: string
+  emoji?: string
+  svg?: string
+  /** A worked example: a question like the one coming, with its answer shown. Never the exact question they'll be asked. */
+  example?: { prompt: Prompt; answer: string }
+}
 
 export interface Skill {
   /** Short id inside its subject, e.g. "add". */
@@ -58,6 +75,8 @@ export interface Skill {
   unlocksAfter?: { skill: string; level: number }[]
   /** Make a question at a level. */
   generate(level: number): ItemSpec
+  /** How this skill works, at a level, for the first time they meet it. Optional: games fall back to a worked example. */
+  teach?(level: number): Teach
   /** Rebuild a question from its key, to re-ask a fact they missed. */
   fromKey?(key: string, level: number): ItemSpec | null
 }

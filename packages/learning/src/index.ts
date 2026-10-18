@@ -7,7 +7,7 @@
  */
 
 // Core: what's the same for every subject.
-export type { Format, Item, ItemSpec, Prompt, Skill, Subject } from './core/types'
+export type { Format, Item, ItemSpec, Prompt, Skill, Subject, Teach } from './core/types'
 export { learner, peekLearner, Learner, MAX_MOMENT_DROP, type Fact, type LegacyMath } from './core/learner'
 export { pickItem, canPick, type PickOptions } from './core/scheduler'
 export { LOOK_FIRST, RE_PICK, SLOW_DOWN_WAITS } from './core/smash'

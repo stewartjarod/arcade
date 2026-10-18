@@ -1,0 +1,16 @@
+
+ RUN  v5.0.2 /home/jarod/Projects/Games
+
+stdout | packages/learning/src/core/ipush.test.ts > i+1 keeps up with the kid > baseline report (prints the numbers)
+
+LEARNER   lead=-0.95 vsPlaced=-0.77 right=0.94 onTarget=0.35 frontierShare=0 frontierWhilePlacing=0 placedSd=0.14 maxFocus=10 meanFocus=9.27 maxGrew=19 endTruth=2.92 endPlaced=2.7
+STATIC_1  lead=0.43 vsPlaced=0.5 right=0.68 onTarget=0.51 frontierShare=0 frontierWhilePlacing=0 placedSd=0.3 maxFocus=10 meanFocus=9.5 maxGrew=30 endTruth=1 endPlaced=1.05
+STATIC_3  lead=-0.57 vsPlaced=-0.61 right=0.86 onTarget=0.36 frontierShare=0 frontierWhilePlacing=0 placedSd=0.24 maxFocus=10 meanFocus=9.47 maxGrew=21 endTruth=3 endPlaced=2.96
+UNDER     lead=-0.67 vsPlaced=-0.75 right=0.87 onTarget=0.35 frontierShare=0 frontierWhilePlacing=0 placedSd=0.19 maxFocus=10 meanFocus=9.48 maxGrew=49 endTruth=3.5 endPlaced=3.58
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 7 skipped (8)
+   Start at  08:51:18
+   Duration  10.39s (tests 85%, transform 12%, import 3%)
+
