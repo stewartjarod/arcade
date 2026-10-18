@@ -1,4 +1,4 @@
-import type { ItemSpec, Subject } from '../core/types'
+import type { ItemSpec, Subject, Teach } from '../core/types'
 import { grammar, sentences } from './language'
 import { WRITING_EARLY } from './languageEarly'
 import { WRITING_E2 } from './languageEarly2'
@@ -103,7 +103,6 @@ export function misspell(word: string, count: number): string[] {
 
 // --- Capitals and punctuation: which one is written correctly? ---
 
-type Variant = { right: string; wrongs: string[] }
 const lowerFirst = (s: string) => s[0]!.toLowerCase() + s.slice(1)
 const NAMES = ['Sam', 'Mia', 'Ben', 'Ava', 'Leo', 'Zoe']
 const L1 = ['The dog ran fast.', 'We like to play.', 'My cat is soft.', 'The sun is hot.', 'I can see a bird.', 'We went to the park.', 'The frog can jump.', 'Mom made a cake.']
@@ -115,39 +114,58 @@ const L4: [string, string][] = [
   ['We saw the Pacific Ocean.', 'Pacific Ocean'], ['School starts in August.', 'August'],
 ]
 
-function capsVariant(level: number): Variant {
-  if (level === 1) {
-    const s = pick(L1)
-    return { right: s, wrongs: [lowerFirst(s), s.slice(0, -1), lowerFirst(s).slice(0, -1)] }
-  }
+// Each level's correct sentences. A question's key is its correct sentence, and the wrong versions come from that sentence alone.
+const CAPS_SENTENCES: Record<number, string[]> = {
+  1: L1,
+  2: NAMES.flatMap((n) => L2.map((s) => s.replace('{n}', n))),
+  3: L3,
+  4: L4.map(([s]) => s),
+}
+
+/** Wrong versions of a correct sentence: a capital missing, or a period where a question mark goes. */
+function capsWrongs(level: number, s: string): string[] {
+  if (level === 1) return [lowerFirst(s), s.slice(0, -1), lowerFirst(s).slice(0, -1)]
   if (level === 2) {
-    const n = pick(NAMES)
-    const s = pick(L2).replace('{n}', n)
-    return { right: s, wrongs: [s.replace(n, n.toLowerCase()), s.replace(/\bI\b/, 'i'), s.replace(n, n.toLowerCase()).replace(/\bI\b/, 'i')] }
+    const n = NAMES.find((x) => s.includes(x))!
+    return [s.replace(n, n.toLowerCase()), s.replace(/\bI\b/, 'i'), s.replace(n, n.toLowerCase()).replace(/\bI\b/, 'i')]
   }
-  if (level === 3) {
-    const s = pick(L3)
-    return { right: s, wrongs: [s.replace('?', '.'), lowerFirst(s), s.slice(0, -1)] }
+  if (level === 3) return [s.replace('?', '.'), lowerFirst(s), s.slice(0, -1)]
+  const proper = L4.find(([x]) => x === s)![1]
+  return [s.replace(proper, proper.toLowerCase()), lowerFirst(s), s.slice(0, -1)]
+}
+
+function capsSpec(level: number, right: string): ItemSpec {
+  const wrongs = capsWrongs(level, right)
+  return {
+    key: right,
+    prompt: { text: 'Which one is written correctly?' },
+    answer: right,
+    wrong: (n) => wrongFrom(right, n, wrongs),
+    // Capitals and periods are the whole point here, so compare exactly.
+    check: (r) => (r.trim() === right ? 1 : 0),
   }
-  const [s, proper] = pick(L4)
-  return { right: s, wrongs: [s.replace(proper, proper.toLowerCase()), lowerFirst(s), s.slice(0, -1)] }
 }
 
 function capsItem(level: number): ItemSpec {
-  const v = capsVariant(level)
-  return {
-    key: v.right,
-    prompt: { text: 'Which one is written correctly?' },
-    answer: v.right,
-    wrong: (n) => wrongFrom(v.right, n, v.wrongs),
-    // Capitals and periods are the whole point here, so compare exactly.
-    check: (r) => (r.trim() === v.right ? 1 : 0),
-  }
+  return capsSpec(level, pick(CAPS_SENTENCES[level]!))
+}
+
+/** Rebuild a capitals question from its key (the correct sentence), if this level asks it. */
+function capsFromKey(key: string, level: number): ItemSpec | null {
+  return (CAPS_SENTENCES[level] ?? []).includes(key) ? capsSpec(level, key) : null
 }
 
 const SPELL_TOPICS = ['the short vowel word', 'the word with a consonant blend', 'the long vowel word', 'the sight word: grade 1', 'the sight word: grade 2']
 const SPELL_LABELS = SPELL_TOPICS.map((t) => `Spell ${t}`)
 const PICK_LABELS = SPELL_TOPICS.map((t) => `Choose the correct spelling of ${t}`)
+
+// Capitals cards, one per level.
+const CAPS_TEACH: Teach[] = [
+  { text: 'Every sentence starts with a capital letter, like the big T in The dog ran.', say: 'Every sentence starts with a capital letter, like the big T in The dog ran.' },
+  { text: 'Names start with a capital letter, like Mia. The word I is always a capital letter too.', say: 'Names start with a capital letter, like Mia. The word I is always a capital letter too.' },
+  { text: 'A question ends with a question mark, like Do cats like milk? A sentence that tells something ends with a period.', say: 'A question ends with a question mark, like Do cats like milk? A sentence that tells something ends with a period.' },
+  { text: 'Days, months, and places start with a capital letter, like Saturday, March, and Canada.', say: 'Days, months, and places start with a capital letter, like Saturday, March, and Canada.' },
+]
 
 export const writing: Subject = {
   id: 'writing',
@@ -180,6 +198,8 @@ export const writing: Subject = {
       maxLevel: 4,
       formats: ['choice'],
       generate: capsItem,
+      fromKey: capsFromKey,
+      teach: (L) => CAPS_TEACH[L - 1]!,
     },
     ...WRITING_UPPER,
     ...WRITING_MORE,

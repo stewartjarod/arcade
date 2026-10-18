@@ -1,7 +1,7 @@
-import type { ItemSpec, Skill, Subject } from '../core/types'
+import type { ItemSpec, Skill, Subject, Teach } from '../core/types'
 import { GRADE5_MATH } from './mathGrade5'
 import { MATH_345 } from './mathGrades345'
-import { MATH_EARLY } from './mathEarly'
+import { MATH_EARLY, teachFrom } from './mathEarly'
 import { MATH_FINAL } from './mathFinal'
 import { MATH_LAST } from './mathLast'
 import { MORE_MATH } from './mathMore'
@@ -128,13 +128,14 @@ const runs = (ns: number[]) => {
   return out.join(', ')
 }
 
-function opSkill(op: Op, o: Pick<Skill, 'label' | 'unlocksAfter'> & { max: number }): Skill {
+function opSkill(op: Op, o: Pick<Skill, 'label' | 'unlocksAfter' | 'teach'> & { max: number }): Skill {
   return {
     id: op,
     label: o.label,
     maxLevel: o.max,
     formats: ['number', 'choice'],
     unlocksAfter: o.unlocksAfter,
+    teach: o.teach,
     generate: (L) => problemItem(build(op, L)),
     fromKey: (key, L) => {
       const p = fromText(key, L)
@@ -302,6 +303,114 @@ function skipBuild(key: string): ItemSpec | null {
 const SKIP_LABELS = ['Skip-count by tens', 'Skip-count by fives', 'Skip-count by twos', 'Count on from any number', 'Skip-count by hundreds and fives', 'Count backwards']
 const PLACE_LABELS = ['Tens and ones', 'Tens place and ones place', 'Hundreds, tens and ones', 'Adding up place values', '10 more, 100 less', 'Thousands']
 
+// --- Teach cards: a short "here's how it works" for a level the kid hasn't tried yet ---
+// Each list has one card per level; a skill with fewer cards than levels reuses its last card (see teachFrom).
+
+const ADD_TEACH: Teach[] = [
+  { text: 'The plus sign means put together. Start with the bigger number and count on: 4 + 3 is 7.', say: 'The plus sign means put together. Start with the bigger number and count on. Four plus three is seven.' },
+  { text: 'For sums past 10, make a ten first. 8 + 5: take 2 from the 5 to make 10, then add the 3 left: 13.', say: 'For sums past ten, make a ten first. Eight plus five: take two from the five to make ten, then add the three left. That is thirteen.' },
+  { text: 'Add the ones first. If they make 10 or more, trade 10 ones for 1 ten. 27 + 15: 12 ones is 1 ten and 2 ones, so 42.', say: 'Add the ones first. If they make ten or more, trade ten ones for one ten. Twenty-seven plus fifteen: twelve ones is one ten and two ones, so forty-two.' },
+  { text: 'Add the ones, then the tens. Ten or more ones make a new ten. 48 + 37: 15 ones is 1 ten and 5 ones, so 85.', say: 'Add the ones, then the tens. Ten or more ones make a new ten. Forty-eight plus thirty-seven: fifteen ones is one ten and five ones, so eighty-five.' },
+  { text: 'Add the ones, then the tens, then the hundreds. Ten tens make 1 hundred: 136 + 78 is 214.', say: 'Add the ones, then the tens, then the hundreds. Ten tens make one hundred. One hundred thirty-six plus seventy-eight is two hundred fourteen.' },
+  { text: 'Same steps, bigger numbers. 245 + 180: 12 tens is 1 hundred and 2 tens, so the answer is 425.', say: 'Same steps, bigger numbers. Two hundred forty-five plus one hundred eighty: twelve tens is one more hundred and two tens, so the answer is four hundred twenty-five.' },
+  { text: 'Line up the ones, tens and hundreds. Add each column, and trade 10 of one place for 1 of the next when needed.', say: 'Line up the ones, tens and hundreds. Add each column. Trade ten of one place for one of the next place when you need to.' },
+]
+
+const SUB_TEACH: Teach[] = [
+  { text: 'Minus means take away. Start with 9 and take away 4: 5 are left.', say: 'Minus means take away. Start with nine and take away four. Five are left.' },
+  { text: 'To subtract, count back, or think what plus 7 makes 15: 8, so 15 − 7 is 8.', say: 'To subtract, count back, or think what plus seven makes fifteen. That is eight, so fifteen minus seven is eight.' },
+  { text: 'If the ones are not enough, trade 1 ten for 10 ones. 42 − 17: 12 − 7 is 5, and 3 tens − 1 ten is 2 tens, so 25.', say: 'If the ones are not enough, trade one ten for ten ones. Forty-two minus seventeen: twelve minus seven is five, and three tens minus one ten is two tens, so twenty-five.' },
+  { text: 'Trade 1 ten for 10 ones when the ones are not enough. 73 − 38: 13 − 8 is 5, and 6 tens − 3 tens is 3 tens, so 35.', say: 'Trade one ten for ten ones when the ones are not enough. Seventy-three minus thirty-eight: thirteen minus eight is five, and six tens minus three tens is three tens, so thirty-five.' },
+  { text: 'Work from the ones to the hundreds, and trade when a column is too small. 305 − 128 is 177.', say: 'Work from the ones to the hundreds. Trade when a column is too small. Three hundred five minus one hundred twenty-eight is one hundred seventy-seven.' },
+  { text: 'Work column by column, from the ones to the hundreds. Trade one from the next place when a column is too small.', say: 'Work column by column, from the ones to the hundreds. Trade one from the next place when a column is too small.' },
+]
+
+// The times table that is new at level L is TABLE_ORDER[L] (levels 1 and 2 start with 2, 10 and 5).
+function timesTeach(L: number): Teach {
+  if (L === 1) {
+    return {
+      text: '× means equal groups. 2 × 4 means 2 groups of 4: 4 + 4 = 8.',
+      say: 'Times means equal groups. Two times four means two groups of four. Four plus four is eight.',
+      emoji: '🍪🍪🍪🍪 🍪🍪🍪🍪',
+    }
+  }
+  if (L <= TABLE_LEVELS) {
+    const n = TABLE_ORDER[L]!
+    return {
+      text: `The ${n}s: 3 × ${n} means 3 groups of ${n}. Count by ${n}s: ${n}, ${2 * n}, ${3 * n}.`,
+      say: `The ${n}s. 3 times ${n} means 3 groups of ${n}. Count by ${n}s: ${n}, ${2 * n}, ${3 * n}.`,
+    }
+  }
+  if (L === TABLE_LEVELS + 1) {
+    return {
+      text: '7 × 8 is 5 × 8 plus 2 × 8: 40 + 16 = 56. Break a hard fact into easy ones.',
+      say: 'Break a hard fact into easy ones. Seven times eight is five times eight, plus two times eight. That is forty plus sixteen, which is fifty-six.',
+    }
+  }
+  return {
+    text: '9 × 12 is 9 × 10 plus 9 × 2: 90 + 18 = 108. Use the facts you know.',
+    say: 'Use the facts you know. Nine times twelve is nine times ten, plus nine times two. That is ninety plus eighteen, which is one hundred eight.',
+  }
+}
+
+function divideTeach(L: number): Teach {
+  if (L === 1) {
+    return {
+      text: '÷ means share equally. 8 ÷ 2 means share 8 into 2 equal groups: 4 each.',
+      say: 'Divide means share equally. Eight divided by two means share eight into two equal groups. That is four each.',
+    }
+  }
+  if (L <= TABLE_LEVELS) {
+    const n = TABLE_ORDER[L]!
+    return {
+      text: `${3 * n} ÷ ${n} asks how many ${n}s fit. Count by ${n}s: ${n}, ${2 * n}, ${3 * n}. That is 3.`,
+      say: `${3 * n} divided by ${n} asks how many ${n}s fit. Count by ${n}s: ${n}, ${2 * n}, ${3 * n}. That is 3.`,
+    }
+  }
+  if (L === TABLE_LEVELS + 1) {
+    return {
+      text: '56 ÷ 7 = 8, because 7 × 8 = 56. Division undoes multiplication.',
+      say: 'Division undoes multiplication. Fifty-six divided by seven is eight, because seven times eight is fifty-six.',
+    }
+  }
+  return {
+    text: '96 ÷ 8 = 12, because 8 × 12 = 96. Think of the times fact.',
+    say: 'Think of the times fact. Ninety-six divided by eight is twelve, because eight times twelve is ninety-six.',
+  }
+}
+
+const COUNT_TEACH: Teach[] = [
+  { text: 'Point to each dot as you count it. The last number you say is how many.', say: 'Point to each dot as you count it. The last number you say is how many.' },
+  { text: 'The dots are in rows of five. Count row by row: 5, then 10, then 15. The last number is how many.', say: 'The dots are in rows of five. Count row by row: five, then ten, then fifteen. The last number is how many.' },
+  { text: 'Count each full row of five, then count any dots left over. The last number you say is how many.', say: 'Count each full row of five, then count any dots left over. The last number you say is how many.' },
+]
+
+const COMPARE_TEACH: Teach[] = [
+  { text: 'Greatest means the biggest number. Least means the smallest. Numbers that come later when you count are bigger.', say: 'Greatest means the biggest number. Least means the smallest. Numbers that come later when you count are bigger.' },
+  { text: 'Numbers that come later when you count are bigger. 8 comes after 5, so 8 is greater.', say: 'Numbers that come later when you count are bigger. Eight comes after five, so eight is greater.' },
+  { text: 'A number with a ten in it is bigger than any number with no tens. 14 is greater than 9.', say: 'A number with a ten in it is bigger than any number with no tens. Fourteen is greater than nine.' },
+  { text: 'Compare the tens first. If the tens match, compare the ones. 52 is greater than 47.', say: 'Compare the tens first. If the tens match, compare the ones. Fifty-two is greater than forty-seven.' },
+  { text: 'Compare the hundreds first, then the tens, then the ones. 512 is greater than 498.', say: 'Compare the hundreds first, then the tens, then the ones. Five hundred twelve is greater than four hundred ninety-eight.' },
+]
+
+const PLACE_TEACH: Teach[] = [
+  { text: 'A ten is 10 ones. Count the tens first, then add the ones. 3 tens and 4 ones is 34.', say: 'A ten is ten ones. Count the tens first, then add the ones. Three tens and four ones is thirty-four.' },
+  { text: 'The digit in the tens place tells how many tens. In 46, the 4 is 4 tens, or 40. The 6 is 6 ones.', say: 'The digit in the tens place tells how many tens. In forty-six, the 4 is four tens, or forty. The 6 is six ones.' },
+  { text: 'A hundred is 10 tens. In 326, the 3 means 3 hundreds, the 2 means 2 tens, and the 6 means 6 ones.', say: 'A hundred is ten tens. In three hundred twenty-six, the 3 means 3 hundreds, the 2 means 2 tens, and the 6 means 6 ones.' },
+  { text: 'Break a number into its places, then add: 300 + 20 + 5 is 325.', say: 'Break a number into its places, then add. Three hundred plus twenty plus five is three hundred twenty-five.' },
+  { text: '10 more means one more ten. 100 less means one less hundred: 352 − 100 is 252.', say: 'Ten more means one more ten. A hundred less means one less hundred. Three hundred fifty-two minus a hundred is two hundred fifty-two.' },
+  { text: 'A thousand is 10 hundreds. Each place is 10 times the place to its right.', say: 'A thousand is ten hundreds. Each place is ten times the place on its right.' },
+]
+
+const SKIP_TEACH: Teach[] = [
+  { text: 'Skip-count by tens: add 10 each time, like 30, 40, 50.', say: 'Skip-count by tens. Add ten each time, like thirty, forty, fifty.' },
+  { text: 'Skip-count by fives: add 5 each time, like 35, 40, 45.', say: 'Skip-count by fives. Add five each time, like thirty-five, forty, forty-five.' },
+  { text: 'Skip-count by twos: add 2 each time, like 14, 16, 18.', say: 'Skip-count by twos. Add two each time, like fourteen, sixteen, eighteen.' },
+  { text: 'Start at any number, then add the same jump each time, like 57, 67, 77.', say: 'Start at any number, then add the same jump each time, like fifty-seven, sixty-seven, seventy-seven.' },
+  { text: 'Hundreds jump by 100: 300, 400, 500. Fives jump by 5: 25, 30, 35.', say: 'Hundreds jump by one hundred, like three hundred, four hundred, five hundred. Fives jump by five, like twenty-five, thirty, thirty-five.' },
+  { text: 'Count backwards by taking the same jump away each time: 50, 45, 40.', say: 'Count backwards by taking the same jump away each time. Fifty, forty-five, forty.' },
+]
+
 export const math: Subject = {
   id: 'math',
   name: 'Math',
@@ -310,27 +419,32 @@ export const math: Subject = {
     opSkill('add', {
       label: (L) => `Addition up to ${cap(L)}`,
       max: 12,
+      teach: teachFrom(ADD_TEACH),
     }),
     opSkill('sub', {
       label: (L) => `Subtraction up to ${cap(L)}`,
       max: 12,
+      teach: teachFrom(SUB_TEACH),
     }),
     // Skills unlock in order: × once + and − are solid, ÷ once × is.
     opSkill('mul', {
       label: (L) => (L <= TABLE_LEVELS ? `Multiplication facts: ${runs(tables(L))}` : `Multiplication facts up to 12`),
       max: 16,
       unlocksAfter: [{ skill: 'add', level: 3 }, { skill: 'sub', level: 3 }],
+      teach: timesTeach,
     }),
     opSkill('div', {
       label: (L) => (L <= TABLE_LEVELS ? `Division facts: ${runs(tables(L))}` : `Division facts up to 12`),
       max: 16,
       unlocksAfter: [{ skill: 'mul', level: 3 }],
+      teach: divideTeach,
     }),
     {
       id: 'count',
       label: (L) => COUNT_LABELS[L - 1]!,
       maxLevel: COUNT_LABELS.length,
       formats: ['number', 'choice'],
+      teach: teachFrom(COUNT_TEACH),
       generate: countItems,
       fromKey: (key) => {
         const m = key.match(/^count:(\d+)$/)
@@ -342,6 +456,7 @@ export const math: Subject = {
       label: (L) => COMPARE_LABELS[L - 1]!,
       maxLevel: COMPARE_LABELS.length,
       formats: ['number', 'choice'],
+      teach: teachFrom(COMPARE_TEACH),
       generate: compareItem,
       fromKey: (key, level) => {
         const m = key.match(/^cmp:(max|min):([\d,]+)$/)
@@ -356,6 +471,7 @@ export const math: Subject = {
       label: (L) => PLACE_LABELS[L - 1]!,
       maxLevel: PLACE_LABELS.length,
       formats: ['number', 'choice'],
+      teach: teachFrom(PLACE_TEACH),
       generate: (L) => placeBuild(placeKey(L))!,
       fromKey: (key, L) => (key.startsWith(`place:${L}:`) ? placeBuild(key) : null),
     },
@@ -364,6 +480,7 @@ export const math: Subject = {
       label: (L) => SKIP_LABELS[L - 1]!,
       maxLevel: SKIP_LABELS.length,
       formats: ['number', 'choice'],
+      teach: teachFrom(SKIP_TEACH),
       generate: (L) => skipBuild(skipKey(L))!,
       fromKey: (key) => skipBuild(key),
     },

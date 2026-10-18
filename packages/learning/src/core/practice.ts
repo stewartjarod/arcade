@@ -86,8 +86,8 @@ const RECENT = 6
 export class Practice {
   readonly learner: Learner
   readonly options: PickOptions
-  /** Ratings when this practice started, to see what grew. */
-  private readonly start: Record<string, number>
+  /** Saved levels (no placement floor) when this practice started. See grew(). */
+  private readonly savedStart: Record<string, number>
   /** The last few questions asked, so a short list of questions doesn't repeat right away. */
   private recent: string[] = []
   /** Spots answer-mashing across the whole round. */
@@ -96,7 +96,7 @@ export class Practice {
   constructor(learner: Learner, options: PickOptions = {}) {
     this.learner = learner
     this.options = options
-    this.start = learner.snapshot()
+    this.savedStart = learner.savedSnapshot()
     // Games read the play grade before starting a round; this commits it, so the next round can rise one more grade.
     notePracticeGrades(learner, options.subjects ?? SUBJECTS.map((s) => s.id))
   }
@@ -119,11 +119,16 @@ export class Practice {
     this.smash.pick(right, q.askedAt, performance.now())
   }
 
-  /** Friendly names of skills that levelled up (or unlocked) since this practice started. */
+  /**
+   * Friendly names of skills that levelled up during this practice. Only the levels a kid has actually earned
+   * count (saved ratings, which only answers change), so a skill that merely rose because their placement did
+   * isn't called out. Skills they answered in this round are the only ones that can change, so that's the list.
+   */
   grew(): string[] {
     const now = this.learner.snapshot()
+    const saved = this.learner.savedSnapshot()
     return Object.entries(now)
-      .filter(([id, r]) => r > 0 && (Math.round(r) > Math.round(this.start[id] ?? 0) || !this.start[id]))
+      .filter(([id, r]) => r > 0 && saved[id] !== undefined && (Math.round(saved[id]) > Math.round(this.savedStart[id] ?? 0) || this.savedStart[id] === undefined))
       .map(([id, r]) => findSkill(id)!.label(Math.min(Math.round(r), findSkill(id)!.maxLevel)))
   }
 
@@ -153,7 +158,7 @@ export class Moment {
 
   constructor(practice: Practice) {
     this.practice = practice
-    this.before = practice.learner.snapshot()
+    this.before = practice.learner.savedSnapshot()
   }
 
   /** Seconds to lock the answers after the latest pick (see `Practice.slowDown`). */

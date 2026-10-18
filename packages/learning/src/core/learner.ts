@@ -19,6 +19,14 @@ import type { Item, Skill } from './types'
  * answer at their level jumps a whole level, and the first miss settles them just below it. From
  * then on it's gentle i+1. All of it is saved on the player, so it carries across games.
  *
+ * The placement also acts as a floor for every skill they've started: a skill is never rated more than half
+ * a level below where the placement says it should start. So when the placement climbs (a kid who's getting
+ * 1st-grade sums right), the skills they touched early climb with it, instead of staying stuck at the level
+ * they first tried. Placement lifts skills but never drags them down.
+ *
+ * Brand-new topics (frontier items, see types.ts) don't move the placement when they're missed: "not yet" is
+ * not "lower".
+ *
  * Games shouldn't change ratings directly — use startPractice() (practice.ts),
  * which applies the fairness rules.
  */
@@ -74,8 +82,11 @@ export const PLACING_ANSWERS = 24
 export const PLACING_REACH = 0.35
 /** Kindergarten and 1st grade: closer to their spot, so fewer wrong answers. */
 const PLACING_REACH_YOUNG = 0.15
-/** How far one answer moves the placement, in grades: big at first, then it settles. */
-const placeStep = (answers: number) => Math.max(0.3, 2.5 * 0.82 ** answers)
+/**
+ * How far one answer moves the placement, in grades: big at first, then it settles. Once placing is over it
+ * only drifts (a steady 1st grader's placement shouldn't swing between grades from one surprising answer).
+ */
+const placeStep = (answers: number) => Math.max(answers < PLACING_ANSWERS ? 0.3 : 0.05, 2.5 * 0.82 ** answers)
 /** How sharply a question's chance of being right falls as it gets a grade harder than the player's spot. */
 const GRADE_SLOPE = 3
 
@@ -210,14 +221,20 @@ export class Learner {
     }
   }
 
-  /** Current level for a skill ("math.add"). 0 means not unlocked yet. */
+  /**
+   * Current level for a skill ("math.add"). 0 means not unlocked yet.
+   * Not tried yet: begin where their placement in this subject says (level 1 if they're a beginner).
+   * Tried before: the saved level, but never more than half a level below where the placement now puts it,
+   * so a placement that climbs lifts the skills they started early too. (A saved level above that is kept as is.)
+   */
   rating(skillId: string): number {
-    const r = this.state.ratings[skillId]
-    if (r !== undefined && r > 0) return r
+    const saved = this.state.ratings[skillId]
+    const hasSaved = saved !== undefined && saved > 0
     const skill = findSkill(skillId)
-    if (!skill || !this.prereqsMet(skillId, skill)) return 0
-    // Not tried yet: begin where their placement in this subject says (level 1 if they're a beginner).
-    return startLevel(skillId, this.placement(skillId.split('.')[0]!).grade)
+    if (!skill || !this.prereqsMet(skillId, skill)) return hasSaved ? saved : 0
+    const start = startLevel(skillId, this.placement(skillId.split('.')[0]!).grade)
+    if (!hasSaved) return start
+    return Math.max(saved, Math.max(1, start - 0.5))
   }
 
   /** Still finding their starting level in this skill? */
@@ -252,6 +269,15 @@ export class Learner {
     return this.state.last[subjectId] ?? 0
   }
 
+  /**
+   * Saved levels only, without the placement floor: what answers have actually earned (see Practice.grew).
+   * Also starts a fresh challenge: corrections from earlier answers stop being protected (see limitDrop).
+   */
+  savedSnapshot(): Record<string, number> {
+    this.settled.clear()
+    return { ...this.state.ratings }
+  }
+
   /** All current ratings, for "did anything grow?" and the safety net. */
   snapshot(): Record<string, number> {
     this.settled.clear()
@@ -265,7 +291,8 @@ export class Learner {
    * `guess`: chance of being right by luck (1/3 with three choices, 0 when typed).
    *
    * Calibrating (a new skill): right at their level → jump up a level (less for a possible lucky
-   * guess); the first miss → settle half a level lower and stop calibrating.
+   * guess); the first miss → settle half a level lower and stop calibrating. A new topic (frontier) that's
+   * missed takes this same path but leaves the placement alone, so it never settles below where placement starts it.
    * After that, Elo-style: surprise (result vs. expected) moves the rating, fast at first, then
    * settling. Three quick first-try answers in a row at or above their level skip them ahead a little.
    */
@@ -277,8 +304,10 @@ export class Learner {
     this.fromSkills.clear()
     const r = this.rating(id) || 1
     const seen = this.seen(id)
+    // A miss on a brand-new topic says "not yet", not "their spot is lower", so it doesn't move the placement.
+    const newTopicMiss = !!item.frontier && outcome < 1
     // The subject's placement learns from every answer first, so a skill's first miss can settle to it below.
-    this.updatePlacement(subject, item, outcome, guess)
+    if (!newTopicMiss) this.updatePlacement(subject, item, outcome, guess)
     let next: number
     let fast = 0
     if (this.isCalibrating(id)) {
@@ -334,7 +363,11 @@ export class Learner {
   /** Skills whose rating just made a correction (not a bad stretch), so limitDrop leaves them be. */
   private settled = new Set<string>()
 
-  /** Put ratings back up to `before - MAX_MOMENT_DROP` so one bad stretch can't undo a level. */
+  /**
+   * Put saved levels back up to `before - MAX_MOMENT_DROP` so one bad stretch can't undo a level. `before` is
+   * savedSnapshot() from when the moment started, so a placement move (which only shows through the floor) can't
+   * make a skill look like it dropped.
+   */
   limitDrop(before: Record<string, number>) {
     for (const [id, r] of Object.entries(before)) {
       if (this.settled.has(id)) continue

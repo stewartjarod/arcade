@@ -140,6 +140,11 @@ describe('i+1 keeps up with the kid', { timeout: 120_000 }, () => {
     }
   })
 
+  test('placement keeps up with a kid who is learning (it settles, but not so much it lags)', () => {
+    const m = metrics(LEARNER, 20)
+    expect(Math.abs(m.endPlaced - m.endTruth)).toBeLessThan(0.35)
+  })
+
   test('placement settles once placing is over', () => {
     expect(metrics(STATIC_1, 10).placedSd).toBeLessThan(0.15)
     expect(metrics(STATIC_3, 10).placedSd).toBeLessThan(0.15)

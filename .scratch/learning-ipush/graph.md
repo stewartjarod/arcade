@@ -50,3 +50,6 @@ Every agent edge: deterministic test output first, then the node report. Fixed g
 
 ## Learning edges
 (filled in as results are accepted)
+- **N1 → rule:** a placement floor in `rating()` (max(saved, start − 0.5)) is enough to make skills climb with the kid; no save-format change needed. Damping placement too hard (0.05/answer) makes it lag a growing kid: settle vs. follow must be tuned together, with both evaluator checks on.
+- **N3 → rule:** "same question" means same key, or same text+picture+answer. Comparing prompt text alone rejects most picture and pick-the-answer questions.
+- **N4 → rule:** agent-written content needs a lead read of every distinct text; tests can't catch a wrong fact (×-convention flip, syllable count).

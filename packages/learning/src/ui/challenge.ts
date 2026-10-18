@@ -1,11 +1,13 @@
 import { sfx } from '@arcade/engine'
 import { startPractice, type Practice, type Question } from '../core/practice'
+import { lessonFor } from '../core/teach'
 import type { PickOptions } from '../core/scheduler'
 import type { Format } from '../core/types'
 import { choicePad } from './choicePad'
 import { letterPad } from './letterPad'
 import { numberPad } from './numberPad'
 import { spokenText } from './prompt'
+import { teachCard } from './teachCard'
 import { slowDown } from './slowDown'
 
 /**
@@ -53,6 +55,11 @@ export async function challenge(o: ChallengeOptions = {}): Promise<ChallengeResu
   const formats = o.formats ?? PREFERENCE
   const moment = practiceFor({ ...o, formats }).moment()
   const q = moment.ask()
+  if (q.item.frontier) {
+    // A topic they haven't met: teach it first. Restart the clock after, so the speed bonus counts from the question.
+    await teachCard(lessonFor(q.item))
+    q.restartTimer()
+  }
   const format = PREFERENCE.find((f) => formats.includes(f) && q.item.formats.includes(f))!
   const title = o.title ?? 'Solve it!'
   const result = format === 'choice' ? await askChoice(q, moment, title, o.choices ?? 3) : await askTyped(q, moment, title, format, o.tries ?? 3)

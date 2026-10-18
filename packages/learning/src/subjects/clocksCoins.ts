@@ -1,4 +1,4 @@
-import type { ItemSpec, Subject } from '../core/types'
+import type { ItemSpec, Subject, Teach } from '../core/types'
 import { pick, rand, wrongFrom } from './util'
 
 /**
@@ -43,6 +43,9 @@ function clockTime(level: number): [number, number] {
   return [h, rand(0, 59)]
 }
 
+/** Seconds a fluent kid needs to read the clock: whole and half hours are quickest, any minute slowest. */
+const clockSeconds = (m: number) => (m % 30 === 0 ? 8 : m % 15 === 0 ? 9 : m % 5 === 0 ? 10 : 12)
+
 function clockItem(h: number, m: number): ItemSpec {
   const answer = fmt(h, m)
   // Classic mix-ups: hands swapped, the hour hand read as the next/last hour, 5 minutes off.
@@ -54,6 +57,7 @@ function clockItem(h: number, m: number): ItemSpec {
     prompt: { text: 'What time is it?', svg: clockSVG(h, m) },
     answer,
     wrong: (n) => wrongFrom(answer, n, pool, near.filter(Boolean)),
+    seconds: clockSeconds(m),
   }
 }
 
@@ -96,7 +100,7 @@ const plural = (n: number, name: string) => `${n} ${name === 'penny' ? (n === 1 
 function coinNameItem(c: Coin): ItemSpec {
   // The key keeps its old wording so facts a kid already missed still come back.
   const key = `Which coin is worth ${c.cents}¢?`
-  return { key, prompt: { text: 'What is this coin called?', svg: coinsSVG([c.name]) }, answer: c.name, formats: ['choice'], wrong: (n) => wrongFrom(c.name, n, COINS.map((x) => x.name)) }
+  return { key, prompt: { text: 'What is this coin called?', svg: coinsSVG([c.name]) }, answer: c.name, formats: ['choice'], wrong: (n) => wrongFrom(c.name, n, COINS.map((x) => x.name)), seconds: 10 }
 }
 
 /** "How many cents is a nickel worth?" with the coin drawn. */
@@ -107,6 +111,7 @@ function coinValueItem(c: Coin): ItemSpec {
     prompt: { text, svg: coinsSVG([c.name]) },
     answer: String(c.cents),
     wrong: (n) => wrongFrom(String(c.cents), n, COINS.map((x) => String(x.cents)), ['2', '50', '100']),
+    seconds: 10,
   }
 }
 
@@ -198,6 +203,24 @@ function coinFromKey(key: string): ItemSpec | null {
   return null
 }
 
+// Teach cards: shown before a kid's first question on a new idea. Clock cards are one per level.
+const CLOCK_TEACH: Teach[] = [
+  { text: "The short hand shows the hour. When the long hand points up at the 12, it is o'clock.", say: "The short hand shows the hour. When the long hand points up at the twelve, it is o'clock." },
+  { text: 'When the long hand points down at the 6, it is half past. The short hand has passed the hour, so 3:30 is half past 3.', say: 'When the long hand points down at the six, it is half past. The short hand has passed the hour, so three thirty is half past three.' },
+  { text: 'Long hand on the 3 means quarter past: 2:15 is quarter past 2. Long hand on the 9 means quarter to: 3:45 is quarter to 4.', say: 'The long hand on the three means quarter past: two fifteen is quarter past two. The long hand on the nine means quarter to: three forty-five is quarter to four.' },
+  { text: 'Each number on the clock is 5 minutes. Long hand on the 1 is 5 minutes, on the 2 is 10, and so on.', say: 'Each number on the clock is 5 minutes. The long hand on the one is 5 minutes, on the two is 10, and so on.' },
+  { text: 'Count by fives to the last number the long hand passed, then add 1 for each little tick after it.', say: 'Count by fives to the last number the long hand passed, then add one for each little tick after it.' },
+]
+
+// Coin cards, one per level.
+const COIN_TEACH: Teach[] = [
+  { text: 'A penny is worth 1¢, a nickel 5¢, a dime 10¢, and a quarter 25¢.', say: 'A penny is worth 1 cent, a nickel 5 cents, a dime 10 cents, and a quarter 25 cents.', svg: coinsSVG(['penny', 'nickel', 'dime', 'quarter']) },
+  { text: 'To count the same coins, skip-count by their value. Dimes go 10, 20, 30. Nickels go 5, 10, 15.', say: 'To count the same coins, skip-count by their value. Dimes go ten, twenty, thirty. Nickels go five, ten, fifteen.' },
+  { text: 'Start with the biggest coin, then count on. A quarter, then a dime: 25, then 35 cents.', say: 'Start with the biggest coin, then count on. A quarter, then a dime: twenty-five, then thirty-five cents.' },
+  { text: 'Count the quarters first, then dimes, nickels, and pennies. 100 cents makes 1 dollar.', say: 'Count the quarters first, then dimes, nickels, and pennies. One hundred cents makes one dollar.' },
+  { text: 'To make change, take the price away from the money you have. Then check: change plus price makes what you had.', say: 'To make change, take the price away from the money you have. Then check: change plus price makes what you had.' },
+]
+
 export const clocksCoins: Subject = {
   id: 'clocks',
   name: 'Clocks & Coins',
@@ -209,6 +232,7 @@ export const clocksCoins: Subject = {
       maxLevel: 5,
       formats: ['choice'],
       generate: (L) => clockItem(...clockTime(L)),
+      teach: (L) => CLOCK_TEACH[L - 1]!,
       fromKey: (key) => {
         const m = key.match(/^clock:(\d+):(\d\d)$/)
         return m ? clockItem(Number(m[1]), Number(m[2])) : null
@@ -221,6 +245,7 @@ export const clocksCoins: Subject = {
       formats: ['number', 'choice'],
       generate: coinItem,
       fromKey: (key) => coinFromKey(key),
+      teach: (L) => COIN_TEACH[L - 1]!,
     },
   ],
 }
