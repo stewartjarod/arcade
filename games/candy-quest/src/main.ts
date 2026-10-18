@@ -1,5 +1,5 @@
 import { Game, THREE, burst, clamp, confetti, ease, music, pick, rand, sfx, storage, tone, type Entity, type SceneFn } from '@arcade/engine'
-import { canPick, learner, letterPad, peekLearner, practiceGrade, speak, startPractice, type PickOptions, type Practice } from '@arcade/learning'
+import { canPick, lessonFor, learner, letterPad, peekLearner, practiceGrade, speak, startPractice, teachCard, type PickOptions, type Practice } from '@arcade/learning'
 import { COACH_LINES, LANDS } from './lands'
 import { startChase } from './monster'
 import { afterGate, landFor, mapDone, monsterWakes, newMap } from './quest'
@@ -206,6 +206,8 @@ function runLand(index: number): SceneFn {
     async function spellIt() {
       const moment = practice.moment()
       const q = moment.ask()
+      // A topic the kid hasn't seen gets its "how it works" card before the pad opens (the game is paused at the gate).
+      if (q.item.frontier) await teachCard(lessonFor(q.item))
       const pad = letterPad()
       let msg = ''
       q.restartTimer()

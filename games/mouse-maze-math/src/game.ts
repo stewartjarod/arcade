@@ -6,7 +6,7 @@ import { DX, DZ, generateMaze } from './maze'
 import { activeRealm, currentSubject, depth } from './progress'
 import { REALMS, realmForDepth } from './realms'
 import { currentPlayer } from '@arcade/players'
-import { choicePad, learner, practiceGrade, slowDown, speak, spokenText, startPractice, type Moment, type Question } from '@arcade/learning'
+import { choicePad, lessonFor, learner, practiceGrade, slowDown, speak, spokenText, startPractice, type Moment, type Question } from '@arcade/learning'
 import { commit, save } from './save'
 import * as ui from './ui'
 import { sleep, type World } from './world'
@@ -110,6 +110,8 @@ export const createGame = (world: World) => {
     pending = null
     world.setFocus(false) // a cage may have been up; bring the camera back down
     ui.closeTrap()
+    ui.closeTeach() // a "something new" card may still be up: it goes with the round
+    if (import.meta.env.DEV) delete (window as unknown as { __maze?: unknown }).__maze // no maze is being played
     ui.hideAnswers()
     keepAwake(false) // nobody is playing, let the screen sleep
     setMood('menu')
@@ -123,6 +125,8 @@ export const createGame = (world: World) => {
     const mine = ++round
     stopIdle() // belt and braces: no timers from an earlier maze can reach this one
     const left = () => mine !== round // true once the player has gone back to the menu
+    // Dev only: ?teach=1 makes the first door question count as a new topic, so the teach card can be seen by hand.
+    const forceTeach = import.meta.env.DEV && new URLSearchParams(location.search).has('teach')
     const n = save.mazes + 1
     const subjectId = currentSubject()
     // The maze gets longer as the player's IXL grade in this subject goes up (and a little with every maze won).
@@ -171,9 +175,22 @@ export const createGame = (world: World) => {
       const tried = new Set<number>() // doors that were wrong (dead end or trap)
       const blocked = new Set<number>() // tried doors, plus any door a hint faded away: none of these can be picked
       let hinted = false
+      let teaching = false // true while the "something new" card is up
       // Test bots (dev server only) read this to know which door is right, and which ones are blocked right now.
       const publish = () => {
-        if (import.meta.env.DEV) (window as unknown as { __maze: unknown }).__maze = { correctIdx, grade, junction: k, of: layout.junctions.length, round: mine, blocked: [...blocked] }
+        if (import.meta.env.DEV) (window as unknown as { __maze: unknown }).__maze = { correctIdx, grade, junction: k, of: layout.junctions.length, round: mine, blocked: [...blocked], teaching }
+      }
+
+      // A topic the kid has never met: show the "how it works" card before any door comes up. It is shown once per
+      // question (not on every wrong door), and no nudge or hint timer runs yet (askExit starts them). The question's
+      // own read-aloud happens below, after the card closes, so the two voices never overlap.
+      if (q.item.frontier || (forceTeach && k === 0)) {
+        teaching = true
+        publish()
+        await ui.showTeach(lessonFor(q.item))
+        teaching = false
+        if (left()) return // the player went back to the menu while the card was up
+        q.restartTimer() // the speed bonus counts from when the doors appear
       }
 
       // The cozy hint: fade one wrong door that's still open. Once per question.

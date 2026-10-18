@@ -16,6 +16,8 @@ export interface TeachCardOptions {
   title?: string
   /** Where to put the card. Default: the page. */
   parent?: HTMLElement
+  /** Read the card aloud as soon as it shows. Default: yes. (The 🔊 button always works.) */
+  readAloud?: boolean
 }
 
 let styled = false
@@ -36,7 +38,7 @@ function injectCss() {
 }
 
 /** Show the card and wait for "Got it!". Resolves once it's closed. */
-export function teachCard(teach: Teach, { title = '✨ Something new!', parent = document.body }: TeachCardOptions = {}): Promise<void> {
+export function teachCard(teach: Teach, { title = '✨ Something new!', parent = document.body, readAloud = true }: TeachCardOptions = {}): Promise<void> {
   styleCard()
   injectCss()
   return new Promise((done) => {
@@ -79,7 +81,7 @@ export function teachCard(teach: Teach, { title = '✨ Something new!', parent =
     el.append(got)
 
     parent.append(el)
-    if (teach.say) speak(teach.say) // read it once, as soon as it shows
+    if (teach.say && readAloud) speak(teach.say) // read it once, as soon as it shows
   })
 }
 

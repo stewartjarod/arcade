@@ -10,6 +10,7 @@ try {
   for (let i = 0; i < 4000; i++) {
     const text = await evalJs('document.body.innerText')
     if (text.includes('crossed the pond')) break
+    await evalJs(`document.querySelector('.teach-go')?.click()`) // "Got it!" on a new topic's card
     if (mode === 'careful') await sleep(1300)
     await evalJs(`(() => { const b = [...document.querySelectorAll('#lh-answers button')].filter(b => !b.disabled); b[Math.floor(Math.random()*b.length)]?.click() })()`)
     if (!shotTaken && (await evalJs(`!!document.querySelector('.slow-down')`))) { await shot('.scratch/lily-slowdown.png'); shotTaken = true }

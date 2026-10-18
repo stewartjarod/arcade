@@ -29,6 +29,7 @@ try {
   for (let t = 0; t < 600; t++) {
     const text = await hudText()
     if (text.includes('Treasure found')) break
+    await evalJs(`document.querySelector('.teach-go')?.click()`) // "Got it!" on a new topic's card
     if (await padOpen()) {
       gates++
       if (gates === 1) await shot(out + '4-gate.png')

@@ -17,7 +17,8 @@ import type { Item, Skill } from './types'
  * every skill of the subject: down at once, but up only about a grade a round (questions never go more
  * than a grade above where the round started). Then each skill calibrates on its own: each right
  * answer at their level jumps a whole level, and the first miss settles them just below it. From
- * then on it's gentle i+1. All of it is saved on the player, so it carries across games.
+ * then questions aim a little above that spot (see aimGrade), so each one sits near their level; a round sticks to
+ * a few skills (see scheduler.ts). All of it is saved on the player, so it carries across games.
  *
  * The placement also acts as a floor for every skill they've started: a skill is never rated more than half
  * a level below where the placement says it should start. So when the placement climbs (a kid who's getting
@@ -52,7 +53,7 @@ interface State {
   /** Skills whose starting level has been found (see score()). */
   calibrated: Record<string, boolean>
   /** Where they are on IXL's grade scale in each subject (1.4 = 140), and how many answers have shaped it. */
-  placement: Record<string, { g: number; n: number; s?: number }>
+  placement: Record<string, { g: number; n: number; s?: number; d?: number }>
   /** The grade games last played a subject at, so the play style can only rise about a grade per round. */
   played?: Record<string, number>
 }
@@ -83,10 +84,25 @@ export const PLACING_REACH = 0.35
 /** Kindergarten and 1st grade: closer to their spot, so fewer wrong answers. */
 const PLACING_REACH_YOUNG = 0.15
 /**
- * How far one answer moves the placement, in grades: big at first, then it settles. Once placing is over it
- * only drifts (a steady 1st grader's placement shouldn't swing between grades from one surprising answer).
+ * How far one answer moves the placement, in grades: big at first, then it settles.
+ *
+ * Once placing is over, the step depends on the drift: a running average of how surprising recent answers were
+ * (see updatePlacement). Surprises that point both ways are just noise, so the step stays small and the placement
+ * settles. When several recent answers surprise the same way, the kid really moved, so the step grows and the
+ * placement follows. Old saves have no drift yet, which counts as zero.
  */
-const placeStep = (answers: number) => Math.max(answers < PLACING_ANSWERS ? 0.3 : 0.05, 2.5 * 0.82 ** answers)
+const SETTLED_STEP = 0.04
+/** How much a drift beyond the dead zone adds to the step. */
+const DRIFT_GAIN = 2.5
+/** Drift this small is noise (a few mixed answers), so it doesn't change the step. */
+const DRIFT_DEAD = 0.10
+/** How much one answer counts in the drift (a slow average: about the last ten answers). */
+const DRIFT_ALPHA = 0.10
+const placeStep = (answers: number, drift = 0) =>
+  answers < PLACING_ANSWERS ? Math.max(0.3, 2.5 * 0.82 ** answers) : SETTLED_STEP + DRIFT_GAIN * Math.max(0, Math.abs(drift) - DRIFT_DEAD)
+/** Once placing is over, aim this far (in grades) above their spot. Kindergarten and 1st grade: closer. */
+export const AIM_REACH = 0.2
+const AIM_REACH_YOUNG = 0.1
 /** How sharply a question's chance of being right falls as it gets a grade harder than the player's spot. */
 const GRADE_SLOPE = 3
 
@@ -181,6 +197,17 @@ export class Learner {
     const young = roundStart < 2
     const target = spot + (young ? PLACING_REACH_YOUNG : PLACING_REACH) + (young ? 0.25 : 0.5) * Math.min(streak, 3)
     return Math.min(target, roundStart + 1)
+  }
+
+  /**
+   * The grade questions aim at once placing is over: a little above their spot (less for the youngest), and never
+   * more than a grade above where this round started, so a lucky streak can't jump them ahead.
+   */
+  aimGrade(subjectId: string) {
+    const spot = this.placement(subjectId).grade
+    const roundStart = this.state.played?.[subjectId] ?? this.grade ?? 0
+    const reach = roundStart < 2 ? AIM_REACH_YOUNG : AIM_REACH
+    return Math.min(spot + reach, roundStart + 1)
   }
 
   /**
@@ -355,9 +382,17 @@ export class Learner {
     if (gi === undefined) return
     const { grade, answers } = this.placement(subject)
     const expected = guess + (1 - guess) * sigmoid(GRADE_SLOPE * (grade - gi) + 1.6)
-    const streak = this.state.placement[subject]?.s ?? 0
-    const delta = placeStep(answers) * (Math.min(outcome, 1) - expected)
-    this.state.placement[subject] = { g: Math.min(6, Math.max(0, grade + Math.max(-1, Math.min(1, delta)))), n: answers + 1, s: outcome >= 1 ? streak + 1 : 0 }
+    const prev = this.state.placement[subject]
+    const streak = prev?.s ?? 0
+    const drift = prev?.d ?? 0
+    const surprise = Math.min(outcome, 1) - expected
+    const delta = placeStep(answers, drift) * surprise
+    this.state.placement[subject] = {
+      g: Math.min(6, Math.max(0, grade + Math.max(-1, Math.min(1, delta)))),
+      n: answers + 1,
+      s: outcome >= 1 ? streak + 1 : 0,
+      d: (1 - DRIFT_ALPHA) * drift + DRIFT_ALPHA * surprise,
+    }
   }
 
   /** Skills whose rating just made a correction (not a bad stretch), so limitDrop leaves them be. */

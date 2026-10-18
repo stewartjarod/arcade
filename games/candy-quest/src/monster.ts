@@ -1,5 +1,5 @@
 import { THREE, ease, noise, sfx, tone, type Entity, type Game } from '@arcade/engine'
-import { renderPrompt, speak, spokenText, type Practice, type Question } from '@arcade/learning'
+import { lessonFor, renderPrompt, speak, spokenText, teachCard, type Practice, type Question } from '@arcade/learning'
 import { MONSTER_LINES } from './lands'
 import { MAX_GAP, caught, chaseAnswer, creep, eaten, escaped, newChase } from './quest'
 import { chasePanel, toast } from './ui'
@@ -60,8 +60,14 @@ export function startChase(o: ChaseOptions) {
   let options: string[] = []
   let open = new Set<number>()
 
-  function ask() {
+  // Ask the next question. A topic the kid hasn't seen gets its "how it works" card first.
+  // `asking` is false until the card closes, so the monster doesn't creep and taps are ignored.
+  async function ask() {
     q = moment.ask()
+    if (q.item.frontier) {
+      await teachCard(lessonFor(q.item))
+      if (over) return // the chase ended while the card was up
+    }
     options = q.options(3)
     open = new Set([0, 1, 2])
     panel.show(renderPrompt(q.prompt), options, pick)

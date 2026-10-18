@@ -1,6 +1,6 @@
 import { findSkill, SUBJECTS } from '../subjects'
 import { learner as currentLearner, type Learner } from './learner'
-import { pickItem, pickSimilar, type PickOptions } from './scheduler'
+import { pickItem, pickSimilar, type PickOptions, type RoundFocus } from './scheduler'
 import { SmashGuard } from './smash'
 import { notePracticeGrades } from './summary'
 import type { Item } from './types'
@@ -92,6 +92,8 @@ export class Practice {
   private recent: string[] = []
   /** Spots answer-mashing across the whole round. */
   private readonly smash = new SmashGuard()
+  /** Which few skills this round is sticking to, per subject (see scheduler.ts). */
+  private readonly focus: RoundFocus = {}
 
   constructor(learner: Learner, options: PickOptions = {}) {
     this.learner = learner
@@ -134,7 +136,7 @@ export class Practice {
 
   /** @internal */
   next(): Item {
-    const it = pickItem(this.learner, this.options, this.recent)
+    const it = pickItem(this.learner, this.options, this.recent, this.focus)
     this.remember(it.key)
     return it
   }

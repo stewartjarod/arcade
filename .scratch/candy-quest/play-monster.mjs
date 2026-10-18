@@ -26,6 +26,7 @@ try {
   let answered = 0
   let shotChase = false
   for (const end = Date.now() + 20 * 60e3; Date.now() < end; ) {
+    await evalJs(`document.querySelector('.teach-go')?.click()`) // "Got it!" on a new topic's card
     if (await padOpen()) {
       gates++
       const word = await evalJs('window.__candyWord')

@@ -1,7 +1,7 @@
 import { Game, confetti, currentPlayer, hz, music, rand, scale, sfx, storage, tone } from '@arcade/engine'
 import { cloud as skyCloud } from '@arcade/assets'
 import { heartsMatter, nextPace, PARTY_EVERY, PARTY_SECONDS, QUICK_POINTS, quickPopSeconds, readingSeconds, settingsFor, START_PACE, styleFor } from './difficulty'
-import { canSpeak, escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, type Question } from '@arcade/learning'
+import { canSpeak, escapeHTML, findSubject, lessonFor, peekLearner, practiceGrade, renderPrompt, speak, spokenText, startPractice, teachCard, type Question } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  Bubble Pop
@@ -98,7 +98,7 @@ function round(game: Game) {
   let lockedUntil = 0 // after mashing, no pops until `age` gets here
 
   /** Ask a new question, or (after a miss) one like the last, so they get another go at the same idea. */
-  function nextQuestion(like?: Question) {
+  async function nextQuestion(like?: Question) {
     play.replaceChildren()
     live = []
     if (like) {
@@ -108,6 +108,12 @@ function round(game: Game) {
       moment = practice.moment()
       q = moment.ask()
       firstInMoment = true
+      // A topic the kid hasn't seen gets its "how it works" card first. Nothing falls or pops while it's up:
+      // any phase other than 'ask' is a pause.
+      if (q.item.frontier) {
+        phase = 'wait'
+        await teachCard(lessonFor(q.item))
+      }
     }
     showQuestion()
 

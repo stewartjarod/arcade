@@ -1,5 +1,5 @@
 import { Game, THREE, ball, box, cylinder, group, lerp, storage, confetti, burst, ease, sfx, currentPlayer } from '@arcade/engine'
-import { escapeHTML, findSubject, peekLearner, practiceGrade, renderPrompt, slowDown, speak, spokenText, startPractice, type Question } from '@arcade/learning'
+import { escapeHTML, findSubject, lessonFor, peekLearner, practiceGrade, renderPrompt, slowDown, speak, spokenText, startPractice, teachCard, type Question } from '@arcade/learning'
 import { gatorHunts, pondFor, styleFor, superHopSeconds } from './difficulty'
 
 // ------------------------------------------------------------------
@@ -124,9 +124,13 @@ function level(game: Game) {
     game.hud.set('best', `🏆 ${save.get('best', 0)}`, 'top-right')
   }
 
-  function ask() {
+  // Ask the next question. A topic the kid hasn't seen gets its "how it works" card first.
+  // `busy` stays true while the card is up, so taps and the gator wait.
+  async function ask() {
+    busy = true
     moment = practice.moment()
     q = moment.ask()
+    if (q.item.frontier) await teachCard(lessonFor(q.item))
     options = q.options(3)
     open = new Set([0, 1, 2])
     missedThisQuestion = false
@@ -139,6 +143,7 @@ function level(game: Game) {
     q.restartTimer()
     if (grade <= 1) speak(spokenText(q.prompt)) // young readers: say it out loud
     showTop()
+    busy = false
   }
 
   async function pick(lane: number) {
@@ -160,7 +165,7 @@ function level(game: Game) {
       game.hud.message(superHop ? '⚡ Super hop! 2 pads!' : CHEERS[streak % CHEERS.length]!, { seconds: 0.9 })
       showTop()
       if (frogRow >= pond.pads) return win()
-      ask()
+      await ask()
     } else {
       streak = 0
       open.delete(lane)

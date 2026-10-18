@@ -4,7 +4,7 @@ import {
 } from '@arcade/engine'
 import { planetModel, rocketModel, starPickup, sunModel, PLANET_COLOR, PLANET_SIZE, type PlanetName } from '@arcade/assets'
 import { QUICK_DUST, quickSeconds, startingChoices, styleFor } from './difficulty'
-import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, peekLearner, practiceGrade, speak, startPractice, type Moment, type Question } from '@arcade/learning'
+import { PLANETS, PLANET_CARDS, PLANET_MNEMONIC, lessonFor, peekLearner, practiceGrade, speak, startPractice, teachCard, type Moment, type Question } from '@arcade/learning'
 
 // ------------------------------------------------------------------
 //  🚀 Rocket Tour
@@ -226,7 +226,8 @@ function explore(game: Game) {
 //  The tour
 // ------------------------------------------------------------------
 
-type Phase = 'intro' | 'cruise' | 'gate' | 'bounce' | 'land' | 'card' | 'done'
+// 'teach' is the "how it works" card before a question on a new topic: the rocket holds still until it's closed.
+type Phase = 'intro' | 'cruise' | 'teach' | 'gate' | 'bounce' | 'land' | 'card' | 'done'
 
 function tour(game: Game) {
   addSpace(game)
@@ -291,11 +292,13 @@ function tour(game: Game) {
   let banner: HTMLElement | undefined
   let laneButtons: HTMLElement | undefined
 
-  function openGate() {
-    phase = 'gate'
-    steerHint.remove()
+  async function openGate() {
+    phase = 'teach'
     moment = practice.moment()
     q = moment.ask()
+    if (q.item.frontier) await teachCard(lessonFor(q.item), { readAloud }) // new topic: show how it works first
+    phase = 'gate'
+    steerHint.remove()
     options = q.options(3)
     open = new Set([0, 1, 2])
     bubbles = options.map((opt, i) => makeBubble(opt, i))
@@ -533,7 +536,8 @@ function tour(game: Game) {
 
     // Stardust and asteroids in our lane.
     for (const p of pickups) {
-      if (!p.alive || Math.abs(p.position.z - rocket.position.z) > 1.4 || Math.abs(p.position.x - rocket.position.x) > 1.8) continue
+      // Nothing is picked up or bonked while the teach card is up.
+      if (phase === 'teach' || !p.alive || Math.abs(p.position.z - rocket.position.z) > 1.4 || Math.abs(p.position.x - rocket.position.x) > 1.8) continue
       if (p.is('stardust')) {
         stardust++
         dust.textContent = `✨ ${stardust}`

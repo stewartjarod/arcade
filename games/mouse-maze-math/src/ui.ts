@@ -1,6 +1,6 @@
 import { COLORS, HATS, STICKERS } from './catalog'
 import { questionHTML } from './questionHtml'
-import { choicePad, findSubject, learner, practiceGrade, skillSummary, speak, spokenText, type Prompt, type SkillInfo } from '@arcade/learning'
+import { choicePad, findSubject, learner, practiceGrade, skillSummary, speak, spokenText, teachCard, type Prompt, type SkillInfo, type Teach } from '@arcade/learning'
 import { confetti as rain, setMuted } from '@arcade/engine'
 import { REALMS } from './realms'
 import { commit, save } from './save'
@@ -300,6 +300,15 @@ export const closeTrap = () => pad.close()
 export const askChoice = pad.ask
 export const askAgain = pad.again
 export const markChoice = pad.mark
+
+// The "something new" card for a first-time topic. It lives in its own box, so menu() can clear it
+// if the player leaves while it is up (its promise then never resolves, and play() is already gone).
+let teachBox: HTMLElement | undefined
+export const showTeach = (teach: Teach) => {
+  teachBox ??= document.body.appendChild(document.createElement('div'))
+  return teachCard(teach, { parent: teachBox })
+}
+export const closeTeach = () => teachBox?.replaceChildren()
 
 // Keys that pick a door in the maze. While the leave prompt is up, they must not pick one behind it.
 const DOOR_KEYS = ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'a', 'w', 'd']
