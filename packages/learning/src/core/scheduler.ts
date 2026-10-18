@@ -267,7 +267,10 @@ export function harderLevel(skillId: string, skill: Skill, base: number) {
 /** Another question from the same skill and level (e.g. "try one like it"). */
 export function pickSimilar(to: Item, avoid: string | readonly string[] = to.key): Item {
   const avoidKeys = typeof avoid === 'string' ? [avoid] : avoid
-  return generate(to.skill, to.level, (it) => !avoidKeys.includes(it.key))
+  const it = generate(to.skill, to.level, (it) => !avoidKeys.includes(it.key))
+  // Another go at a brand-new topic is still new: a miss on it shouldn't lower their placement either.
+  // (Games show the teach card only for fresh questions, so it isn't shown twice.)
+  return to.frontier ? { ...it, frontier: true } : it
 }
 
 function generate(skillId: string, level: number, ok: (it: Item) => boolean): Item {

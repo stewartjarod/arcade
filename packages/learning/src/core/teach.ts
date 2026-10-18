@@ -66,7 +66,7 @@ export function lessonFor(item: Item): Teach {
   if (!skill) return { text: 'New! Let’s try this one together.', say: 'New! Let’s try this one together.' }
 
   const own = skill.teach?.(item.level)
-  const text = own?.text ?? `New! ${kidLabel(skill.label(item.level))}`
+  const text = own?.text ?? kidLabel(skill.label(item.level)) // the card's title already says "Something new!"
   const example = own?.example ?? exampleFor(item, skill)
   return {
     text,

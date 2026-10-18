@@ -145,3 +145,30 @@ describe('mastered skills', () => {
     expect(learning).toBeGreaterThan(0.3)
   })
 })
+
+describe('another go at a new topic', () => {
+  test('similar() to a frontier question is still frontier, and missing it leaves placement alone', () => {
+    const l = new Learner('t', null, { grade: 2 })
+    vi.spyOn(l, 'save').mockImplementation(() => {})
+    const practice = startPractice({ learner: l, subjects: ['math'], formats: ['choice'], audio: true })
+    // Get past placing with answers at their level, then wait for a new topic.
+    let checked = false
+    for (let i = 0; i < PLACING_ANSWERS + 200 && !checked; i++) {
+      const m = practice.moment()
+      const q = m.ask()
+      if (!q.item.frontier) {
+        m.record(q, (itemGrade(q.item.skill, q.item.level) ?? 0) <= 2.2, { choices: 3 })
+        continue
+      }
+      m.record(q, false, { choices: 3 }) // missed the new topic...
+      const again = m.similar(q) // ...so the game asks one like it (Mouse Maze's trap, Bubble Pop's retry)
+      expect(again.item.frontier).toBe(true)
+      expect(again.item.skill).toBe(q.item.skill)
+      const before = l.placement('math').grade
+      m.record(again, false, { choices: 3 })
+      expect(l.placement('math').grade).toBeGreaterThanOrEqual(before - 1e-9)
+      checked = true
+    }
+    expect(checked, 'a new topic came up').toBe(true)
+  })
+})

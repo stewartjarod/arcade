@@ -51,11 +51,11 @@ describe('teach cards for every skill and level', () => {
     expect(examples / checked).toBeGreaterThan(0.95)
   })
 
-  test('a skill without its own card gets a "New!" line with its name', () => {
+  test('a skill without its own card gets its name (the card title says it is new)', () => {
     const plain = SUBJECTS.flatMap((s) => s.skills.map((k) => [s.id, k] as const)).find(([, k]) => !k.teach)
     expect(plain).toBeTruthy()
     const [subjectId, skill] = plain!
     const lesson = lessonFor(sample(subjectId, skill, 1))
-    expect(lesson.text).toBe(`New! ${kidLabel(skill.label(1))}`)
+    expect(lesson.text).toBe(kidLabel(skill.label(1)))
   })
 })
